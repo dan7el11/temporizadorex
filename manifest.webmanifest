@@ -1,0 +1,16 @@
+{
+  "name": "MIR 2027 · Temporizador de estudio",
+  "short_name": "MIR 2027",
+  "description": "Temporizador programable por bloques encadenados, con pantalla de vaciado progresivo y registro de distracciones.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0d12",
+  "theme_color": "#0b0d12",
+  "lang": "es",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
