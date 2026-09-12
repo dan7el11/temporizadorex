@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MIR 2027 · Temporizador de estudio</title>
+<meta name="description" content="Temporizador programable por bloques con registro de distracciones para preparar el examen MIR 2027.">
+<meta name="theme-color" content="#0b0d12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+
+<div id="app">
+  <header class="topbar">
+    <div class="topbar__brand">
+      <span class="topbar__dot" aria-hidden="true"></span>
+      <div>
+        <strong>MIR 2027</strong>
+        <span class="topbar__sub" id="countdownMir">—</span>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist">
+      <button class="tab is-active" data-view="plan" role="tab">Plan de hoy</button>
+      <button class="tab" data-view="library" role="tab">Biblioteca</button>
+      <button class="tab" data-view="history" role="tab">Historial</button>
+      <button class="tab" data-view="settings" role="tab">Ajustes</button>
+    </nav>
+  </header>
+
+  <main class="main">
+
+    <!-- ══════════════ PLAN ══════════════ -->
+    <section class="view is-active" id="view-plan">
+      <div class="grid">
+        <div class="col">
+          <div class="card">
+            <div class="card__head">
+              <h2>Bloques disponibles</h2>
+              <button class="btn btn--ghost btn--sm" id="goLibrary">Editar biblioteca</button>
+            </div>
+            <p class="hint">Pulsa para añadir el bloque a la sesión de hoy. Después ajustas el tiempo de cada uno.</p>
+            <div class="preset-picker" id="presetPicker"></div>
+            <button class="btn btn--ghost btn--block" id="quickBlock">+ Bloque puntual (sin guardar)</button>
+          </div>
+
+          <div class="card">
+            <div class="card__head">
+              <h2>Plantillas de día</h2>
+              <button class="btn btn--ghost btn--sm" id="savePlan">Guardar día actual</button>
+            </div>
+            <div class="plan-templates" id="planTemplates"></div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="card card--queue">
+            <div class="card__head">
+              <h2>Sesión de hoy</h2>
+              <button class="btn btn--ghost btn--sm" id="clearQueue">Vaciar</button>
+            </div>
+            <ol class="queue" id="queue"></ol>
+            <div class="queue__empty" id="queueEmpty">
+              Todavía no has añadido bloques. Elige uno de la izquierda para empezar a montar el día.
+            </div>
+            <div class="queue__summary">
+              <div>
+                <span class="label">Tiempo total</span>
+                <strong id="queueTotal">0 min</strong>
+              </div>
+              <div>
+                <span class="label">Terminarías a las</span>
+                <strong id="queueEta">—</strong>
+              </div>
+            </div>
+            <button class="btn btn--primary btn--block btn--lg" id="startSession" disabled>Iniciar sesión</button>
+            <p class="hint hint--center">Una vez iniciado un bloque no se puede reiniciar: solo pausar. Cada pausa se registra como distracción.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ BIBLIOTECA ══════════════ -->
+    <section class="view" id="view-library">
+      <div class="card">
+        <div class="card__head">
+          <h2>Biblioteca de temporizadores</h2>
+          <button class="btn btn--primary btn--sm" id="newPreset">+ Nuevo tipo</button>
+        </div>
+        <p class="hint">Cada tipo guarda su nombre, color y duración habitual. Se reutiliza cada día y el tiempo se puede recalcular al montar la sesión.</p>
+        <div class="library" id="library"></div>
+      </div>
+    </section>
+
+    <!-- ══════════════ HISTORIAL ══════════════ -->
+    <section class="view" id="view-history">
+      <div class="card">
+        <h2>Resumen de los últimos 14 días</h2>
+        <div class="stats" id="stats"></div>
+        <div class="chart" id="chart"></div>
+      </div>
+      <div class="card">
+        <div class="card__head">
+          <h2>Sesiones</h2>
+          <span class="hint" id="historyCount"></span>
+        </div>
+        <div class="history" id="history"></div>
+      </div>
+    </section>
+
+    <!-- ══════════════ AJUSTES ══════════════ -->
+    <section class="view" id="view-settings">
+      <div class="card">
+        <h2>Ajustes</h2>
+        <div class="settings" id="settings"></div>
+      </div>
+      <div class="card">
+        <h2>Datos</h2>
+        <p class="hint">Todo se guarda en este navegador. Exporta de vez en cuando para no perder el historial.</p>
+        <div class="row row--wrap">
+          <button class="btn btn--ghost" id="exportData">Exportar copia (.json)</button>
+          <button class="btn btn--ghost" id="importData">Importar copia</button>
+          <button class="btn btn--danger-ghost" id="resetData">Borrar todo</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json" hidden>
+      </div>
+      <div class="card">
+        <h2>Atajos de teclado (durante la sesión)</h2>
+        <ul class="keys">
+          <li><kbd>Espacio</kbd> Pausar / reanudar (la pausa cuenta como distracción)</li>
+          <li><kbd>D</kbd> Registrar distracción rápida sin pausar</li>
+          <li><kbd>P</kbd> Ventana miniatura (Picture in Picture)</li>
+          <li><kbd>F</kbd> Pantalla completa</li>
+          <li><kbd>Esc</kbd> Salir de pantalla completa</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ══════════════ RUNNER ══════════════ -->
+<div id="runner" class="runner" hidden>
+  <div class="stage" id="stage">
+    <div class="stage__fill" id="stageFill"></div>
+    <div class="stage__edge" id="stageEdge"></div>
+
+    <div class="stage__layer stage__layer--over">
+      <div class="stage__inner">
+        <div class="stage__name js-name">—</div>
+        <div class="stage__time js-time">00:00</div>
+        <div class="stage__sub js-sub"></div>
+        <div class="stage__pause js-pause" hidden>
+          <span class="stage__pauseTag">PAUSA · distracción en curso</span>
+          <span class="stage__pauseTime js-pausetime">00:00</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage__layer stage__layer--void">
+      <div class="stage__inner">
+        <div class="stage__name js-name">—</div>
+        <div class="stage__time js-time">00:00</div>
+        <div class="stage__sub js-sub"></div>
+        <div class="stage__pause js-pause" hidden>
+          <span class="stage__pauseTag">PAUSA · distracción en curso</span>
+          <span class="stage__pauseTime js-pausetime">00:00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="runner__chrome" id="runnerChrome">
+    <div class="runner__hud">
+      <div class="hud__left">
+        <span class="hud__pill" id="hudProgress">Bloque 1 / 1</span>
+        <span class="hud__pill" id="hudNext"></span>
+      </div>
+      <div class="hud__right">
+        <span class="hud__pill" id="hudSession"></span>
+        <button class="iconbtn" id="btnFull" title="Pantalla completa (F)" aria-label="Pantalla completa">⛶</button>
+      </div>
+    </div>
+
+    <div class="runner__controls">
+      <button class="ctrl ctrl--primary" id="btnPause" title="Pausar (Espacio)">Pausar</button>
+      <button class="ctrl" id="btnDistraction" title="Distracción rápida sin pausar (D)">+ Distracción</button>
+      <button class="ctrl" id="btnPip" title="Miniatura Picture in Picture (P)">Miniatura</button>
+      <button class="ctrl" id="btnSkip" title="Saltar al siguiente bloque">Saltar bloque</button>
+      <button class="ctrl ctrl--danger" id="btnEnd" title="Terminar la sesión">Terminar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toast" class="toast" hidden></div>
+<video id="pipVideo" playsinline muted hidden></video>
+<canvas id="pipCanvas" width="640" height="360" hidden></canvas>
+
+<script src="src/utils.js"></script>
+<script src="src/store.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/library.js"></script>
+<script src="src/planner.js"></script>
+<script src="src/pip.js"></script>
+<script src="src/runner.js"></script>
+<script src="src/history.js"></script>
+<script src="src/settings.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>
