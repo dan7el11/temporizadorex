@@ -6,6 +6,7 @@ const ASSETS = [
   'manifest.webmanifest',
   'assets/styles.css',
   'assets/icon.svg',
+  'assets/icon-192.png',
   'src/utils.js',
   'src/store.js',
   'src/audio.js',

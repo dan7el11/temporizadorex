@@ -106,10 +106,8 @@ sw.js                    Service worker para el uso sin conexión
 tools/make-icons.js      Genera los iconos PNG (opcional, sin dependencias)
 ```
 
-El icono es `assets/icon.svg`. Si quieres además los PNG (iOS los necesita para el icono de la
-pantalla de inicio), ejecuta `node tools/make-icons.js`: escribe `icon-192.png`, `icon-512.png` e
-`icon-180.png` en `assets/` y el propio script explica las dos líneas que hay que añadir al
-manifiesto y al HTML.
+Los iconos ya están en `assets/`. Si cambias el diseño, `node tools/make-icons.js` regenera los PNG
+(192, 512 y 180 px) a partir del mismo dibujo, sin dependencias.
 
 ## Compatibilidad
 

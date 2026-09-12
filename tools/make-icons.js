@@ -4,10 +4,8 @@
  *   node tools/make-icons.js            -> escribe en assets/
  *   node tools/make-icons.js otra/ruta  -> escribe en esa carpeta
  *
- * El repositorio solo incluye assets/icon.svg. Ejecuta este script si quieres
- * los PNG (los usan iOS para el icono de la pantalla de inicio y algunos
- * Android); después añade en manifest.webmanifest las entradas icon-192.png e
- * icon-512.png, y en index.html <link rel="apple-touch-icon" href="assets/icon-180.png">.
+ * Los PNG ya están en assets/ y se referencian desde manifest.webmanifest y
+ * desde index.html; este script solo hace falta para regenerarlos.
  */
 const zlib = require('zlib');
 const fs = require('fs');
