@@ -38,9 +38,15 @@ Repaso ANKI, Repaso con Claude, Simulacro, Descanso…). Se crean, editan, dupli
 pestaña *Biblioteca*.
 
 ### Plan del día
-Vas añadiendo bloques desde la biblioteca a la *Sesión de hoy*, los **reordenas** (arrastrando o con
-las flechas) y ajustas **el tiempo de cada uno** (campo de minutos o botones rápidos: 15, 25, 45, 50,
-60, 90, 120). Arriba ves el tiempo total y **a qué hora terminarías**.
+Vas añadiendo bloques desde la biblioteca a la *Sesión de hoy* y ajustas **el tiempo de cada uno**
+(campo de minutos o botones rápidos: 15, 25, 45, 50, 60, 90, 120). Arriba ves el tiempo total y **a
+qué hora terminarías**.
+
+Para **reordenar** hay dos formas: arrastrar desde el asa de la izquierda —una línea azul marca
+dónde va a caer el bloque— o los botones de subir y bajar, que se quedan enfocados en el bloque que
+mueves para poder pulsarlos varias veces seguidas y se desactivan en los extremos. El tercer botón
+lo quita del día. En el móvil no hay arrastre (no existe de forma nativa), pero los botones son más
+grandes.
 
 Un día montado se puede guardar como **plantilla** y recargarlo otro día con un clic. Desde el
 historial también puedes «repetir» un día ya hecho.
@@ -72,6 +78,13 @@ distracciones cuando está pausado.
 
 - En Chrome y Edge de escritorio usa *Document Picture-in-Picture*: la miniatura es interactiva.
 - En el resto, se usa un vídeo en PiP: el **botón de pausa del reproductor pausa el temporizador**.
+
+**Se puede configurar qué se ve en ella**, desde *Ajustes → Ventana miniatura* o con el botón `☰` de
+la cabecera del temporizador (útil a mitad de sesión, porque los cambios se aplican al momento con
+la miniatura abierta). Puedes quitar el reloj, el nombre del bloque, el cronómetro de la pausa, el
+contador de distracciones o el botón de pausa, añadir el «Bloque X de N», y elegir el fondo: que se
+vacíe con el tiempo, color fijo o solo negro. Si quitas el botón de pausa y las distracciones,
+desaparece también la barra inferior y la miniatura queda limpia del todo.
 
 ### Atajos durante la sesión
 | Tecla | Acción |

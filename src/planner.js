@@ -4,6 +4,7 @@
 
   const Planner = {};
   const QUICK_MINUTES = [15, 25, 45, 50, 60, 90, 120];
+  let refocus = null;   // botón al que devolver el foco tras redibujar la lista
 
   function queue() { return Store.data.queue; }
   function persist() { Store.setQueue(Store.data.queue); }
@@ -57,6 +58,13 @@
 
     Planner.renderTotals();
     Planner.renderTemplates();
+
+    if (refocus) {
+      const row = list.children[refocus.index];
+      const btn = row && row.querySelector('.qbtn[data-action="' + refocus.action + '"]');
+      if (btn && !btn.disabled) btn.focus();
+      refocus = null;
+    }
   };
 
   Planner.renderTotals = function () {
@@ -93,38 +101,78 @@
       }));
     });
 
+    const first = index === 0;
+    const last = index === items.length - 1;
+
+    function actionBtn(icon, label, danger, disabled, action) {
+      return U.el('button', {
+        class: 'qbtn' + (danger ? ' qbtn--danger' : ''), type: 'button',
+        title: label, 'aria-label': label + ' «' + item.name + '»',
+        dataset: { action: icon },
+        disabled: disabled ? true : null,
+        onclick: action
+      }, [U.icon(icon)]);
+    }
+
+    const actions = U.el('div', { class: 'qitem__actions' }, [
+      actionBtn('up', first ? 'Ya es el primero' : 'Subir', false, first, function () { move(index, -1); }),
+      actionBtn('down', last ? 'Ya es el último' : 'Bajar', false, last, function () { move(index, 1); }),
+      actionBtn('trash', 'Quitar del día', true, false, function () { remove(index); })
+    ]);
+
+    const handle = U.el('span', {
+      class: 'qitem__handle', title: 'Arrastra para reordenar',
+      'aria-hidden': 'true'
+    }, [U.icon('grip', 16)]);
+
     const row = U.el('li', {
       class: 'qitem', draggable: 'true', dataset: { index: String(index) }
     }, [
-      U.el('span', { class: 'qitem__handle', title: 'Arrastra para reordenar', text: '⠿' }),
-      U.el('div', { class: 'qitem__main' }, [
-        U.el('div', { class: 'qitem__name' }, [
-          U.el('span', { class: 'qitem__dot', style: { background: item.color, color: item.color } }),
-          U.el('span', { text: (index + 1) + '. ' + item.name })
-        ]),
-        ctrls
+      handle,
+      U.el('div', { class: 'qitem__name' }, [
+        U.el('span', { class: 'qitem__pos', text: String(index + 1) }),
+        U.el('span', { class: 'qitem__dot', style: { background: item.color, color: item.color } }),
+        U.el('span', { class: 'qitem__label', text: item.name })
       ]),
-      U.el('div', { class: 'qitem__side' }, [
-        U.el('button', { class: 'mini', type: 'button', text: '↑', title: 'Subir', disabled: index === 0, onclick: function () { move(index, -1); } }),
-        U.el('button', { class: 'mini', type: 'button', text: '↓', title: 'Bajar', disabled: index === items.length - 1, onclick: function () { move(index, 1); } }),
-        U.el('button', { class: 'mini', type: 'button', text: '✕', title: 'Quitar', onclick: function () { remove(index); } })
-      ])
+      actions,
+      ctrls
     ]);
+
+    // Solo se arrastra desde el asa: así el campo de minutos sigue siendo editable.
+    row.draggable = false;
+    handle.addEventListener('pointerdown', function () { row.draggable = true; });
+    handle.addEventListener('pointerup', function () { row.draggable = false; });
+
+    function clearMarks() { row.classList.remove('is-over-top', 'is-over-bottom'); }
 
     row.addEventListener('dragstart', function (e) {
       row.classList.add('is-dragging');
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', String(index));
     });
-    row.addEventListener('dragend', function () { row.classList.remove('is-dragging'); });
-    row.addEventListener('dragover', function (e) { e.preventDefault(); row.classList.add('is-over'); });
-    row.addEventListener('dragleave', function () { row.classList.remove('is-over'); });
+    row.addEventListener('dragend', function () {
+      row.classList.remove('is-dragging');
+      row.draggable = false;
+      U.$$('.qitem').forEach(function (r) { r.classList.remove('is-over-top', 'is-over-bottom'); });
+    });
+    row.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const rect = row.getBoundingClientRect();
+      const below = e.clientY > rect.top + rect.height / 2;
+      row.classList.toggle('is-over-bottom', below);
+      row.classList.toggle('is-over-top', !below);
+    });
+    row.addEventListener('dragleave', clearMarks);
     row.addEventListener('drop', function (e) {
       e.preventDefault();
-      row.classList.remove('is-over');
+      const below = row.classList.contains('is-over-bottom');
+      clearMarks();
       const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
-      const to = index;
-      if (isNaN(from) || from === to) return;
+      if (isNaN(from)) return;
+      let to = index + (below ? 1 : 0);
+      if (from < to) to -= 1;
+      if (from === to) return;
       const arr = queue();
       arr.splice(to, 0, arr.splice(from, 1)[0]);
       persist();
@@ -142,6 +190,8 @@
     arr[index] = arr[to];
     arr[to] = tmp;
     persist();
+    // El botón viaja con el bloque: se puede pulsar varias veces seguidas.
+    refocus = { index: to, action: delta < 0 ? 'up' : 'down' };
     Planner.render();
   }
 

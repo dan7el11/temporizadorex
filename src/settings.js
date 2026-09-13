@@ -60,6 +60,94 @@
       ]),
       date
     ]));
+
+    const miniBox = document.getElementById('miniSettings');
+    if (miniBox) U.clear(miniBox).appendChild(Settings.miniOptions());
+  };
+
+  /* ── Contenido de la ventana miniatura ─────────────────── */
+  const MINI_BG = [
+    ['drain', 'Se vacía con el tiempo'],
+    ['solid', 'Color fijo'],
+    ['dark', 'Solo negro']
+  ];
+  const MINI_ITEMS = [
+    ['time', 'Reloj'],
+    ['name', 'Nombre del bloque'],
+    ['index', 'Bloque X de N'],
+    ['pauseTimer', 'Cronómetro de la pausa'],
+    ['distractions', 'Distracciones'],
+    ['pauseButton', 'Botón de pausa']
+  ];
+
+  /** Panel de configuración de la miniatura; se usa en Ajustes y durante la sesión. */
+  Settings.miniOptions = function () {
+    const mini = Store.mini();
+    const frag = document.createDocumentFragment();
+
+    frag.appendChild(U.el('p', {
+      class: 'hint',
+      text: 'Elige qué se ve en la ventana miniatura. Los cambios se aplican al momento, aunque la tengas abierta.'
+    }));
+
+    frag.appendChild(U.el('span', { class: 'label', text: 'Fondo' }));
+    const bg = U.el('div', { class: 'chips', style: { margin: '6px 0 14px' } });
+    const bgButtons = [];
+    MINI_BG.forEach(function (o) {
+      const c = U.el('button', {
+        class: 'chip' + (mini.bg === o[0] ? ' is-active' : ''), type: 'button', text: o[1],
+        onclick: function () {
+          Store.setMini('bg', o[0]);
+          bgButtons.forEach(function (b) { b.classList.toggle('is-active', b.dataset.bg === o[0]); });
+          refresh();
+        },
+        dataset: { bg: o[0] }
+      });
+      bgButtons.push(c);
+      bg.appendChild(c);
+    });
+    frag.appendChild(bg);
+
+    frag.appendChild(U.el('span', { class: 'label', text: 'Elementos' }));
+    const items = U.el('div', { class: 'chips', style: { marginTop: '6px' } });
+    MINI_ITEMS.forEach(function (o) {
+      const c = U.el('button', {
+        class: 'chip' + (mini[o[0]] !== false ? ' is-active' : ''), type: 'button', text: o[1],
+        'aria-pressed': mini[o[0]] !== false ? 'true' : 'false',
+        onclick: function () {
+          const value = !c.classList.contains('is-active');
+          Store.setMini(o[0], value);
+          c.classList.toggle('is-active', value);
+          c.setAttribute('aria-pressed', value ? 'true' : 'false');
+          refresh();
+        }
+      });
+      items.appendChild(c);
+    });
+    frag.appendChild(items);
+
+    function refresh() {
+      if (window.Runner && Runner.isActive()) PiP.update(Runner.snapshot());
+    }
+
+    return frag;
+  };
+
+  /** Mismo panel en un modal, para ajustarlo sin salir del temporizador. */
+  Settings.openMiniDialog = function () {
+    return UI.modal({
+      title: 'Ventana miniatura',
+      build: function () { return Settings.miniOptions(); },
+      actions: function (close) {
+        return [
+          U.el('button', {
+            class: 'btn btn--ghost', text: PiP.isOpen() ? 'Cerrar miniatura' : 'Abrir miniatura',
+            onclick: function () { close(true); PiP.toggle(); }
+          }),
+          U.el('button', { class: 'btn btn--primary', text: 'Listo', onclick: function () { close(true); } })
+        ];
+      }
+    });
   };
 
   Settings.exportData = function () {

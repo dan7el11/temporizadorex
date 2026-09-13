@@ -155,6 +155,36 @@
     return node;
   };
 
+  /* Iconos en línea (trazo, heredan el color del botón). */
+  const ICONS = {
+    up: ['M12 20V4', 'M5 11l7-7 7 7'],
+    down: ['M12 4v16', 'M19 13l-7 7-7-7'],
+    top: ['M5 4h14', 'M12 20V8', 'M6 13l6-6 6 6'],
+    bottom: ['M5 20h14', 'M12 4v12', 'M18 11l-6 6-6-6'],
+    trash: ['M4 7h16', 'M10 7V4h4v3', 'M6 7l1 13h10l1-13', 'M10 11v6', 'M14 11v6'],
+    grip: ['M9 5h.01', 'M9 12h.01', 'M9 19h.01', 'M15 5h.01', 'M15 12h.01', 'M15 19h.01']
+  };
+
+  U.icon = function (name, size) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', size || 18);
+    svg.setAttribute('height', size || 18);
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', name === 'grip' ? '2.6' : '1.9');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    (ICONS[name] || []).forEach(function (d) {
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', d);
+      svg.appendChild(p);
+    });
+    return svg;
+  };
+
   U.$ = function (sel, root) { return (root || document).querySelector(sel); };
   U.$$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
   U.clear = function (node) {

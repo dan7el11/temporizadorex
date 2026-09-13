@@ -151,17 +151,62 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .queue{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
 .queue__empty{color:var(--text-faint);font-size:.85rem;text-align:center;padding:26px 10px;border:1px dashed var(--line);border-radius:12px;margin-top:8px}
 .qitem{
-  display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+  column-gap:10px;row-gap:8px;align-items:center;position:relative;
   background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:10px;
+  transition:border-color .15s, background .15s;
 }
-.qitem.is-dragging{opacity:.45}
-.qitem.is-over{border-color:var(--accent)}
-.qitem__handle{cursor:grab;color:var(--text-faint);font-size:1rem;padding:0 2px;user-select:none}
-.qitem__main{min-width:0}
+.qitem:hover{border-color:#31394f}
+.qitem.is-dragging{opacity:.4}
+/* Línea que marca dónde caerá el bloque al soltarlo */
+.qitem.is-over-top::before,
+.qitem.is-over-bottom::after{
+  content:"";position:absolute;left:8px;right:8px;height:3px;border-radius:3px;
+  background:var(--accent);box-shadow:0 0 12px rgba(91,140,255,.9);
+}
+.qitem.is-over-top::before{top:-6px}
+.qitem.is-over-bottom::after{bottom:-6px}
+
+.qitem__handle{
+  grid-row:1 / 3;align-self:center;display:grid;place-items:center;
+  width:26px;height:38px;border-radius:8px;
+  color:var(--text-faint);cursor:grab;touch-action:none;user-select:none;
+}
+.qitem__handle:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.qitem__handle:active{cursor:grabbing}
+/* En táctil no existe arrastrar y soltar nativo: se reordena con los botones. */
+@media (hover:none){
+  .qitem__handle{display:none}
+  .qitem{grid-template-columns:minmax(0,1fr) auto}
+  .qitem__ctrls{grid-column:1 / -1}
+}
+
 .qitem__name{font-weight:560;display:flex;align-items:center;gap:8px;min-width:0}
-.qitem__name span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qitem__pos{
+  flex:0 0 auto;min-width:20px;height:20px;padding:0 5px;border-radius:6px;
+  background:var(--card);border:1px solid var(--line);
+  font-size:.72rem;color:var(--text-faint);display:grid;place-items:center;
+  font-variant-numeric:tabular-nums;
+}
+.qitem__label{overflow-wrap:anywhere;line-height:1.25}
 .qitem__dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 10px currentColor}
-.qitem__ctrls{display:flex;align-items:center;gap:6px;margin-top:7px;flex-wrap:wrap}
+
+.qitem__actions{display:flex;gap:5px}
+.qbtn{
+  width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto;
+  border:1px solid var(--line);background:var(--card);color:var(--text-dim);
+  border-radius:9px;cursor:pointer;padding:0;
+  transition:background .14s, color .14s, border-color .14s, transform .08s;
+}
+.qbtn:hover:not(:disabled){background:#252d43;color:var(--text);border-color:#3b445e}
+.qbtn:active:not(:disabled){transform:translateY(1px)}
+.qbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.qbtn:disabled{opacity:.28;cursor:not-allowed}
+.qbtn--danger:hover:not(:disabled){background:#3a1c24;color:#ff9aa4;border-color:#5f2c37}
+/* Objetivo táctil más cómodo en pantallas pequeñas */
+@media (max-width:640px){ .qbtn{width:38px;height:38px} }
+
+.qitem__ctrls{grid-column:2 / -1;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .qitem__ctrls input[type=number]{
   width:70px;background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;
   color:var(--text);padding:5px 8px;font-variant-numeric:tabular-nums;

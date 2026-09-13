@@ -14,6 +14,17 @@
     { id: 'p_descanso', name: 'Descanso', color: '#0ea5b7', minutes: 15, note: 'Levantarse, agua, ventana.' }
   ];
 
+  // Qué se ve en la ventana miniatura. `bg`: drain (se vacía) | solid | dark.
+  const DEFAULT_MINI = {
+    bg: 'drain',
+    name: true,
+    time: true,
+    index: false,
+    pauseTimer: true,
+    distractions: true,
+    pauseButton: true
+  };
+
   const DEFAULT_SETTINGS = {
     sound: true,
     volume: 0.6,
@@ -21,7 +32,8 @@
     askDistractions: true,
     autoNext: true,
     wakeLock: true,
-    examDate: '2027-01-23'
+    examDate: '2027-01-23',
+    mini: DEFAULT_MINI
   };
 
   const DEFAULT_DATA = {
@@ -63,6 +75,7 @@
       const stored = read(KEY, DEFAULT_DATA);
       this.data = Object.assign(deepClone(DEFAULT_DATA), stored || {});
       this.data.settings = Object.assign({}, DEFAULT_SETTINGS, this.data.settings || {});
+      this.data.settings.mini = Object.assign({}, DEFAULT_MINI, this.data.settings.mini || {});
       if (!Array.isArray(this.data.presets) || !this.data.presets.length) this.data.presets = deepClone(DEFAULT_PRESETS);
       ['plans', 'queue', 'sessions'].forEach(function (k) {
         if (!Array.isArray(Store.data[k])) Store.data[k] = [];
@@ -124,6 +137,13 @@
       this.data.settings[key] = value;
       this.save();
     },
+    setMini: function (key, value) {
+      this.data.settings.mini[key] = value;
+      this.save();
+    },
+    mini: function () {
+      return (this.data && this.data.settings && this.data.settings.mini) || DEFAULT_MINI;
+    },
 
     /* ── Estado de la sesión en curso (se recupera al recargar) ── */
     saveRun: function (run) { write(RUN_KEY, run); },
@@ -140,6 +160,7 @@
       if (!incoming || typeof incoming !== 'object') throw new Error('Archivo no válido');
       this.data = Object.assign(deepClone(DEFAULT_DATA), incoming);
       this.data.settings = Object.assign({}, DEFAULT_SETTINGS, this.data.settings || {});
+      this.data.settings.mini = Object.assign({}, DEFAULT_MINI, this.data.settings.mini || {});
       this.save();
     },
     resetAll: function () {

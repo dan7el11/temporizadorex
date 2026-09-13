@@ -81,7 +81,7 @@
       w.document.body.appendChild(stage);
       w.document.body.appendChild(bar);
 
-      nodes = { stage: stage, fill: fill, edge: edge, over: overIn, vd: voidIn, btn: btn, dist: dist, body: w.document.body };
+      nodes = { stage: stage, fill: fill, edge: edge, over: overIn, vd: voidIn, bar: bar, btn: btn, dist: dist, body: w.document.body };
 
       w.addEventListener('pagehide', function () { mode = null; win = null; nodes = null; });
       PiP.update(Runner.snapshot());
@@ -99,36 +99,53 @@
     const root = mk(w, 'div', 'mini__inner');
     const name = mk(w, 'div', 'mini__name');
     const time = mk(w, 'div', 'mini__time');
+    const index = mk(w, 'div', 'mini__index');
     const pause = mk(w, 'div', 'mini__pause');
-    root.appendChild(name);
-    root.appendChild(time);
-    root.appendChild(pause);
-    return { root: root, name: name, time: time, pause: pause };
+    [name, time, index, pause].forEach(function (n) { root.appendChild(n); });
+    return { root: root, name: name, time: time, index: index, pause: pause };
+  }
+
+  /** Altura de relleno según el modo de fondo elegido. */
+  function fillFor(s, m) {
+    if (m.bg === 'solid') return 100;
+    if (m.bg === 'dark') return 0;
+    return s.fill;
   }
 
   function updateDocument(s) {
     if (!nodes) return;
+    const m = Store.mini();
     const b = nodes.body;
     b.style.setProperty('--c', s.color);
     b.style.setProperty('--on', s.on);
     b.style.setProperty('--glow', s.glow);
-    b.style.setProperty('--fill', s.fill.toFixed(2) + '%');
-    nodes.stage.classList.toggle('is-paused', s.paused);
+    b.style.setProperty('--fill', fillFor(s, m).toFixed(2) + '%');
+    nodes.stage.classList.toggle('is-paused', s.paused && m.bg === 'drain');
 
+    const showPause = m.pauseTimer && s.paused;
     [nodes.over, nodes.vd].forEach(function (l) {
       l.name.textContent = s.name;
+      l.name.hidden = !m.name;
       l.time.textContent = s.time;
-      l.pause.textContent = s.paused ? 'PAUSA · ' + s.pauseTime : '';
+      l.time.hidden = !m.time;
+      l.index.textContent = 'Bloque ' + s.index + ' de ' + s.total;
+      l.index.hidden = !m.index;
+      l.pause.textContent = 'PAUSA · ' + s.pauseTime;
+      l.pause.hidden = !showPause;
     });
 
     nodes.btn.textContent = s.paused ? 'Reanudar' : 'Pausar';
+    nodes.btn.hidden = !m.pauseButton;
     nodes.dist.textContent = s.distractionCount
       ? s.distractionCount + ' distr. · ' + s.distractionTotal
       : 'Sin distracciones';
+    nodes.dist.hidden = !m.distractions;
+    nodes.bar.hidden = !m.pauseButton && !m.distractions;
   }
 
   const MINI_CSS = [
     '*{box-sizing:border-box;margin:0}',
+    '[hidden]{display:none !important}',
     'body.mini{background:#000;color:#fff;height:100vh;display:flex;flex-direction:column;',
     'font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}',
     '.mini__stage{position:relative;flex:1;background:#000;overflow:hidden}',
@@ -136,13 +153,15 @@
     '.mini__stage.is-paused .mini__fill{background:repeating-linear-gradient(135deg,rgba(0,0,0,.2) 0 10px,rgba(0,0,0,0) 10px 20px),var(--c,#2f6bff)}',
     '.mini__edge{position:absolute;left:0;right:0;bottom:var(--fill,100%);height:2px;background:var(--glow,#fff);opacity:.9}',
     '.mini__layer{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px}',
+    '.mini__inner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%}',
+    '.mini__index{font-size:12px;font-weight:600;opacity:.85}',
     '.mini__layer--over{color:var(--on,#000);clip-path:inset(calc(100% - var(--fill,100%)) 0 0 0)}',
     '.mini__layer--void{color:var(--glow,#fff);clip-path:inset(0 0 var(--fill,100%) 0)}',
     '.mini__name{font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.9;',
     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:95%}',
     '.mini__time{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:clamp(28px,13vw,64px);',
     'font-weight:700;line-height:1;font-variant-numeric:tabular-nums}',
-    '.mini__pause{font-size:12px;font-weight:700;letter-spacing:.08em;min-height:14px}',
+    '.mini__pause{font-size:13px;font-weight:700;letter-spacing:.08em}',
     '.mini__bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;',
     'background:#0b0d12;border-top:1px solid #23283a}',
     '.mini__btn{background:#fff;color:#111;border:0;border-radius:8px;padding:7px 14px;font-weight:600;cursor:pointer}',
@@ -192,56 +211,77 @@
 
   function drawCanvas(s) {
     if (!ctx || !s) return;
+    const m = Store.mini();
     const w = canvas.width, h = canvas.height;
-    const barH = 46;
+    const barH = m.pauseButton ? 46 : 0;
     const stageH = h - barH;
 
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, w, h);
 
-    const fillH = Math.round(stageH * (s.fill / 100));
-    ctx.fillStyle = s.color;
-    ctx.fillRect(0, stageH - fillH, w, fillH);
-    ctx.fillStyle = s.glow;
-    ctx.fillRect(0, stageH - fillH - 2, w, 2);
+    const fillH = Math.round(stageH * (fillFor(s, m) / 100));
+    if (fillH > 0) {
+      ctx.fillStyle = s.color;
+      ctx.fillRect(0, stageH - fillH, w, fillH);
+      if (fillH < stageH) {
+        ctx.fillStyle = s.glow;
+        ctx.fillRect(0, stageH - fillH - 2, w, 2);
+      }
+    }
 
+    // Solo se dibuja lo que esté activado, y se centra en bloque.
+    const lines = [];
+    if (m.name) lines.push({ text: s.name.toUpperCase(), size: 20, weight: 600 });
+    if (m.time) lines.push({ text: s.time, size: 92, weight: 700, mono: true });
+    if (m.index) lines.push({ text: 'Bloque ' + s.index + ' de ' + s.total, size: 19, weight: 600 });
+    if (m.pauseTimer && s.paused) lines.push({ text: 'PAUSA · ' + s.pauseTime, size: 28, weight: 700, mono: true });
+    if (m.distractions) {
+      lines.push({
+        text: s.distractionCount ? s.distractionCount + ' distracciones · ' + s.distractionTotal : 'Sin distracciones',
+        size: 19, weight: 600
+      });
+    }
+
+    const gap = 10;
+    const totalH = lines.reduce(function (a, l) { return a + l.size * 1.06 + gap; }, -gap);
     const cx = w / 2;
     const boundary = stageH - fillH;
 
     function textBlock(color, clipTop, clipBottom) {
+      if (clipBottom <= clipTop) return;
       ctx.save();
       ctx.beginPath();
-      ctx.rect(0, clipTop, w, Math.max(0, clipBottom - clipTop));
+      ctx.rect(0, clipTop, w, clipBottom - clipTop);
       ctx.clip();
       ctx.fillStyle = color;
       ctx.textAlign = 'center';
-
-      ctx.font = '600 20px system-ui, sans-serif';
-      ctx.fillText(s.name.toUpperCase(), cx, stageH * 0.28);
-
-      ctx.font = '700 92px ui-monospace, Menlo, monospace';
-      ctx.fillText(s.time, cx, stageH * 0.62);
-
-      ctx.font = '600 20px system-ui, sans-serif';
-      const sub = s.paused ? 'PAUSA · ' + s.pauseTime
-        : (s.distractionCount ? s.distractionCount + ' distracciones · ' + s.distractionTotal : 'Bloque ' + s.index + '/' + s.total);
-      ctx.fillText(sub, cx, stageH * 0.84);
+      ctx.textBaseline = 'top';
+      let y = (stageH - totalH) / 2;
+      lines.forEach(function (l) {
+        ctx.font = l.weight + ' ' + l.size + 'px ' + (l.mono ? 'ui-monospace, Menlo, monospace' : 'system-ui, sans-serif');
+        ctx.fillText(l.text, cx, y);
+        y += l.size * 1.06 + gap;
+      });
       ctx.restore();
     }
 
     textBlock(s.glow, 0, boundary);
     textBlock(s.on, boundary, stageH);
 
+    if (!barH) return;
     ctx.fillStyle = '#0b0d12';
     ctx.fillRect(0, stageH, w, barH);
     ctx.fillStyle = '#e8ecf6';
     ctx.font = '600 20px system-ui, sans-serif';
     ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
     // Sin emojis: en canvas dependen de fuentes que pueden faltar.
-    ctx.fillText(s.paused ? 'En pausa — pulsa reproducir para seguir' : 'En marcha — pulsa pausa para parar', 16, stageH + 29);
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#9aa4bd';
-    ctx.fillText(s.distractionCount + ' distr. · ' + s.distractionTotal, w - 16, stageH + 29);
+    ctx.fillText(s.paused ? 'En pausa — pulsa reproducir para seguir' : 'En marcha — pulsa pausa para parar', 16, stageH + barH / 2);
+    if (m.distractions) {
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#9aa4bd';
+      ctx.fillText(s.distractionCount + ' distr. · ' + s.distractionTotal, w - 16, stageH + barH / 2);
+    }
   }
 
   global.PiP = PiP;

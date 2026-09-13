@@ -59,6 +59,10 @@
     document.getElementById('btnSkip').addEventListener('click', function () { Runner.skip(); });
     document.getElementById('btnEnd').addEventListener('click', function () { Runner.confirmEnd(); });
     document.getElementById('btnFull').addEventListener('click', function () { Runner.toggleFullscreen(); });
+    document.getElementById('btnMiniCfg').addEventListener('click', function () {
+      Runner.showChrome('stick');
+      Settings.openMiniDialog().then(function () { Runner.showChrome(); });
+    });
 
     document.getElementById('exportData').addEventListener('click', Settings.exportData);
     document.getElementById('importData').addEventListener('click', function () { document.getElementById('importFile').click(); });
