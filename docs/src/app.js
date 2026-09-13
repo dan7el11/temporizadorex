@@ -128,7 +128,25 @@
   function registerSW() {
     if (!('serviceWorker' in navigator)) return;
     if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
-    navigator.serviceWorker.register('sw.js').catch(function () { /* funciona igual sin él */ });
+
+    // Si ya había un service worker controlando la página, un cambio de
+    // controlador significa que se ha desplegado una versión nueva.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (reloading || !hadController) return;
+      if (Runner.isActive()) {
+        UI.toast('Hay una versión nueva; se aplicará al terminar la sesión');
+        return;
+      }
+      reloading = true;
+      location.reload();
+    });
+
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+      .then(function (reg) { reg.update(); })
+      .catch(function () { /* funciona igual sin él */ });
   }
 
   App.init = function () {

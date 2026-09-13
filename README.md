@@ -117,13 +117,19 @@ docs/                         Lo que se publica en GitHub Pages
   src/history.js              Historial y estadísticas de distracciones
   src/settings.js             Ajustes, miniatura y copias de seguridad
   src/app.js                  Arranque, navegación y atajos
-  sw.js                       Service worker para el uso sin conexión
+  sw.js                       Service worker: sin conexión, sin quedarse en versiones viejas
   .nojekyll                   Pages publica los archivos sin procesarlos con Jekyll
 tools/make-icons.js           Genera los iconos PNG (opcional, sin dependencias)
 ```
 
 Los iconos ya están en `docs/assets/`. Si cambias el diseño, `node tools/make-icons.js` regenera los
 PNG (192, 512 y 180 px) a partir del mismo dibujo, sin dependencias.
+
+**Sobre las actualizaciones:** el service worker pide siempre los archivos a la red y guarda una
+copia solo como respaldo para cuando no hay conexión, así que al publicar una versión nueva se ve
+con recargar la página. Si además cambias mucho de golpe, sube el número de `VERSION` en
+`docs/sw.js` y el `?v=` de las etiquetas `<script>` y `<link>` de `docs/index.html` (los dos tienen
+que coincidir).
 
 ## Compatibilidad
 
