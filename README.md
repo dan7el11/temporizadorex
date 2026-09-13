@@ -10,25 +10,26 @@ todos los datos se guardan en tu navegador.
 
 ## Cómo usarlo
 
-**Opción A — como página web (recomendada).** Publica la carpeta en cualquier hosting estático
-(GitHub Pages sirve) y ábrela. Desde el navegador puedes **instalarla como aplicación**
-(Chrome/Edge: menú → «Instalar»; iOS: Compartir → «Añadir a pantalla de inicio»). Una vez abierta
-funciona sin conexión.
+La aplicación entera vive en la carpeta **`docs/`**, que es la que se publica.
 
-Para publicarla en GitHub Pages: *Settings → Pages → Deploy from a branch*, y elige la rama y la
-carpeta raíz.
+**Opción A — como página web (recomendada).** En *Settings → Pages → Deploy from a branch*, elige la
+rama y la carpeta **`/docs`**. Al abrirla puedes **instalarla como aplicación** (Chrome/Edge: menú →
+«Instalar»; iOS: Compartir → «Añadir a pantalla de inicio»), y a partir de ahí funciona sin conexión.
 
-**Opción B — en local.** Descarga el repositorio y levanta un servidor mínimo en la carpeta:
+El archivo `docs/.nojekyll` hace que Pages publique los archivos tal cual, sin pasarlos por Jekyll.
+
+**Opción B — en local.** Descarga el repositorio y levanta un servidor mínimo dentro de `docs/`:
 
 ```bash
+cd docs
 python3 -m http.server 8000      # o:  npx http-server -p 8000
 ```
 
 y abre `http://localhost:8000`.
 
-> Abrir `index.html` con doble clic también funciona, pero Chrome bloquea el almacenamiento local
-> en archivos `file://`: la app irá bien durante la sesión y **no guardará** la biblioteca ni el
-> historial. Para uso diario, usa la opción A o B.
+> Abrir `docs/index.html` con doble clic también funciona, pero Chrome bloquea el almacenamiento
+> local en archivos `file://`: la app irá bien durante la sesión y **no guardará** la biblioteca ni
+> el historial. Para uso diario, usa la opción A o B.
 
 ## Qué hace
 
@@ -102,25 +103,27 @@ como distracción). En *Ajustes* puedes **exportar e importar** una copia en `.j
 ## Estructura
 
 ```
-index.html               Estructura de la app y de la pantalla del temporizador
-assets/styles.css        Estilos, incluido el vaciado en dos capas
-src/utils.js             Formato de tiempo y cálculo de contraste de color
-src/store.js             Persistencia (biblioteca, plantillas, historial, sesión en curso)
-src/audio.js             Sonidos sintetizados con WebAudio (sin archivos)
-src/ui.js                Modales, avisos y selector de color
-src/library.js           Biblioteca de tipos de temporizador
-src/planner.js           Plan del día: orden, tiempos y plantillas
-src/runner.js            Motor del temporizador y pantalla completa
-src/pip.js               Ventana miniatura (dos implementaciones)
-src/history.js           Historial y estadísticas de distracciones
-src/settings.js          Ajustes y copias de seguridad
-src/app.js               Arranque, navegación y atajos
-sw.js                    Service worker para el uso sin conexión
-tools/make-icons.js      Genera los iconos PNG (opcional, sin dependencias)
+docs/                         Lo que se publica en GitHub Pages
+  index.html                  Estructura de la app y de la pantalla del temporizador
+  assets/styles.css           Estilos, incluido el vaciado en dos capas
+  src/utils.js                Formato de tiempo, contraste de color e iconos
+  src/store.js                Persistencia (biblioteca, plantillas, historial, sesión en curso)
+  src/audio.js                Sonidos sintetizados con WebAudio (sin archivos)
+  src/ui.js                   Modales, avisos y selector de color
+  src/library.js              Biblioteca de tipos de temporizador
+  src/planner.js              Plan del día: orden, tiempos y plantillas
+  src/runner.js               Motor del temporizador y pantalla completa
+  src/pip.js                  Ventana miniatura (dos implementaciones)
+  src/history.js              Historial y estadísticas de distracciones
+  src/settings.js             Ajustes, miniatura y copias de seguridad
+  src/app.js                  Arranque, navegación y atajos
+  sw.js                       Service worker para el uso sin conexión
+  .nojekyll                   Pages publica los archivos sin procesarlos con Jekyll
+tools/make-icons.js           Genera los iconos PNG (opcional, sin dependencias)
 ```
 
-Los iconos ya están en `assets/`. Si cambias el diseño, `node tools/make-icons.js` regenera los PNG
-(192, 512 y 180 px) a partir del mismo dibujo, sin dependencias.
+Los iconos ya están en `docs/assets/`. Si cambias el diseño, `node tools/make-icons.js` regenera los
+PNG (192, 512 y 180 px) a partir del mismo dibujo, sin dependencias.
 
 ## Compatibilidad
 

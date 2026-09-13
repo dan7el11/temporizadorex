@@ -1,10 +1,10 @@
 /*
  * Genera los iconos PNG de la aplicación sin dependencias externas.
  *
- *   node tools/make-icons.js            -> escribe en assets/
+ *   node tools/make-icons.js            -> escribe en docs/assets/
  *   node tools/make-icons.js otra/ruta  -> escribe en esa carpeta
  *
- * Los PNG ya están en assets/ y se referencian desde manifest.webmanifest y
+ * Los PNG ya están en docs/assets/ y se referencian desde el manifiesto y
  * desde index.html; este script solo hace falta para regenerarlos.
  */
 const zlib = require('zlib');
@@ -103,7 +103,7 @@ function build(size) {
   return png(size, size, buf);
 }
 
-const out = process.argv[2] || require('path').join(__dirname, '..', 'assets');
+const out = process.argv[2] || require('path').join(__dirname, '..', 'docs', 'assets');
 [[192, 'icon-192.png'], [512, 'icon-512.png'], [180, 'icon-180.png']].forEach(function (s) {
   fs.writeFileSync(out + '/' + s[1], build(s[0]));
   console.log('escrito', s[1]);
