@@ -11,8 +11,17 @@
     { id: 'p_claude', name: 'Repaso con Claude', color: '#e07a3f', minutes: 60, note: 'Repaso dirigido y dudas.' },
     { id: 'p_test', name: 'Simulacro / Test', color: '#e0453f', minutes: 90, note: 'Bloque de preguntas cronometrado.' },
     { id: 'p_lectura', name: 'Lectura ligera', color: '#8b5cf6', minutes: 45, note: '' },
-    { id: 'p_descanso', name: 'Descanso', color: '#0ea5b7', minutes: 15, note: 'Levantarse, agua, ventana.' }
+    { id: 'p_descanso', name: 'Descanso', color: '#0ea5b7', minutes: 15, note: 'Levantarse, agua, ventana.', isBreak: true }
   ];
+
+  // Temas o asignaturas que se pueden asignar a cada bloque. Editables.
+  const DEFAULT_TOPICS = [
+    'Cardiología', 'Neumología', 'Digestivo', 'Nefrología', 'Endocrinología',
+    'Infecciosas', 'Neurología', 'Hematología', 'Reumatología', 'Dermatología',
+    'Ginecología y Obstetricia', 'Pediatría', 'Psiquiatría', 'Traumatología',
+    'Urología', 'Oftalmología', 'Otorrinolaringología', 'Cirugía',
+    'Farmacología', 'Estadística y Preventiva', 'Repaso general'
+  ].map(function (label, i) { return { id: 't_' + (i + 1), label: label }; });
 
   // Razones de distracción; el usuario puede editarlas, añadir y borrar.
   const DEFAULT_REASONS = [
@@ -49,6 +58,13 @@
     goalWeekly: 1800,        // objetivo semanal, en minutos
     historyGroup: 'day',     // 'day' | 'week'
     historyRange: 14,        // días mostrados; 0 = todo
+    historyTopic: '',        // filtro por tema; '' = todos
+    notify: false,           // aviso del sistema al terminar un bloque
+    pauseFriction: 3,        // segundos de espera antes de poder pausar; 0 = sin fricción
+    pauseLimit: 3,           // pausas por bloque a partir de las cuales avisa; 0 = nunca
+    breakEvery: 90,          // minutos de estudio entre descansos automáticos
+    breakMinutes: 10,        // duración de cada descanso insertado
+    breakPresetId: 'p_descanso',
     askReasonQuick: true,    // preguntar la razón en la distracción rápida
     mini: DEFAULT_MINI
   };
@@ -57,6 +73,7 @@
     version: 1,
     presets: DEFAULT_PRESETS,
     reasons: DEFAULT_REASONS,
+    topics: DEFAULT_TOPICS,
     plans: [],      // plantillas de día
     queue: [],      // sesión de hoy en construcción
     sessions: [],   // historial
@@ -96,6 +113,11 @@
       this.data.settings.mini = Object.assign({}, DEFAULT_MINI, this.data.settings.mini || {});
       if (!Array.isArray(this.data.presets) || !this.data.presets.length) this.data.presets = deepClone(DEFAULT_PRESETS);
       if (!Array.isArray(this.data.reasons) || !this.data.reasons.length) this.data.reasons = deepClone(DEFAULT_REASONS);
+      if (!Array.isArray(this.data.topics)) this.data.topics = deepClone(DEFAULT_TOPICS);
+      // Los «Descanso» guardados antes de existir la marca no contaban aparte.
+      this.data.presets.forEach(function (p) {
+        if (p.isBreak === undefined && p.id === 'p_descanso') p.isBreak = true;
+      });
       ['plans', 'queue', 'sessions'].forEach(function (k) {
         if (!Array.isArray(Store.data[k])) Store.data[k] = [];
       });
@@ -180,6 +202,36 @@
       return out;
     },
 
+    /* ── Temas / asignaturas ─────────────────────────────── */
+    addTopic: function (label) {
+      const t = { id: U.uid('t'), label: label };
+      this.data.topics.push(t);
+      this.save();
+      return t;
+    },
+    updateTopic: function (id, label) {
+      const t = this.data.topics.find(function (x) { return x.id === id; });
+      if (t) { t.label = label; this.save(); }
+      return t;
+    },
+    removeTopic: function (id) {
+      this.data.topics = this.data.topics.filter(function (x) { return x.id !== id; });
+      this.save();
+    },
+    moveTopic: function (id, delta) {
+      const arr = this.data.topics;
+      const i = arr.findIndex(function (x) { return x.id === id; });
+      const to = i + delta;
+      if (i < 0 || to < 0 || to >= arr.length) return;
+      const tmp = arr[i]; arr[i] = arr[to]; arr[to] = tmp;
+      this.save();
+    },
+    topicLabel: function (id) {
+      if (!id) return null;
+      const t = this.data.topics.find(function (x) { return x.id === id; });
+      return t ? t.label : null;
+    },
+
     /* ── Cola / sesión de hoy ────────────────────────────── */
     setQueue: function (queue) { this.data.queue = queue; this.save(); },
 
@@ -248,7 +300,8 @@
     saveSessions: function () { this.save(); },
 
     DEFAULT_PRESETS: DEFAULT_PRESETS,
-    DEFAULT_REASONS: DEFAULT_REASONS
+    DEFAULT_REASONS: DEFAULT_REASONS,
+    DEFAULT_TOPICS: DEFAULT_TOPICS
   };
 
   global.Store = Store;

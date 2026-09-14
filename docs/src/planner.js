@@ -3,7 +3,7 @@
   'use strict';
 
   const Planner = {};
-  const QUICK_MINUTES = [15, 25, 45, 50, 60, 90, 120];
+  const QUICK_MINUTES = [25, 45, 60, 90, 120];
   let refocus = null;   // botón al que devolver el foco tras redibujar la lista
 
   function queue() { return Store.data.queue; }
@@ -29,7 +29,10 @@
   Planner.addFromPreset = function (id) {
     const p = Store.getPreset(id);
     if (!p) return;
-    queue().push({ uid: U.uid('q'), presetId: p.id, name: p.name, color: p.color, minutes: p.minutes });
+    queue().push({
+      uid: U.uid('q'), presetId: p.id, name: p.name, color: p.color,
+      minutes: p.minutes, isBreak: !!p.isBreak, topicId: ''
+    });
     persist();
     Planner.render();
   };
@@ -37,7 +40,10 @@
   Planner.addQuickBlock = function () {
     Library.form(null).then(function (values) {
       if (!values) return;
-      queue().push({ uid: U.uid('q'), presetId: null, name: values.name, color: values.color, minutes: values.minutes });
+      queue().push({
+        uid: U.uid('q'), presetId: null, name: values.name, color: values.color,
+        minutes: values.minutes, isBreak: !!values.isBreak, topicId: ''
+      });
       persist();
       Planner.render();
     });
@@ -68,8 +74,11 @@
   };
 
   Planner.renderTotals = function () {
-    const totalMs = queue().reduce(function (a, b) { return a + b.minutes * 60000; }, 0);
-    document.getElementById('queueTotal').textContent = totalMs ? U.fmtHuman(totalMs) : '0 min';
+    const items = queue();
+    const totalMs = items.reduce(function (a, b) { return a + b.minutes * 60000; }, 0);
+    const breakMs = items.reduce(function (a, b) { return a + (b.isBreak ? b.minutes * 60000 : 0); }, 0);
+    document.getElementById('queueTotal').textContent = totalMs ? U.fmtHuman(totalMs - breakMs) : '0 min';
+    document.getElementById('queueBreaks').textContent = breakMs ? '+ ' + U.fmtHuman(breakMs) + ' de descanso' : '';
     document.getElementById('queueEta').textContent = totalMs ? U.fmtClock(new Date(Date.now() + totalMs)) : '—';
   };
 
@@ -93,6 +102,13 @@
       minInput,
       U.el('span', { class: 'qitem__unit', text: 'min' })
     ]);
+    // Los descansos no llevan tema.
+    if (!item.isBreak) {
+      ctrls.appendChild(Topics.select(item.topicId, function (value) {
+        item.topicId = value;
+        persist();
+      }, { small: true, emptyLabel: 'Tema…' }));
+    }
     QUICK_MINUTES.forEach(function (m) {
       ctrls.appendChild(U.el('button', {
         class: 'mini', type: 'button', text: String(m),
@@ -211,6 +227,103 @@
       });
   };
 
+  /* ── Descansos automáticos ─────────────────────────────── */
+  function isBreakItem(item) {
+    if (item.isBreak !== undefined) return !!item.isBreak;
+    const p = item.presetId && Store.getPreset(item.presetId);
+    return !!(p && p.isBreak);
+  }
+
+  /** Reparte descansos cada X minutos de estudio. Es idempotente: primero
+      quita los que había puesto antes, así se puede repetir sin duplicar. */
+  Planner.insertBreaks = function (every, minutes, presetId) {
+    const source = queue().filter(function (i) { return !i.autoBreak; });
+    const preset = Store.getPreset(presetId) || { name: 'Descanso', color: '#0ea5b7', id: null };
+    const out = [];
+    let acc = 0;
+
+    source.forEach(function (item, index) {
+      out.push(item);
+      if (isBreakItem(item)) { acc = 0; return; }
+      acc += item.minutes;
+      const last = index === source.length - 1;
+      if (acc >= every && !last) {
+        out.push({
+          uid: U.uid('q'), presetId: preset.id, name: preset.name, color: preset.color,
+          minutes: minutes, isBreak: true, autoBreak: true, topicId: ''
+        });
+        acc = 0;
+      }
+    });
+
+    Store.setQueue(out);
+    Planner.render();
+    const n = out.length - source.length;
+    UI.toast(n ? 'Añadidos ' + U.plural(n, 'descanso', 'descansos') : 'No hacía falta ningún descanso');
+  };
+
+  Planner.breaksDialog = function () {
+    if (!queue().length) { UI.toast('Primero añade bloques al día'); return; }
+    const s = Store.data.settings;
+    let everyInput, minInput, presetSel;
+
+    UI.modal({
+      title: 'Descansos automáticos',
+      sub: 'Se intercalan descansos entre los bloques, sin partirlos. Si ya los habías insertado, se recolocan en vez de duplicarse.',
+      build: function () {
+        const frag = document.createDocumentFragment();
+
+        const f1 = U.el('div', { class: 'field' });
+        f1.appendChild(U.el('label', { text: 'Descansar cada (minutos de estudio)' }));
+        everyInput = U.el('input', { type: 'number', min: '15', max: '300', step: '5', value: String(s.breakEvery) });
+        f1.appendChild(everyInput);
+        frag.appendChild(f1);
+
+        const f2 = U.el('div', { class: 'field' });
+        f2.appendChild(U.el('label', { text: 'Duración del descanso (minutos)' }));
+        minInput = U.el('input', { type: 'number', min: '1', max: '60', step: '1', value: String(s.breakMinutes) });
+        f2.appendChild(minInput);
+        frag.appendChild(f2);
+
+        const f3 = U.el('div', { class: 'field' });
+        f3.appendChild(U.el('label', { text: 'Tipo de bloque para el descanso' }));
+        presetSel = U.el('select', { class: 'topic-select' });
+        Store.data.presets.forEach(function (p) {
+          presetSel.appendChild(U.el('option', { value: p.id, text: p.name + (p.isBreak ? '' : ' (no marcado como descanso)') }));
+        });
+        presetSel.value = s.breakPresetId;
+        if (!presetSel.value && Store.data.presets.length) presetSel.value = Store.data.presets[0].id;
+        f3.appendChild(presetSel);
+        frag.appendChild(f3);
+        return frag;
+      },
+      actions: function (close) {
+        return [
+          U.el('button', {
+            class: 'btn btn--ghost', text: 'Quitar los descansos',
+            onclick: function () {
+              Store.setQueue(queue().filter(function (i) { return !i.autoBreak; }));
+              Planner.render();
+              close(false);
+            }
+          }),
+          U.el('button', {
+            class: 'btn btn--primary', text: 'Insertar',
+            onclick: function () {
+              const every = U.clamp(parseInt(everyInput.value, 10) || 90, 15, 300);
+              const minutes = U.clamp(parseInt(minInput.value, 10) || 10, 1, 60);
+              Store.setSetting('breakEvery', every);
+              Store.setSetting('breakMinutes', minutes);
+              Store.setSetting('breakPresetId', presetSel.value);
+              Planner.insertBreaks(every, minutes, presetSel.value);
+              close(true);
+            }
+          })
+        ];
+      }
+    });
+  };
+
   /* ── Plantillas de día ─────────────────────────────────── */
   Planner.renderTemplates = function () {
     const box = U.clear(document.getElementById('planTemplates'));
@@ -239,7 +352,10 @@
     const plan = Store.data.plans.find(function (p) { return p.id === id; });
     if (!plan) return;
     const copies = plan.items.map(function (i) {
-      return { uid: U.uid('q'), presetId: i.presetId || null, name: i.name, color: i.color, minutes: i.minutes };
+      return {
+        uid: U.uid('q'), presetId: i.presetId || null, name: i.name, color: i.color,
+        minutes: i.minutes, isBreak: !!i.isBreak, autoBreak: !!i.autoBreak, topicId: i.topicId || ''
+      };
     });
     Store.setQueue(append ? queue().concat(copies) : copies);
     Planner.render();
@@ -252,7 +368,10 @@
       .then(function (name) {
         if (!name) return;
         Store.addPlan(name, queue().map(function (i) {
-          return { presetId: i.presetId, name: i.name, color: i.color, minutes: i.minutes };
+          return {
+            presetId: i.presetId, name: i.name, color: i.color, minutes: i.minutes,
+            isBreak: !!i.isBreak, autoBreak: !!i.autoBreak, topicId: i.topicId || ''
+          };
         }));
         Planner.renderTemplates();
         UI.toast('Plantilla guardada');

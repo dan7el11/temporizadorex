@@ -48,13 +48,62 @@
       vol
     ]));
 
+    // Aviso del sistema: hay que pedir permiso al activarlo
+    const notifyInput = U.el('input', {
+      type: 'checkbox', checked: s.notify ? true : null,
+      onchange: function () {
+        if (!notifyInput.checked) { Store.setSetting('notify', false); notifyHint.textContent = base; return; }
+        if (!Notify.supported()) {
+          notifyInput.checked = false;
+          notifyHint.textContent = 'Este navegador no admite notificaciones.';
+          return;
+        }
+        Notify.request().then(function (ok) {
+          Store.setSetting('notify', ok);
+          notifyInput.checked = ok;
+          notifyHint.textContent = ok
+            ? 'Permiso concedido. Avisará cuando la pestaña no esté a la vista.'
+            : 'El navegador ha bloqueado el permiso; actívalo en el candado de la barra de direcciones.';
+          if (ok) Notify.show('Avisos activados', 'Así se verá cuando termine un bloque.', true);
+        });
+      }
+    });
+    const base = 'Aviso al terminar un bloque cuando la pestaña está en segundo plano. El sonido sigue sonando igual.';
+    const notifyHint = U.el('small', {
+      text: Notify.permission() === 'denied'
+        ? 'El navegador tiene el permiso bloqueado para esta página.'
+        : base
+    });
+    box.appendChild(U.el('div', { class: 'setting' }, [
+      U.el('div', { class: 'setting__txt' }, [U.el('span', { text: 'Notificación del sistema' }), notifyHint]),
+      U.el('label', { class: 'switch' }, [notifyInput, U.el('i')])
+    ]));
+
+    // Fricción al pausar y tope de pausas
+    [['pauseFriction', 'Segundos antes de poder pausar', 'El botón de pausar tarda en habilitarse mientras el reloj sigue. 0 lo desactiva.', 0, 30, 1],
+     ['pauseLimit', 'Pausas recomendadas por bloque', 'Al llegar a este número, el aviso es más insistente. No impide pausar. 0 lo desactiva.', 0, 20, 1]]
+      .forEach(function (g) {
+        const input = U.el('input', {
+          type: 'number', min: String(g[3]), max: String(g[4]), step: String(g[5]), value: String(s[g[0]] || 0),
+          class: 'num-setting',
+          onchange: function () {
+            Store.setSetting(g[0], U.clamp(parseInt(input.value, 10) || 0, g[3], g[4]));
+            input.value = String(Store.data.settings[g[0]]);
+          }
+        });
+        box.appendChild(U.el('div', { class: 'setting' }, [
+          U.el('div', { class: 'setting__txt' }, [U.el('span', { text: g[1] }), U.el('small', { text: g[2] })]),
+          input
+        ]));
+      });
+
     // Objetivos de estudio
     [['goalDaily', 'Objetivo diario', 'Minutos de estudio al día; se usa en el resumen y en el gráfico.'],
      ['goalWeekly', 'Objetivo semanal', 'Minutos a la semana; marca el progreso de cada semana en el historial.']]
       .forEach(function (g) {
         const input = U.el('input', {
           type: 'number', min: '0', max: '10080', step: '15', value: String(s[g[0]] || 0),
-          style: { width: '92px', background: 'var(--bg-soft)', border: '1px solid var(--line)', borderRadius: '10px', color: 'var(--text)', padding: '8px 10px' },
+          class: 'num-setting',
           onchange: function () {
             Store.setSetting(g[0], U.clamp(parseInt(input.value, 10) || 0, 0, 10080));
             input.value = String(Store.data.settings[g[0]]);
@@ -74,8 +123,7 @@
 
     // Fecha del examen
     const date = U.el('input', {
-      type: 'date', value: s.examDate || '',
-      style: { background: 'var(--bg-soft)', border: '1px solid var(--line)', borderRadius: '10px', color: 'var(--text)', padding: '8px 10px' },
+      type: 'date', value: s.examDate || '', class: 'num-setting num-setting--date',
       onchange: function () { Store.setSetting('examDate', date.value); App.renderCountdown(); }
     });
     box.appendChild(U.el('div', { class: 'setting' }, [

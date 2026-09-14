@@ -8,7 +8,7 @@
     U.$$('.view').forEach(function (v) { v.classList.toggle('is-active', v.id === 'view-' + name); });
     U.$$('.tab').forEach(function (t) { t.classList.toggle('is-active', t.dataset.view === name); });
     if (name === 'history') History.render();
-    if (name === 'settings') { Settings.render(); Reasons.render(); }
+    if (name === 'settings') { Settings.render(); Reasons.render(); Topics.render(); }
     if (name === 'library') Library.render();
   };
 
@@ -19,6 +19,7 @@
     History.render();
     Settings.render();
     Reasons.render();
+    Topics.render();
     App.renderCountdown();
   };
 
@@ -73,6 +74,8 @@
     });
     document.getElementById('resetData').addEventListener('click', Settings.resetAll);
     document.getElementById('newReason').addEventListener('click', Reasons.create);
+    document.getElementById('newTopic').addEventListener('click', Topics.create);
+    document.getElementById('autoBreaks').addEventListener('click', Planner.breaksDialog);
     document.getElementById('exportBlocks').addEventListener('click', History.exportBlocks);
     document.getElementById('exportDistractions').addEventListener('click', History.exportDistractions);
 

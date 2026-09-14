@@ -19,7 +19,7 @@
           U.el('span', { class: 'preset-chip__dot', style: { background: p.color, color: p.color } }),
           U.el('span', { text: p.name })
         ]),
-        U.el('div', { class: 'libcard__meta', text: 'Duración habitual: ' + U.fmtHuman(p.minutes * 60000) }),
+        U.el('div', { class: 'libcard__meta', text: 'Duración habitual: ' + U.fmtHuman(p.minutes * 60000) + (p.isBreak ? ' · descanso' : '') }),
         p.note ? U.el('div', { class: 'libcard__meta', text: p.note }) : null,
         U.el('div', { class: 'libcard__actions' }, [
           U.el('button', { class: 'mini', text: 'Editar', onclick: function () { Library.edit(p.id); } }),
@@ -34,8 +34,8 @@
 
   Library.form = function (preset) {
     const isNew = !preset;
-    const model = preset || { name: '', color: UI.PALETTE[0], minutes: 60, note: '' };
-    let nameInput, minInput, noteInput, picker;
+    const model = preset || { name: '', color: UI.PALETTE[0], minutes: 60, note: '', isBreak: false };
+    let nameInput, minInput, noteInput, picker, breakInput;
 
     return UI.modal({
       title: isNew ? 'Nuevo tipo de temporizador' : 'Editar tipo',
@@ -62,6 +62,15 @@
         f3.appendChild(picker.node);
         frag.appendChild(f3);
 
+        breakInput = U.el('input', { type: 'checkbox', checked: model.isBreak ? true : null });
+        frag.appendChild(U.el('div', { class: 'setting', style: { paddingTop: '0' } }, [
+          U.el('div', { class: 'setting__txt' }, [
+            U.el('span', { text: 'Es un descanso' }),
+            U.el('small', { text: 'No cuenta como tiempo de estudio ni lleva tema, y es el que se usa al intercalar descansos.' })
+          ]),
+          U.el('label', { class: 'switch' }, [breakInput, U.el('i')])
+        ]));
+
         const f4 = U.el('div', { class: 'field' });
         f4.appendChild(U.el('label', { text: 'Nota (opcional)' }));
         noteInput = U.el('textarea', { rows: '2', placeholder: 'Qué haces exactamente en este bloque' });
@@ -83,7 +92,10 @@
       const name = nameInput.value.trim();
       if (!name) { nameInput.focus(); UI.toast('Ponle un nombre al bloque'); return; }
       const minutes = U.clamp(parseInt(minInput.value, 10) || 1, 1, 600);
-      close({ name: name, minutes: minutes, color: picker.value, note: noteInput.value.trim() });
+      close({
+        name: name, minutes: minutes, color: picker.value,
+        note: noteInput.value.trim(), isBreak: breakInput.checked
+      });
     }
   };
 
@@ -112,7 +124,7 @@
   Library.duplicate = function (id) {
     const p = Store.getPreset(id);
     if (!p) return;
-    const copy = { name: p.name + ' (copia)', color: p.color, minutes: p.minutes, note: p.note };
+    const copy = { name: p.name + ' (copia)', color: p.color, minutes: p.minutes, note: p.note, isBreak: !!p.isBreak };
     Store.addPreset(copy);
     Library.render();
     Planner.renderPicker();

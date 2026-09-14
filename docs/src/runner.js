@@ -67,6 +67,8 @@
           presetId: i.presetId || null,
           name: i.name,
           color: i.color,
+          topicId: i.topicId || '',
+          isBreak: !!i.isBreak,
           plannedMs: Math.round(i.minutes * 60000),
           elapsedBefore: 0,
           startedAt: null,
@@ -143,10 +145,84 @@
   }
 
   /* ── Pausa = distracción ───────────────────────────────── */
+  /** Pausas del bloque actual, incluida la que esté en curso. */
+  function pauseCount() {
+    const b = block();
+    if (!b) return 0;
+    const done = b.distractions.filter(function (d) { return d.type === 'pause'; }).length;
+    return done + (state.pausedAt ? 1 : 0);
+  }
+  Runner.pauseCount = pauseCount;
+
   Runner.togglePause = function () {
     if (!state || state.gate) return;
     if (state.pausedAt) Runner.resume();
-    else Runner.pause();
+    else Runner.requestPause();
+  };
+
+  /**
+   * Pausar cuesta un poco a propósito: hay que confirmarlo y el botón tarda
+   * unos segundos en habilitarse, mientras el reloj sigue corriendo. Así una
+   * pausa impulsiva da tiempo a pensarla. Se ajusta o se quita en Ajustes.
+   */
+  Runner.requestPause = function (skipFriction) {
+    if (!state || state.gate || state.pausedAt) return;
+    const cfg = Store.data.settings;
+    const seconds = cfg.pauseFriction || 0;
+    const limit = cfg.pauseLimit || 0;
+    const done = pauseCount();
+    if (skipFriction || (!seconds && !(limit && done >= limit))) { Runner.pause(); return; }
+
+    let left = seconds;
+    let btn = null;
+    let ticker = null;
+
+    UI.modal({
+      title: '¿Seguro que quieres pausar?',
+      sub: 'El reloj sigue corriendo mientras decides. La pausa se registrará como distracción.',
+      build: function () {
+        const frag = document.createDocumentFragment();
+        frag.appendChild(U.el('p', {
+          class: 'pause-count',
+          text: done
+            ? 'Llevas ' + U.plural(done, 'pausa', 'pausas') + ' en este bloque' +
+              (limit ? ' de un máximo recomendado de ' + limit + '.' : '.')
+            : 'Sería la primera pausa de este bloque.'
+        }));
+        if (limit && done >= limit) {
+          frag.appendChild(U.el('p', {
+            class: 'pause-warn',
+            text: 'Ya has llegado a tu tope. Si puedes aguantar hasta el final del bloque, aguanta.'
+          }));
+        }
+        return frag;
+      },
+      actions: function (close) {
+        btn = U.el('button', {
+          class: 'btn btn--danger-ghost',
+          text: left ? 'Pausar (' + left + ')' : 'Pausar',
+          disabled: left ? true : null,
+          onclick: function () { close('pause'); }
+        });
+        if (left) {
+          ticker = setInterval(function () {
+            left -= 1;
+            if (left > 0) { btn.textContent = 'Pausar (' + left + ')'; return; }
+            clearInterval(ticker);
+            ticker = null;
+            btn.textContent = 'Pausar';
+            btn.disabled = false;
+          }, 1000);
+        }
+        return [
+          btn,
+          U.el('button', { class: 'btn btn--primary', text: 'Seguir estudiando', onclick: function () { close('keep'); } })
+        ];
+      }
+    }).then(function (result) {
+      if (ticker) clearInterval(ticker);
+      if (result === 'pause') Runner.pause();
+    });
   };
 
   Runner.pause = function () {
@@ -243,7 +319,12 @@
     stopLoop();
     document.getElementById('stage').classList.remove('is-paused');
     document.getElementById('btnPause').textContent = 'Pausar';
-    if (!skipped) Sound.end();
+    if (!skipped) {
+      Sound.end();
+      const next = state.blocks[state.index + 1];
+      Notify.show('Bloque terminado: ' + b.name,
+        next ? 'Siguiente: ' + next.name + ' (' + U.fmtHuman(next.plannedMs) + ')' : 'Era el último bloque de la sesión.');
+    }
     persist();
     render();
     PiP.update(Runner.snapshot());
@@ -267,6 +348,7 @@
     let count = 0;
     let minutes = 0;
     let picker;
+    let topicId = b.topicId || '';
 
     return UI.modal({
       title: 'Bloque terminado: ' + b.name,
@@ -274,6 +356,13 @@
       dismissible: false,
       build: function () {
         const frag = document.createDocumentFragment();
+
+        if (!b.isBreak) {
+          const ft = U.el('div', { class: 'field' });
+          ft.appendChild(U.el('label', { text: '¿Qué tema has trabajado?' }));
+          ft.appendChild(Topics.select(topicId, function (value) { topicId = value; }));
+          frag.appendChild(ft);
+        }
 
         const f1 = U.el('div', { class: 'field' });
         f1.appendChild(U.el('label', { text: '¿Cuántas distracciones no registradas?' }));
@@ -300,10 +389,14 @@
       },
       actions: function (close) {
         return [
-          U.el('button', { class: 'btn btn--ghost', text: 'Ninguna más', onclick: function () { close(false); } }),
+          U.el('button', {
+            class: 'btn btn--ghost', text: 'Ninguna más',
+            onclick: function () { b.topicId = topicId; persist(); close(false); }
+          }),
           U.el('button', {
             class: 'btn btn--primary', text: 'Registrar y seguir',
             onclick: function () {
+              b.topicId = topicId;
               const chosen = picker.value;
               if (count > 0 || minutes > 0 || chosen.reasons.length || chosen.freeText) {
                 b.distractions.push({
@@ -398,6 +491,7 @@
       blocks: state.blocks.map(function (x) {
         return {
           name: x.name, color: x.color, presetId: x.presetId,
+          topicId: x.topicId || '', isBreak: !!x.isBreak,
           plannedMs: x.plannedMs, actualMs: x.elapsedBefore,
           status: x.status, distractions: x.distractions
         };
@@ -408,6 +502,8 @@
 
     UI.closeTransient();
     Sound.finish();
+    Notify.show('Sesión ' + state.reason,
+      U.fmtHuman(state.blocks.reduce(function (a, x) { return a + (x.isBreak ? 0 : x.elapsedBefore); }, 0)) + ' de estudio.');
     PiP.close();
     releaseWakeLock();
     exitFullscreen();
@@ -508,6 +604,12 @@
     const next = state.blocks[state.index + 1];
     document.getElementById('hudNext').textContent = next ? 'Después: ' + next.name : 'Último bloque';
     document.getElementById('hudSession').textContent = 'Sesión: ' + U.fmtHuman(sessionRemainingMs()) + ' restantes';
+
+    const limit = Store.data.settings.pauseLimit || 0;
+    const pauses = pauseCount();
+    const hudPauses = document.getElementById('hudPauses');
+    hudPauses.textContent = pauses || limit ? 'Pausas: ' + pauses + (limit ? ' / ' + limit : '') : '';
+    hudPauses.classList.toggle('is-over', !!limit && pauses >= limit);
     document.getElementById('btnSkip').disabled = state.gate;
 
     document.title = (state.pausedAt ? '⏸ ' : '') + timeText + ' · ' + b.name;

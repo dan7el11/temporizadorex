@@ -12,6 +12,40 @@
   let nodes = null;       // referencias dentro de la miniatura
   let video = null, canvas = null, ctx = null, stream = null;
   let suppressVideoEvents = false;
+  let arm = null;   // confirmación de pausa dentro de la miniatura
+
+  /**
+   * En la miniatura no caben diálogos, así que la fricción al pausar se hace
+   * con dos toques: el primero arma el botón y lo deja en cuenta atrás, el
+   * segundo pausa. Si no se confirma, se desarma solo.
+   */
+  function pauseFromMini() {
+    const st = Runner.getState();
+    if (!st) return;
+    if (st.pausedAt) { Runner.resume(); disarm(); return; }
+
+    const cfg = Store.data.settings;
+    const seconds = cfg.pauseFriction || 0;
+    const limit = cfg.pauseLimit || 0;
+    const needsConfirm = seconds > 0 || (limit && Runner.pauseCount() >= limit);
+    if (!needsConfirm) { Runner.requestPause(true); return; }
+
+    if (arm && arm.left <= 0) { Runner.requestPause(true); disarm(); return; }
+    if (arm) return;                       // ya armado y aún en cuenta atrás
+
+    arm = { left: seconds || 3, timer: null };
+    arm.timer = setInterval(function () {
+      arm.left -= 1;
+      if (arm.left <= -6) { disarm(); }    // sin confirmar: se desarma
+      PiP.update(Runner.snapshot());
+    }, 1000);
+    PiP.update(Runner.snapshot());
+  }
+
+  function disarm() {
+    if (arm && arm.timer) clearInterval(arm.timer);
+    arm = null;
+  }
 
   PiP.isOpen = function () { return mode !== null; };
 
@@ -29,6 +63,7 @@
   };
 
   PiP.close = function () {
+    disarm();
     if (mode === 'document' && win) { try { win.close(); } catch (e) { /* noop */ } }
     if (mode === 'video') {
       try { if (document.pictureInPictureElement) document.exitPictureInPicture(); } catch (e) { /* noop */ }
@@ -73,7 +108,7 @@
       const btn = w.document.createElement('button');
       btn.className = 'mini__btn';
       btn.textContent = 'Pausar';
-      btn.addEventListener('click', function () { Runner.togglePause(); PiP.update(Runner.snapshot()); });
+      btn.addEventListener('click', function () { pauseFromMini(); PiP.update(Runner.snapshot()); });
       const dist = mk(w, 'span', 'mini__dist');
       bar.appendChild(btn);
       bar.appendChild(dist);
@@ -134,7 +169,10 @@
       l.pause.hidden = !showPause;
     });
 
-    nodes.btn.textContent = s.paused ? 'Reanudar' : 'Pausar';
+    if (s.paused) nodes.btn.textContent = 'Reanudar';
+    else if (arm) nodes.btn.textContent = arm.left > 0 ? 'Confirmar (' + arm.left + ')' : 'Confirmar';
+    else nodes.btn.textContent = 'Pausar';
+    nodes.btn.classList.toggle('is-armed', !!arm && !s.paused);
     nodes.btn.hidden = !m.pauseButton;
     nodes.dist.textContent = s.distractionCount
       ? s.distractionCount + ' distr. · ' + s.distractionTotal
@@ -166,6 +204,7 @@
     'background:#0b0d12;border-top:1px solid #23283a}',
     '.mini__btn{background:#fff;color:#111;border:0;border-radius:8px;padding:7px 14px;font-weight:600;cursor:pointer}',
     '.mini__btn:hover{background:#e6eaf5}',
+    '.mini__btn.is-armed{background:#ff5c6c;color:#fff}',
     '.mini__dist{font-size:11px;color:#9aa4bd;text-align:right}'
   ].join('');
 
@@ -186,7 +225,10 @@
       video.addEventListener('pause', function () {
         if (suppressVideoEvents) return;
         // El botón nativo del reproductor hace de pausa del temporizador.
-        Runner.togglePause();
+        // No hay dónde confirmar en la ventana de vídeo, así que se salta la
+        // fricción: pulsarlo ya es un gesto deliberado.
+        if (Runner.getState() && Runner.getState().pausedAt) Runner.resume();
+        else Runner.requestPause(true);
         suppressVideoEvents = true;
         video.play().finally(function () { suppressVideoEvents = false; });
       });

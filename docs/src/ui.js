@@ -133,6 +133,37 @@
     });
   };
 
+  /**
+   * Lista editable de un catálogo (razones, temas…): cada fila con sus botones
+   * de subir, bajar, renombrar y borrar.
+   * `handlers` = { move(id, delta), rename(id), remove(id) }.
+   */
+  UI.catalogList = function (container, items, handlers) {
+    U.clear(container);
+    items.forEach(function (item, index) {
+      const last = index === items.length - 1;
+      function btn(icon, label, danger, disabled, action) {
+        return U.el('button', {
+          class: 'qbtn' + (danger ? ' qbtn--danger' : ''), type: 'button',
+          title: label, 'aria-label': label + ' ' + item.label,
+          disabled: disabled ? true : null, onclick: action
+        }, [U.icon(icon)]);
+      }
+      container.appendChild(U.el('div', { class: 'reason-row' }, [
+        U.el('span', { class: 'reason-row__label', text: item.label }),
+        U.el('div', { class: 'qitem__actions' }, [
+          btn('up', 'Subir', false, index === 0, function () { handlers.move(item.id, -1); }),
+          btn('down', 'Bajar', false, last, function () { handlers.move(item.id, 1); }),
+          btn('pencil', 'Renombrar', false, false, function () { handlers.rename(item.id); }),
+          btn('trash', 'Borrar', true, false, function () { handlers.remove(item.id); })
+        ])
+      ]));
+    });
+    if (!items.length) {
+      container.appendChild(U.el('p', { class: 'empty-note', text: 'La lista está vacía.' }));
+    }
+  };
+
   /** Selector de color: paleta + color personalizado. Devuelve el nodo y expone `.value`. */
   UI.colorPicker = function (initial) {
     const state = { value: initial || PALETTE[0] };

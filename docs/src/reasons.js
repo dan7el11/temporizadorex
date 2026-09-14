@@ -78,33 +78,10 @@
   Reasons.render = function () {
     const box = document.getElementById('reasonList');
     if (!box) return;
-    U.clear(box);
-
-    Store.data.reasons.forEach(function (r, index) {
-      const last = index === Store.data.reasons.length - 1;
-      box.appendChild(U.el('div', { class: 'reason-row' }, [
-        U.el('span', { class: 'reason-row__label', text: r.label }),
-        U.el('div', { class: 'qitem__actions' }, [
-          U.el('button', {
-            class: 'qbtn', type: 'button', title: 'Subir', 'aria-label': 'Subir ' + r.label,
-            disabled: index === 0 ? true : null,
-            onclick: function () { Store.moveReason(r.id, -1); Reasons.render(); }
-          }, [U.icon('up')]),
-          U.el('button', {
-            class: 'qbtn', type: 'button', title: 'Bajar', 'aria-label': 'Bajar ' + r.label,
-            disabled: last ? true : null,
-            onclick: function () { Store.moveReason(r.id, 1); Reasons.render(); }
-          }, [U.icon('down')]),
-          U.el('button', {
-            class: 'qbtn', type: 'button', title: 'Renombrar', 'aria-label': 'Renombrar ' + r.label,
-            onclick: function () { Reasons.rename(r.id); }
-          }, [U.icon('pencil')]),
-          U.el('button', {
-            class: 'qbtn qbtn--danger', type: 'button', title: 'Borrar', 'aria-label': 'Borrar ' + r.label,
-            onclick: function () { Reasons.remove(r.id); }
-          }, [U.icon('trash')])
-        ])
-      ]));
+    UI.catalogList(box, Store.data.reasons, {
+      move: function (id, d) { Store.moveReason(id, d); Reasons.render(); },
+      rename: function (id) { Reasons.rename(id); },
+      remove: function (id) { Reasons.remove(id); }
     });
   };
 

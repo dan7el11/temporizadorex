@@ -8,8 +8,13 @@
 
   function distMs(b) { return (b.distractions || []).reduce(function (a, d) { return a + (d.ms || 0); }, 0); }
   function distN(b) { return (b.distractions || []).reduce(function (a, d) { return a + (d.count || 1); }, 0); }
-  function studyMs(b) { return b.actualMs || 0; }
+  function isBreak(b) { return !!b.isBreak; }
+  /** El tiempo de descanso no cuenta como estudio. */
+  function studyMs(b) { return isBreak(b) ? 0 : (b.actualMs || 0); }
+  function breakMs(b) { return isBreak(b) ? (b.actualMs || 0) : 0; }
   function sessionStudy(s) { return s.blocks.reduce(function (a, b) { return a + studyMs(b); }, 0); }
+  function topicOf(b) { return b.topicId || ''; }
+  function topicName(id) { return Store.topicLabel(id) || (id ? '(tema borrado)' : 'Sin tema'); }
 
   function settings() { return Store.data.settings; }
 
@@ -18,24 +23,40 @@
     const range = settings().historyRange;
     const from = range ? U.startOfDay(Date.now() - (range - 1) * 86400000).getTime() : 0;
 
-    const sessions = Store.data.sessions.filter(function (s) { return s.startedAt >= from; });
+    const topicFilter = settings().historyTopic || '';
+    const sessions = Store.data.sessions
+      .filter(function (s) { return s.startedAt >= from; })
+      .filter(function (s) {
+        if (!topicFilter) return true;
+        return s.blocks.some(function (b) { return topicOf(b) === topicFilter; });
+      });
     const days = {};       // clave de día -> datos
     const reasons = {};    // etiqueta -> { count, ms }
     const presets = {};    // nombre de bloque -> { ms, count, color }
+    const topics = {};     // tema -> { ms, count }
     const hours = new Array(24).fill(0);
-    let study = 0, lost = 0, count = 0, blocksDone = 0;
+    let study = 0, lost = 0, count = 0, blocksDone = 0, rest = 0;
 
     sessions.forEach(function (s) {
       const key = U.dayKey(s.startedAt);
-      if (!days[key]) days[key] = { key: key, date: U.startOfDay(s.startedAt), study: 0, lost: 0, count: 0, sessions: [] };
+      if (!days[key]) days[key] = { key: key, date: U.startOfDay(s.startedAt), study: 0, lost: 0, count: 0, rest: 0, sessions: [] };
       const day = days[key];
       day.sessions.push(s);
 
       s.blocks.forEach(function (b) {
-        const st = studyMs(b), dm = distMs(b), dn = distN(b);
-        day.study += st; day.lost += dm; day.count += dn;
-        study += st; lost += dm; count += dn;
+        if (topicFilter && topicOf(b) !== topicFilter) return;
+        const st = studyMs(b), dm = distMs(b), dn = distN(b), br = breakMs(b);
+        day.study += st; day.lost += dm; day.count += dn; day.rest += br;
+        study += st; lost += dm; count += dn; rest += br;
         if (b.status === 'done') blocksDone++;
+
+        if (!isBreak(b)) {
+          const tk = topicOf(b);
+          if (!topics[tk]) topics[tk] = { id: tk, label: topicName(tk), ms: 0, count: 0, lost: 0 };
+          topics[tk].ms += st;
+          topics[tk].count += 1;
+          topics[tk].lost += dm;
+        }
 
         const pk = b.name;
         if (!presets[pk]) presets[pk] = { name: b.name, color: b.color, ms: 0, count: 0, lost: 0 };
@@ -63,7 +84,9 @@
         .sort(function (a, b) { return b.count - a.count; }),
       presets: Object.keys(presets).map(function (k) { return presets[k]; })
         .sort(function (a, b) { return b.ms - a.ms; }),
-      study: study, lost: lost, count: count, blocksDone: blocksDone
+      topics: Object.keys(topics).map(function (k) { return topics[k]; })
+        .sort(function (a, b) { return b.ms - a.ms; }),
+      study: study, lost: lost, count: count, blocksDone: blocksDone, rest: rest
     };
   }
 
@@ -123,6 +146,13 @@
 
     box.appendChild(group);
     box.appendChild(range);
+
+    const topic = Topics.select(s.historyTopic, function (value) {
+      Store.setSetting('historyTopic', value);
+      History.render();
+    }, { emptyLabel: 'Todos los temas' });
+    topic.classList.add('topic-select--filter');
+    box.appendChild(topic);
   }
 
   /* ── Resumen ───────────────────────────────────────────── */
@@ -143,7 +173,8 @@
       ]);
     }
 
-    box.appendChild(tile(U.fmtHuman(data.study), 'Estudio en el periodo'));
+    box.appendChild(tile(U.fmtHuman(data.study), 'Estudio en el periodo',
+      data.rest ? U.el('span', { text: '+ ' + U.fmtHuman(data.rest) + ' de descanso' }) : null));
     box.appendChild(tile(active ? U.fmtHuman(data.study / active) : '—', 'Media por día activo'));
     box.appendChild(tile(String(Math.round(data.count)), U.plural(data.count, 'distracción', 'distracciones').replace(/^\d+ /, '').replace(/^./, function (c) { return c.toUpperCase(); }), U.el('span', { text: U.fmtHuman(data.lost) + ' perdidos' })));
     box.appendChild(tile(data.study >= 600000 ? perHour.toFixed(1) : '—', 'Distracciones por hora'));
@@ -294,6 +325,16 @@
     });
   }
 
+  function renderTopics(data) {
+    const rows = data.topics.map(function (t) {
+      return { label: t.label, value: t.ms, count: t.count };
+    });
+    const max = rows.length ? rows[0].value : 1;
+    barRows(document.getElementById('topicBreakdown'), rows, max, function (r) {
+      return U.fmtHuman(r.value);
+    });
+  }
+
   function renderHours(data) {
     const box = U.clear(document.getElementById('hourBreakdown'));
     const max = Math.max.apply(null, data.hours.concat([1]));
@@ -419,7 +460,10 @@
         class: 'mini', text: 'Repetir este día',
         onclick: function () {
           Store.setQueue(s.blocks.map(function (b) {
-            return { uid: U.uid('q'), presetId: b.presetId || null, name: b.name, color: b.color, minutes: Math.round(b.plannedMs / 60000) };
+            return {
+              uid: U.uid('q'), presetId: b.presetId || null, name: b.name, color: b.color,
+              minutes: Math.round(b.plannedMs / 60000), isBreak: !!b.isBreak, topicId: b.topicId || ''
+            };
           }));
           Planner.render();
           App.showView('plan');
@@ -443,6 +487,12 @@
     wrap.appendChild(U.el('div', { class: 'hblock' }, [
       U.el('span', { class: 'hblock__dot', style: { background: b.color } }),
       U.el('span', { class: 'hblock__name', text: b.name }),
+      b.isBreak ? U.el('span', { class: 'badge', text: 'descanso' })
+        : Topics.select(b.topicId || '', function (value) {
+            b.topicId = value;
+            Store.saveSessions();
+            History.render();
+          }, { small: true, emptyLabel: 'Sin tema' }),
       U.el('span', { class: 'hblock__num', text: U.fmtHuman(studyMs(b)) + ' / ' + U.fmtHuman(b.plannedMs) }),
       U.el('span', {
         class: 'badge ' + (b.status === 'done' ? 'badge--ok' : 'badge--warn'),
@@ -595,7 +645,7 @@
   }
 
   History.exportBlocks = function () {
-    const rows = [['fecha', 'hora', 'bloque', 'planificado_min', 'real_min', 'estado', 'distracciones', 'tiempo_perdido_min', 'razones']];
+    const rows = [['fecha', 'hora', 'bloque', 'tema', 'es_descanso', 'planificado_min', 'real_min', 'estado', 'distracciones', 'tiempo_perdido_min', 'razones']];
     Store.data.sessions.slice().sort(function (a, b) { return a.startedAt - b.startedAt; }).forEach(function (s) {
       s.blocks.forEach(function (b) {
         const labels = {};
@@ -604,7 +654,8 @@
         });
         rows.push([
           U.dayKey(s.startedAt), U.fmtClock(new Date(s.startedAt)), b.name,
-          Math.round(b.plannedMs / 60000), Math.round(studyMs(b) / 60000), b.status,
+          topicName(topicOf(b)), isBreak(b) ? 'si' : 'no',
+          Math.round(b.plannedMs / 60000), Math.round((b.actualMs || 0) / 60000), b.status,
           Math.round(distN(b)), Math.round(distMs(b) / 60000), Object.keys(labels).join(', ')
         ]);
       });
@@ -613,12 +664,13 @@
   };
 
   History.exportDistractions = function () {
-    const rows = [['fecha', 'hora', 'bloque', 'tipo', 'minutos', 'cuantas', 'razones', 'detalle']];
+    const rows = [['fecha', 'hora', 'bloque', 'tema', 'tipo', 'minutos', 'cuantas', 'razones', 'detalle']];
     Store.data.sessions.slice().sort(function (a, b) { return a.startedAt - b.startedAt; }).forEach(function (s) {
       s.blocks.forEach(function (b) {
         (b.distractions || []).forEach(function (d) {
           rows.push([
             U.dayKey(d.at || s.startedAt), U.fmtClock(new Date(d.at || s.startedAt)), b.name,
+            topicName(topicOf(b)),
             d.type || '', Math.round((d.ms || 0) / 60000), d.count || 1,
             Store.reasonLabels(d).join(', '), d.freeText || ''
           ]);
@@ -637,6 +689,7 @@
     renderChart(data);
     renderReasons(data);
     renderBlocks(data);
+    renderTopics(data);
     renderHours(data);
     renderGroups(data);
     document.getElementById('historyCount').textContent =

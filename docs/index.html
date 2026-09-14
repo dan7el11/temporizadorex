@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="assets/styles.css?v=3">
+<link rel="stylesheet" href="assets/styles.css?v=4">
 </head>
 <body>
 
@@ -61,7 +61,10 @@
           <div class="card card--queue">
             <div class="card__head">
               <h2>Sesión de hoy</h2>
-              <button class="btn btn--ghost btn--sm" id="clearQueue">Vaciar</button>
+              <div class="row">
+                <button class="btn btn--ghost btn--sm" id="autoBreaks">Descansos</button>
+                <button class="btn btn--ghost btn--sm" id="clearQueue">Vaciar</button>
+              </div>
             </div>
             <ol class="queue" id="queue"></ol>
             <div class="queue__empty" id="queueEmpty">
@@ -69,8 +72,9 @@
             </div>
             <div class="queue__summary">
               <div>
-                <span class="label">Tiempo total</span>
+                <span class="label">Tiempo de estudio</span>
                 <strong id="queueTotal">0 min</strong>
+                <span class="hint" id="queueBreaks"></span>
               </div>
               <div>
                 <span class="label">Terminarías a las</span>
@@ -128,6 +132,12 @@
       </div>
 
       <div class="card">
+        <h2>Horas por tema</h2>
+        <p class="hint">Cuánto llevas de cada asignatura. Los descansos no cuentan.</p>
+        <div id="topicBreakdown"></div>
+      </div>
+
+      <div class="card">
         <h2>Cuándo te distraes</h2>
         <p class="hint">Distracciones por hora del día. Sirve para colocar los bloques difíciles en tus mejores horas.</p>
         <div id="hourBreakdown"></div>
@@ -152,6 +162,14 @@
       <div class="card">
         <h2>Ajustes</h2>
         <div class="settings" id="settings"></div>
+      </div>
+      <div class="card">
+        <div class="card__head">
+          <h2>Temas y asignaturas</h2>
+          <button class="btn btn--primary btn--sm" id="newTopic">+ Nuevo tema</button>
+        </div>
+        <p class="hint">Se asignan a cada bloque al montar el día (y se pueden corregir al terminarlo o después). El historial te dice cuántas horas llevas de cada uno.</p>
+        <div class="reason-list" id="topicList"></div>
       </div>
       <div class="card">
         <div class="card__head">
@@ -226,6 +244,7 @@
       <div class="hud__left">
         <span class="hud__pill" id="hudProgress">Bloque 1 / 1</span>
         <span class="hud__pill" id="hudNext"></span>
+        <span class="hud__pill" id="hudPauses"></span>
       </div>
       <div class="hud__right">
         <span class="hud__pill" id="hudSession"></span>
@@ -249,17 +268,19 @@
 <video id="pipVideo" playsinline muted hidden></video>
 <canvas id="pipCanvas" width="640" height="360" hidden></canvas>
 
-<script src="src/utils.js?v=3"></script>
-<script src="src/store.js?v=3"></script>
-<script src="src/audio.js?v=3"></script>
-<script src="src/ui.js?v=3"></script>
-<script src="src/reasons.js?v=3"></script>
-<script src="src/library.js?v=3"></script>
-<script src="src/planner.js?v=3"></script>
-<script src="src/pip.js?v=3"></script>
-<script src="src/runner.js?v=3"></script>
-<script src="src/history.js?v=3"></script>
-<script src="src/settings.js?v=3"></script>
-<script src="src/app.js?v=3"></script>
+<script src="src/utils.js?v=4"></script>
+<script src="src/store.js?v=4"></script>
+<script src="src/audio.js?v=4"></script>
+<script src="src/ui.js?v=4"></script>
+<script src="src/reasons.js?v=4"></script>
+<script src="src/topics.js?v=4"></script>
+<script src="src/notify.js?v=4"></script>
+<script src="src/library.js?v=4"></script>
+<script src="src/planner.js?v=4"></script>
+<script src="src/pip.js?v=4"></script>
+<script src="src/runner.js?v=4"></script>
+<script src="src/history.js?v=4"></script>
+<script src="src/settings.js?v=4"></script>
+<script src="src/app.js?v=4"></script>
 </body>
 </html>

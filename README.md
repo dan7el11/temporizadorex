@@ -49,6 +49,17 @@ mueves para poder pulsarlos varias veces seguidas y se desactivan en los extremo
 lo quita del día. En el móvil no hay arrastre (no existe de forma nativa), pero los botones son más
 grandes.
 
+A cada bloque le puedes poner un **tema o asignatura** (Cardiología, Digestivo…). El catálogo viene
+con las asignaturas del MIR y se edita en *Ajustes → Temas y asignaturas*. Si al montar el día
+todavía no sabes qué vas a dar, lo dejas en blanco: al terminar el bloque la app te lo pregunta, y
+siempre se puede corregir después desde el historial.
+
+El botón **Descansos** intercala descansos automáticamente: dices cada cuántos minutos de estudio y
+de cuánto, y los coloca entre bloques sin partir ninguno. Es repetible —si cambias el día y vuelves
+a pulsarlo, los recoloca en vez de duplicarlos— y el botón *Quitar los descansos* los retira. Los
+bloques marcados como descanso en la biblioteca **no cuentan como tiempo de estudio**: el total del
+día los muestra aparte.
+
 Un día montado se puede guardar como **plantilla** y recargarlo otro día con un clic. Desde el
 historial también puedes «repetir» un día ya hecho.
 
@@ -61,10 +72,18 @@ historial también puedes «repetir» un día ya hecho.
 - **Sonidos** de inicio y de fin de bloque, y cuenta atrás opcional en los últimos 5 segundos.
 - Los bloques se encadenan solos (o esperan tu confirmación, si lo prefieres).
 - La pantalla no se apaga durante la sesión (Wake Lock, donde el navegador lo permite).
+- Opcionalmente, **aviso del sistema** al terminar un bloque cuando la pestaña está en segundo
+  plano. Se activa en *Ajustes* (el navegador pedirá permiso).
 
 ### Distracciones
 - **Un bloque iniciado no se puede reiniciar: solo pausar.** Cada pausa se registra como una
   distracción con **su propio cronómetro**, que se va sumando.
+- **Pausar cuesta a propósito.** Al pulsar pausa aparece una confirmación en la que el botón tarda
+  unos segundos en habilitarse —mientras el reloj sigue corriendo— y la opción destacada es *seguir
+  estudiando*; así una pausa impulsiva da tiempo a pensarla. También puedes fijar un **tope de pausas
+  por bloque**: al llegar, el aviso es más insistente y el contador de la cabecera se pone en rojo
+  (no te impide pausar, pero lo ves). Ambas cosas se ajustan o se desactivan en *Ajustes*, y en la
+  ventana miniatura la confirmación son dos toques sobre el mismo botón.
 - Al reanudar eliges la razón: puedes marcar varias y añadir un detalle escrito. Lo que marques se
   guarda aunque cierres con Esc.
 - Botón **+ Distracción** para anotar una sin parar el reloj (también pregunta la razón, y eso se
@@ -86,7 +105,8 @@ todo). Con eso tienes:
   objetivo.
 - Un **gráfico** por día o por semana, con el tiempo de distracción apilado en rojo, la **línea del
   objetivo** y en verde los días (o semanas) que lo cumplen.
-- **Causas de las distracciones** y **reparto por tipo de bloque**, para ver dónde se va el tiempo.
+- **Causas de las distracciones**, **reparto por tipo de bloque** y **horas por tema**, para ver
+  dónde se va el tiempo. Arriba puedes **filtrar por tema** y quedarte solo con una asignatura.
 - **Cuándo te distraes**: distracciones por hora del día, útil para colocar los bloques duros en tus
   mejores horas.
 - Cada día o semana muestra sus totales, y cada sesión se **despliega** para ver bloque a bloque sus
@@ -134,6 +154,8 @@ docs/                         Lo que se publica en GitHub Pages
   src/audio.js                Sonidos sintetizados con WebAudio (sin archivos)
   src/ui.js                   Modales, avisos y selector de color
   src/reasons.js              Catálogo de razones de distracción y su selector
+  src/topics.js               Catálogo de temas o asignaturas y su selector
+  src/notify.js               Avisos del sistema cuando la pestaña no está a la vista
   src/library.js              Biblioteca de tipos de temporizador
   src/planner.js              Plan del día: orden, tiempos y plantillas
   src/runner.js               Motor del temporizador y pantalla completa
