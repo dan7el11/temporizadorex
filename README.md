@@ -40,8 +40,8 @@ pestaña *Biblioteca*.
 
 ### Plan del día
 Vas añadiendo bloques desde la biblioteca a la *Sesión de hoy* y ajustas **el tiempo de cada uno**
-(campo de minutos o botones rápidos: 15, 25, 45, 50, 60, 90, 120). Arriba ves el tiempo total y **a
-qué hora terminarías**.
+(campo de minutos o botones rápidos: 25, 45, 60, 90, 120). Arriba ves el tiempo total y **a qué
+hora terminarías**.
 
 Para **reordenar** hay dos formas: arrastrar desde el asa de la izquierda —una línea azul marca
 dónde va a caer el bloque— o los botones de subir y bajar, que se quedan enfocados en el bloque que
