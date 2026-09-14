@@ -8,6 +8,7 @@
     ['sound', 'Sonidos', 'Aviso al empezar y al terminar cada bloque.'],
     ['finalBeeps', 'Cuenta atrás final', 'Pitido en los últimos 5 segundos de cada bloque.'],
     ['askDistractions', 'Preguntar por distracciones', 'Al terminar un bloque, ofrecer registrar las que no se detectaron; y etiquetar cada pausa.'],
+    ['askReasonQuick', 'Preguntar la razón al pulsar «+ Distracción»', 'Si lo desactivas, la distracción rápida se registra sin razón y sin abrir nada.'],
     ['autoNext', 'Encadenar bloques automáticamente', 'Si lo desactivas, cada bloque espera a que pulses «Empezar».'],
     ['wakeLock', 'Mantener la pantalla encendida', 'Evita que el dispositivo se apague durante la sesión.'],
     ['fullscreenOnStart', 'Pantalla completa al iniciar', 'Abre el temporizador a pantalla completa.']
@@ -46,6 +47,30 @@
       ]),
       vol
     ]));
+
+    // Objetivos de estudio
+    [['goalDaily', 'Objetivo diario', 'Minutos de estudio al día; se usa en el resumen y en el gráfico.'],
+     ['goalWeekly', 'Objetivo semanal', 'Minutos a la semana; marca el progreso de cada semana en el historial.']]
+      .forEach(function (g) {
+        const input = U.el('input', {
+          type: 'number', min: '0', max: '10080', step: '15', value: String(s[g[0]] || 0),
+          style: { width: '92px', background: 'var(--bg-soft)', border: '1px solid var(--line)', borderRadius: '10px', color: 'var(--text)', padding: '8px 10px' },
+          onchange: function () {
+            Store.setSetting(g[0], U.clamp(parseInt(input.value, 10) || 0, 0, 10080));
+            input.value = String(Store.data.settings[g[0]]);
+            hint.textContent = U.fmtHuman(Store.data.settings[g[0]] * 60000);
+            if (window.History) History.render();
+          }
+        });
+        const hint = U.el('small', { text: U.fmtHuman((s[g[0]] || 0) * 60000) });
+        box.appendChild(U.el('div', { class: 'setting' }, [
+          U.el('div', { class: 'setting__txt' }, [
+            U.el('span', { text: g[1] }),
+            U.el('small', { text: g[2] })
+          ]),
+          U.el('div', { class: 'row' }, [input, U.el('span', { class: 'qitem__unit', text: 'min' }), hint])
+        ]));
+      });
 
     // Fecha del examen
     const date = U.el('input', {

@@ -14,6 +14,18 @@
     { id: 'p_descanso', name: 'Descanso', color: '#0ea5b7', minutes: 15, note: 'Levantarse, agua, ventana.' }
   ];
 
+  // Razones de distracción; el usuario puede editarlas, añadir y borrar.
+  const DEFAULT_REASONS = [
+    { id: 'r_movil', label: 'Móvil' },
+    { id: 'r_redes', label: 'Redes sociales' },
+    { id: 'r_ruido', label: 'Ruido / gente' },
+    { id: 'r_mente', label: 'Pensamientos' },
+    { id: 'r_hambre', label: 'Hambre / sed' },
+    { id: 'r_bano', label: 'Baño' },
+    { id: 'r_cansancio', label: 'Cansancio / sueño' },
+    { id: 'r_otro', label: 'Otro' }
+  ];
+
   // Qué se ve en la ventana miniatura. `bg`: drain (se vacía) | solid | dark.
   const DEFAULT_MINI = {
     bg: 'drain',
@@ -33,12 +45,18 @@
     autoNext: true,
     wakeLock: true,
     examDate: '2027-01-23',
+    goalDaily: 360,          // objetivo de estudio al día, en minutos
+    goalWeekly: 1800,        // objetivo semanal, en minutos
+    historyGroup: 'day',     // 'day' | 'week'
+    historyRange: 14,        // días mostrados; 0 = todo
+    askReasonQuick: true,    // preguntar la razón en la distracción rápida
     mini: DEFAULT_MINI
   };
 
   const DEFAULT_DATA = {
     version: 1,
     presets: DEFAULT_PRESETS,
+    reasons: DEFAULT_REASONS,
     plans: [],      // plantillas de día
     queue: [],      // sesión de hoy en construcción
     sessions: [],   // historial
@@ -77,6 +95,7 @@
       this.data.settings = Object.assign({}, DEFAULT_SETTINGS, this.data.settings || {});
       this.data.settings.mini = Object.assign({}, DEFAULT_MINI, this.data.settings.mini || {});
       if (!Array.isArray(this.data.presets) || !this.data.presets.length) this.data.presets = deepClone(DEFAULT_PRESETS);
+      if (!Array.isArray(this.data.reasons) || !this.data.reasons.length) this.data.reasons = deepClone(DEFAULT_REASONS);
       ['plans', 'queue', 'sessions'].forEach(function (k) {
         if (!Array.isArray(Store.data[k])) Store.data[k] = [];
       });
@@ -103,6 +122,62 @@
     },
     getPreset: function (id) {
       return this.data.presets.find(function (x) { return x.id === id; }) || null;
+    },
+
+    /* ── Razones de distracción ──────────────────────────── */
+    addReason: function (label) {
+      const reason = { id: U.uid('r'), label: label };
+      this.data.reasons.push(reason);
+      this.save();
+      return reason;
+    },
+    updateReason: function (id, label) {
+      const r = this.data.reasons.find(function (x) { return x.id === id; });
+      if (r) { r.label = label; this.save(); }
+      return r;
+    },
+    /** Al borrar una razón, las distracciones ya registradas conservan su texto. */
+    removeReason: function (id) {
+      const label = this.reasonLabel(id);
+      this.data.sessions.forEach(function (s) {
+        s.blocks.forEach(function (b) {
+          (b.distractions || []).forEach(function (d) {
+            if (!d.reasons || d.reasons.indexOf(id) < 0) return;
+            d.reasons = d.reasons.filter(function (x) { return x !== id; });
+            d.freeText = d.freeText || label;
+          });
+        });
+      });
+      this.data.reasons = this.data.reasons.filter(function (x) { return x.id !== id; });
+      this.save();
+    },
+    moveReason: function (id, delta) {
+      const arr = this.data.reasons;
+      const i = arr.findIndex(function (x) { return x.id === id; });
+      const to = i + delta;
+      if (i < 0 || to < 0 || to >= arr.length) return;
+      const tmp = arr[i]; arr[i] = arr[to]; arr[to] = tmp;
+      this.save();
+    },
+    reasonLabel: function (id) {
+      const r = this.data.reasons.find(function (x) { return x.id === id; });
+      return r ? r.label : null;
+    },
+    /** Etiquetas de una distracción, con apoyo para los registros antiguos. */
+    reasonLabels: function (entry) {
+      const out = [];
+      (entry.reasons || []).forEach(function (id) {
+        const label = Store.reasonLabel(id);
+        if (label) out.push(label);
+      });
+      if (entry.freeText) out.push(entry.freeText);
+      if (!out.length && entry.tag) {
+        String(entry.tag).split(',').forEach(function (t) {
+          t = t.trim();
+          if (t) out.push(t);
+        });
+      }
+      return out;
     },
 
     /* ── Cola / sesión de hoy ────────────────────────────── */
@@ -169,7 +244,11 @@
       this.clearRun();
     },
 
-    DEFAULT_PRESETS: DEFAULT_PRESETS
+    /** Guarda una sesión editada del historial. */
+    saveSessions: function () { this.save(); },
+
+    DEFAULT_PRESETS: DEFAULT_PRESETS,
+    DEFAULT_REASONS: DEFAULT_REASONS
   };
 
   global.Store = Store;

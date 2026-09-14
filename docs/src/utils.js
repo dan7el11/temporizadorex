@@ -25,6 +25,7 @@
 
   /** ms -> "2 h 15 min" para textos de resumen. */
   U.fmtHuman = function (ms) {
+    if (!ms || ms <= 0) return '0 min';
     const totalMin = Math.round(ms / 60000);
     if (totalMin < 1) return Math.max(0, Math.round(ms / 1000)) + ' s';
     const h = Math.floor(totalMin / 60);
@@ -34,6 +35,12 @@
     return m + ' min';
   };
 
+  /** "1 distracción" / "3 distracciones". */
+  U.plural = function (n, singular, plural) {
+    const v = Math.round(n);
+    return v + ' ' + (v === 1 ? singular : plural);
+  };
+
   U.fmtClock = function (date) {
     return U.pad(date.getHours()) + ':' + U.pad(date.getMinutes());
   };
@@ -41,6 +48,44 @@
   U.dayKey = function (date) {
     const d = date ? new Date(date) : new Date();
     return d.getFullYear() + '-' + U.pad(d.getMonth() + 1) + '-' + U.pad(d.getDate());
+  };
+
+  U.startOfDay = function (ts) {
+    const d = new Date(ts);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  /** Lunes de la semana a la que pertenece la fecha. */
+  U.startOfWeek = function (ts) {
+    const d = U.startOfDay(ts);
+    const dow = (d.getDay() + 6) % 7;   // 0 = lunes
+    d.setDate(d.getDate() - dow);
+    return d;
+  };
+
+  U.MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  U.DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+  /** "8 – 14 sep" o "29 sep – 5 oct" para una semana. */
+  U.weekLabel = function (ts) {
+    const a = U.startOfWeek(ts);
+    const b = new Date(a.getTime() + 6 * 86400000);
+    if (a.getMonth() === b.getMonth()) {
+      return a.getDate() + ' – ' + b.getDate() + ' ' + U.MESES[b.getMonth()];
+    }
+    return a.getDate() + ' ' + U.MESES[a.getMonth()] + ' – ' + b.getDate() + ' ' + U.MESES[b.getMonth()];
+  };
+
+  /** "hoy", "ayer" o "lunes 8 sep". */
+  U.dayLabel = function (ts) {
+    const d = U.startOfDay(ts);
+    const today = U.startOfDay(Date.now());
+    const diff = Math.round((today - d) / 86400000);
+    if (diff === 0) return 'Hoy';
+    if (diff === 1) return 'Ayer';
+    const label = U.DIAS[d.getDay()] + ' ' + d.getDate() + ' ' + U.MESES[d.getMonth()];
+    return label.charAt(0).toUpperCase() + label.slice(1);
   };
 
   U.fmtDate = function (ts) {
@@ -162,7 +207,10 @@
     top: ['M5 4h14', 'M12 20V8', 'M6 13l6-6 6 6'],
     bottom: ['M5 20h14', 'M12 4v12', 'M18 11l-6 6-6-6'],
     trash: ['M4 7h16', 'M10 7V4h4v3', 'M6 7l1 13h10l1-13', 'M10 11v6', 'M14 11v6'],
-    grip: ['M9 5h.01', 'M9 12h.01', 'M9 19h.01', 'M15 5h.01', 'M15 12h.01', 'M15 19h.01']
+    grip: ['M9 5h.01', 'M9 12h.01', 'M9 19h.01', 'M15 5h.01', 'M15 12h.01', 'M15 19h.01'],
+    pencil: ['M4 20h4l10-10a2.8 2.8 0 0 0-4-4L4 16v4z', 'M13.5 6.5l4 4'],
+    plus: ['M12 5v14', 'M5 12h14'],
+    chevron: ['M9 6l6 6-6 6']
   };
 
   U.icon = function (name, size) {

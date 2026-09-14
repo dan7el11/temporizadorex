@@ -65,12 +65,35 @@ historial también puedes «repetir» un día ya hecho.
 ### Distracciones
 - **Un bloque iniciado no se puede reiniciar: solo pausar.** Cada pausa se registra como una
   distracción con **su propio cronómetro**, que se va sumando.
-- Al reanudar puedes etiquetar en un clic qué fue (móvil, ruido, pensamientos, cansancio…).
-- Botón **+ Distracción** para anotar una sin parar el reloj.
+- Al reanudar eliges la razón: puedes marcar varias y añadir un detalle escrito. Lo que marques se
+  guarda aunque cierres con Esc.
+- Botón **+ Distracción** para anotar una sin parar el reloj (también pregunta la razón, y eso se
+  puede desactivar en *Ajustes* si prefieres que sea un solo toque).
 - Al terminar cada bloque, la app **pregunta por las distracciones que no se registraron** (cuántas,
-  cuánto tiempo aproximado y de qué tipo).
-- En *Historial* tienes el total por sesión y por día, el tiempo perdido, las **distracciones por
-  hora** y las causas más repetidas.
+  cuánto tiempo aproximado y por qué).
+- **Las razones las defines tú.** En *Ajustes → Razones de distracción* se crean, renombran,
+  reordenan y borran; también puedes crear una sobre la marcha desde el propio diálogo. Al
+  renombrar una, el cambio se ve en todo el historial.
+- Nada queda cerrado: en el historial puedes **cambiar la razón de una distracción, corregir su
+  tiempo, borrarla o añadir la que se te olvidó** en su momento.
+
+### Historial
+La pestaña *Historial* se agrupa **por día o por semana**, y eliges el periodo (7, 14, 30, 90 días o
+todo). Con eso tienes:
+
+- Un **resumen**: estudio del periodo, media por día activo, distracciones y tiempo perdido,
+  distracciones por hora de estudio, **racha de días seguidos** y lo que llevas hoy frente al
+  objetivo.
+- Un **gráfico** por día o por semana, con el tiempo de distracción apilado en rojo, la **línea del
+  objetivo** y en verde los días (o semanas) que lo cumplen.
+- **Causas de las distracciones** y **reparto por tipo de bloque**, para ver dónde se va el tiempo.
+- **Cuándo te distraes**: distracciones por hora del día, útil para colocar los bloques duros en tus
+  mejores horas.
+- Cada día o semana muestra sus totales, y cada sesión se **despliega** para ver bloque a bloque sus
+  distracciones, con la hora, el tipo (pausa, sin parar el reloj, añadida) y la razón.
+
+Los **objetivos** diario y semanal se ponen en *Ajustes*. Y desde *Historial* puedes exportar a CSV
+(para Excel) tanto los bloques como las distracciones, una fila por cada una.
 
 ### Ventana miniatura (Picture in Picture)
 Con el botón *Miniatura* o la tecla `P` sacas una ventana pequeña, siempre visible sobre las demás
@@ -110,11 +133,12 @@ docs/                         Lo que se publica en GitHub Pages
   src/store.js                Persistencia (biblioteca, plantillas, historial, sesión en curso)
   src/audio.js                Sonidos sintetizados con WebAudio (sin archivos)
   src/ui.js                   Modales, avisos y selector de color
+  src/reasons.js              Catálogo de razones de distracción y su selector
   src/library.js              Biblioteca de tipos de temporizador
   src/planner.js              Plan del día: orden, tiempos y plantillas
   src/runner.js               Motor del temporizador y pantalla completa
   src/pip.js                  Ventana miniatura (dos implementaciones)
-  src/history.js              Historial y estadísticas de distracciones
+  src/history.js              Historial agrupado, estadísticas y exportación a CSV
   src/settings.js             Ajustes, miniatura y copias de seguridad
   src/app.js                  Arranque, navegación y atajos
   sw.js                       Service worker: sin conexión, sin quedarse en versiones viejas

@@ -237,7 +237,7 @@
     if (m.pauseTimer && s.paused) lines.push({ text: 'PAUSA · ' + s.pauseTime, size: 28, weight: 700, mono: true });
     if (m.distractions) {
       lines.push({
-        text: s.distractionCount ? s.distractionCount + ' distracciones · ' + s.distractionTotal : 'Sin distracciones',
+        text: s.distractionCount ? U.plural(s.distractionCount, 'distracción', 'distracciones') + ' · ' + s.distractionTotal : 'Sin distracciones',
         size: 19, weight: 600
       });
     }

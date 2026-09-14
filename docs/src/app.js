@@ -8,7 +8,7 @@
     U.$$('.view').forEach(function (v) { v.classList.toggle('is-active', v.id === 'view-' + name); });
     U.$$('.tab').forEach(function (t) { t.classList.toggle('is-active', t.dataset.view === name); });
     if (name === 'history') History.render();
-    if (name === 'settings') Settings.render();
+    if (name === 'settings') { Settings.render(); Reasons.render(); }
     if (name === 'library') Library.render();
   };
 
@@ -18,6 +18,7 @@
     Library.render();
     History.render();
     Settings.render();
+    Reasons.render();
     App.renderCountdown();
   };
 
@@ -71,6 +72,9 @@
       e.target.value = '';
     });
     document.getElementById('resetData').addEventListener('click', Settings.resetAll);
+    document.getElementById('newReason').addEventListener('click', Reasons.create);
+    document.getElementById('exportBlocks').addEventListener('click', History.exportBlocks);
+    document.getElementById('exportDistractions').addEventListener('click', History.exportDistractions);
 
     // Mostrar los controles al mover el ratón o tocar la pantalla del temporizador.
     ['mousemove', 'touchstart', 'click'].forEach(function (ev) {

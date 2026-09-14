@@ -11,6 +11,19 @@
   ];
   UI.PALETTE = PALETTE;
 
+  const openModals = [];   // diálogos abiertos, para poder cerrar los descartables
+
+  /**
+   * Cierra los diálogos que se pueden descartar (los informativos u opcionales),
+   * dejando en pie los que exigen una respuesta. Se usa cuando pasa algo
+   * importante —termina un bloque, acaba la sesión— y no deben quedar apilados.
+   */
+  UI.closeTransient = function () {
+    openModals.slice().forEach(function (m) {
+      if (m.dismissible !== false) m.close(null);
+    });
+  };
+
   let toastTimer = null;
   UI.toast = function (msg, ms) {
     const t = document.getElementById('toast');
@@ -35,10 +48,14 @@
       function close(value) {
         if (done) return;
         done = true;
+        const i = openModals.indexOf(handle);
+        if (i >= 0) openModals.splice(i, 1);
         try { box.close(); } catch (e) { /* noop */ }
         box.remove();
         resolve(value === undefined ? null : value);
       }
+
+      const handle = { close: close, dismissible: opts.dismissible };
 
       box.addEventListener('cancel', function (e) {
         e.preventDefault();
@@ -67,6 +84,7 @@
         if (outside) close(null);
       });
 
+      openModals.push(handle);
       root().appendChild(box);
       box.showModal();
 

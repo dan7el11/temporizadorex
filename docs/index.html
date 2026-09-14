@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="assets/styles.css?v=2">
+<link rel="stylesheet" href="assets/styles.css?v=3">
 </head>
 <body>
 
@@ -99,15 +99,50 @@
     <!-- ══════════════ HISTORIAL ══════════════ -->
     <section class="view" id="view-history">
       <div class="card">
-        <h2>Resumen de los últimos 14 días</h2>
+        <div class="card__head">
+          <h2>Resumen</h2>
+          <div class="controls" id="historyControls"></div>
+        </div>
         <div class="stats" id="stats"></div>
-        <div class="chart" id="chart"></div>
+        <div class="chart-wrap" id="chartWrap">
+          <div class="chart" id="chart"></div>
+        </div>
+        <div id="chartLegend"></div>
       </div>
+
+      <div class="grid grid--even">
+        <div class="col">
+          <div class="card">
+            <h2>Causas de las distracciones</h2>
+            <p class="hint">Cuántas veces aparece cada razón en el periodo elegido.</p>
+            <div id="reasonBreakdown"></div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="card">
+            <h2>Reparto por tipo de bloque</h2>
+            <p class="hint">Dónde se va realmente tu tiempo de estudio.</p>
+            <div id="blockBreakdown"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Cuándo te distraes</h2>
+        <p class="hint">Distracciones por hora del día. Sirve para colocar los bloques difíciles en tus mejores horas.</p>
+        <div id="hourBreakdown"></div>
+      </div>
+
       <div class="card">
         <div class="card__head">
           <h2>Sesiones</h2>
-          <span class="hint" id="historyCount"></span>
+          <div class="row row--wrap">
+            <span class="hint" id="historyCount"></span>
+            <button class="btn btn--ghost btn--sm" id="exportBlocks">Bloques (.csv)</button>
+            <button class="btn btn--ghost btn--sm" id="exportDistractions">Distracciones (.csv)</button>
+          </div>
         </div>
+        <p class="hint">Despliega una sesión para ver sus bloques y sus distracciones: desde ahí puedes cambiar la razón, corregir el tiempo o añadir la que se te olvidó.</p>
         <div class="history" id="history"></div>
       </div>
     </section>
@@ -117,6 +152,14 @@
       <div class="card">
         <h2>Ajustes</h2>
         <div class="settings" id="settings"></div>
+      </div>
+      <div class="card">
+        <div class="card__head">
+          <h2>Razones de distracción</h2>
+          <button class="btn btn--primary btn--sm" id="newReason">+ Nueva razón</button>
+        </div>
+        <p class="hint">Estas son las razones que se ofrecen al pausar, al registrar una distracción y al editarla después. Ordénalas como más te convenga: las primeras son las que más a mano quedan.</p>
+        <div class="reason-list" id="reasonList"></div>
       </div>
       <div class="card">
         <h2>Ventana miniatura</h2>
@@ -206,16 +249,17 @@
 <video id="pipVideo" playsinline muted hidden></video>
 <canvas id="pipCanvas" width="640" height="360" hidden></canvas>
 
-<script src="src/utils.js?v=2"></script>
-<script src="src/store.js?v=2"></script>
-<script src="src/audio.js?v=2"></script>
-<script src="src/ui.js?v=2"></script>
-<script src="src/library.js?v=2"></script>
-<script src="src/planner.js?v=2"></script>
-<script src="src/pip.js?v=2"></script>
-<script src="src/runner.js?v=2"></script>
-<script src="src/history.js?v=2"></script>
-<script src="src/settings.js?v=2"></script>
-<script src="src/app.js?v=2"></script>
+<script src="src/utils.js?v=3"></script>
+<script src="src/store.js?v=3"></script>
+<script src="src/audio.js?v=3"></script>
+<script src="src/ui.js?v=3"></script>
+<script src="src/reasons.js?v=3"></script>
+<script src="src/library.js?v=3"></script>
+<script src="src/planner.js?v=3"></script>
+<script src="src/pip.js?v=3"></script>
+<script src="src/runner.js?v=3"></script>
+<script src="src/history.js?v=3"></script>
+<script src="src/settings.js?v=3"></script>
+<script src="src/app.js?v=3"></script>
 </body>
 </html>

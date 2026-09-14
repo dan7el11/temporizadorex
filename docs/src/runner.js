@@ -3,7 +3,6 @@
   'use strict';
 
   const Runner = {};
-  const TAGS = ['Móvil', 'Redes', 'Ruido / gente', 'Pensamientos', 'Hambre / agua', 'Baño', 'Cansancio', 'Otro'];
 
   let state = null;          // estado de la sesión en curso
   let timer = null;          // intervalo de refresco
@@ -168,7 +167,7 @@
     if (!state || !state.pausedAt) return;
     const b = block();
     const ms = Date.now() - state.pausedAt;
-    const entry = { type: 'pause', at: state.pausedAt, ms: ms, count: 1, tag: null };
+    const entry = { type: 'pause', at: state.pausedAt, ms: ms, count: 1, reasons: [], freeText: null };
     b.distractions.push(entry);
     state.pausedAt = null;
     state.runningSince = Date.now();
@@ -177,27 +176,37 @@
     Sound.resume();
     persist();
     tick();
-    if (Store.data.settings.askDistractions && ms > 8000) askTag(entry);
+    if (Store.data.settings.askDistractions && ms > 8000) {
+      askReason(entry, 'Distracción de ' + U.fmtHuman(entry.ms),
+        '¿Qué ha sido? Puedes marcar varias razones; el temporizador ya está corriendo.');
+    }
   };
 
-  /** Etiquetado rápido y opcional de la distracción recién terminada. */
-  function askTag(entry) {
+  /**
+   * Razón de una distracción (opcional, el reloj sigue corriendo).
+   * Lo elegido se guarda al cerrar de cualquier forma —botón, Esc o clic fuera—
+   * para no perder la selección por descuido; «Sin razón» la descarta.
+   */
+  function askReason(entry, title, sub) {
+    let picker;
     UI.modal({
-      title: 'Distracción de ' + U.fmtHuman(entry.ms),
-      sub: '¿Qué ha sido? (opcional — el temporizador ya está corriendo)',
-      build: function (close) {
-        const chips = U.el('div', { class: 'chips' });
-        TAGS.forEach(function (t) {
-          chips.appendChild(U.el('button', {
-            class: 'chip', type: 'button', text: t,
-            onclick: function () { entry.tag = t; persist(); close(t); }
-          }));
-        });
-        return chips;
+      title: title,
+      sub: sub,
+      build: function () {
+        picker = Reasons.picker(entry);
+        return picker.node;
       },
       actions: function (close) {
-        return [U.el('button', { class: 'btn btn--ghost', text: 'Sin etiqueta', onclick: function () { close(null); } })];
+        return [
+          U.el('button', { class: 'btn btn--ghost', text: 'Sin razón', onclick: function () { close('none'); } }),
+          U.el('button', { class: 'btn btn--primary', text: 'Guardar', onclick: function () { close('save'); } })
+        ];
       }
+    }).then(function (result) {
+      if (result === 'none') Reasons.apply(entry, { reasons: [], freeText: null });
+      else Reasons.apply(entry, picker.value);
+      persist();
+      tick();
     });
   }
 
@@ -205,17 +214,26 @@
   Runner.quickDistraction = function () {
     if (!state || state.gate) return;
     const b = block();
-    b.distractions.push({ type: 'quick', at: Date.now(), ms: 0, count: 1, tag: null });
+    const entry = { type: 'quick', at: Date.now(), ms: 0, count: 1, reasons: [], freeText: null };
+    b.distractions.push(entry);
     Sound.distraction();
-    UI.toast('Distracción registrada (sin parar el reloj)');
     persist();
     tick();
+
+    if (!Store.data.settings.askReasonQuick) {
+      UI.toast('Distracción registrada (sin parar el reloj)');
+      return;
+    }
+    askReason(entry, 'Distracción registrada', 'El reloj no se ha parado. ¿Por qué ha sido? (opcional)');
   };
 
   /* ── Fin de bloque ─────────────────────────────────────── */
   function completeBlock(skipped) {
     const b = block();
     if (!b || state.gate) return;
+    // Si quedaba abierto un diálogo opcional (p. ej. la razón de una
+    // distracción rápida), se cierra para no apilarlo con el de fin de bloque.
+    UI.closeTransient();
     b.elapsedBefore = elapsedMs();
     b.endedAt = Date.now();
     b.status = skipped ? 'skipped' : 'done';
@@ -248,11 +266,11 @@
   function askUndetected(b) {
     let count = 0;
     let minutes = 0;
-    const chosen = [];
+    let picker;
 
     return UI.modal({
       title: 'Bloque terminado: ' + b.name,
-      sub: 'Registradas ' + blockDistractionCountFor(b) + ' distracciones (' + U.fmtHuman(distractionMsFor(b)) + '). ¿Hubo alguna más que no quedó registrada?',
+      sub: 'Registradas ' + U.plural(blockDistractionCountFor(b), 'distracción', 'distracciones') + ' (' + U.fmtHuman(distractionMsFor(b)) + '). ¿Hubo alguna más que no quedó registrada?',
       dismissible: false,
       build: function () {
         const frag = document.createDocumentFragment();
@@ -273,20 +291,9 @@
         frag.appendChild(f2);
 
         const f3 = U.el('div', { class: 'field' });
-        f3.appendChild(U.el('label', { text: 'Tipo (opcional)' }));
-        const chips = U.el('div', { class: 'chips' });
-        TAGS.forEach(function (t) {
-          const c = U.el('button', {
-            class: 'chip', type: 'button', text: t,
-            onclick: function () {
-              const i = chosen.indexOf(t);
-              if (i >= 0) chosen.splice(i, 1); else chosen.push(t);
-              c.classList.toggle('is-active');
-            }
-          });
-          chips.appendChild(c);
-        });
-        f3.appendChild(chips);
+        f3.appendChild(U.el('label', { text: 'Razón (opcional)' }));
+        picker = Reasons.picker(null);
+        f3.appendChild(picker.node);
         frag.appendChild(f3);
 
         return frag;
@@ -297,11 +304,13 @@
           U.el('button', {
             class: 'btn btn--primary', text: 'Registrar y seguir',
             onclick: function () {
-              if (count > 0 || minutes > 0) {
+              const chosen = picker.value;
+              if (count > 0 || minutes > 0 || chosen.reasons.length || chosen.freeText) {
                 b.distractions.push({
                   type: 'post', at: Date.now(), ms: minutes * 60000,
-                  count: Math.max(count, minutes > 0 ? 1 : 0),
-                  tag: chosen.join(', ') || null
+                  count: Math.max(count, 1),
+                  reasons: chosen.reasons,
+                  freeText: chosen.freeText
                 });
                 persist();
               }
@@ -371,7 +380,7 @@
       b.endedAt = Date.now();
       b.status = 'partial';
       if (state.pausedAt) {
-        b.distractions.push({ type: 'pause', at: state.pausedAt, ms: Date.now() - state.pausedAt, count: 1, tag: null });
+        b.distractions.push({ type: 'pause', at: state.pausedAt, ms: Date.now() - state.pausedAt, count: 1, reasons: [], freeText: null });
         state.pausedAt = null;
       }
     }
@@ -397,6 +406,7 @@
     Store.addSession(session);
     Store.clearRun();
 
+    UI.closeTransient();
     Sound.finish();
     PiP.close();
     releaseWakeLock();
@@ -427,7 +437,7 @@
         ]));
         list.appendChild(U.el('li', { class: 'hblock' }, [
           U.el('span', { class: 'hblock__name', text: 'Distracciones' }),
-          U.el('strong', { text: distN + ' · ' + U.fmtHuman(distMs) })
+          U.el('strong', { text: U.plural(distN, 'distracción', 'distracciones') + ' · ' + U.fmtHuman(distMs) })
         ]));
         session.blocks.forEach(function (b) {
           list.appendChild(U.el('li', { class: 'hblock' }, [
@@ -482,7 +492,7 @@
     const distMs = blockDistractionMs();
     const sub = 'Bloque ' + (state.index + 1) + ' de ' + state.blocks.length +
       ' · ' + U.fmtHuman(b.plannedMs) +
-      (distN ? '  ·  ' + distN + ' distracciones (' + U.fmtHuman(distMs) + ')' : '  ·  sin distracciones');
+      (distN ? '  ·  ' + U.plural(distN, 'distracción', 'distracciones') + ' (' + U.fmtHuman(distMs) + ')' : '  ·  sin distracciones');
     setLayers('.js-sub', sub);
 
     const pausedNodes = U.$$('#stage .js-pause');
