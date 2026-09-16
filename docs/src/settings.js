@@ -223,6 +223,178 @@
     });
   };
 
+  /* ── Sincronización entre dispositivos ─────────────────── */
+  Settings.renderSync = function () {
+    const box = document.getElementById('syncPanel');
+    if (!box) return;
+    U.clear(box);
+    Sync.load();
+
+    if (!Sync.configured()) { box.appendChild(configForm()); return; }
+    if (!Sync.signedIn()) { box.appendChild(loginForm()); return; }
+    box.appendChild(signedInPanel());
+  };
+
+  function row(label, hint, control) {
+    return U.el('div', { class: 'setting' }, [
+      U.el('div', { class: 'setting__txt' }, [
+        U.el('span', { text: label }),
+        hint ? U.el('small', { text: hint }) : null
+      ]),
+      control
+    ]);
+  }
+
+  /** Paso 1: pegar la URL y la clave pública del proyecto de Supabase. */
+  function configForm() {
+    const frag = document.createDocumentFragment();
+    const current = Sync.config();
+
+    frag.appendChild(U.el('p', { class: 'hint' }, [
+      U.el('span', { text: 'Para sincronizar el móvil y el ordenador hace falta un proyecto gratuito de Supabase. Crea uno en supabase.com, abre ' }),
+      U.el('strong', { text: 'Project Settings → API' }),
+      U.el('span', { text: ' y pega aquí la URL y la clave ' }),
+      U.el('strong', { text: 'anon public' }),
+      U.el('span', { text: '. Esa clave está pensada para ir en el cliente: lo que protege tus datos son las reglas del paso siguiente.' })
+    ]));
+
+    const url = U.el('input', { type: 'text', class: 'sync-input', value: current.url, placeholder: 'https://xxxxxxxx.supabase.co' });
+    const key = U.el('input', { type: 'text', class: 'sync-input', value: current.key, placeholder: 'eyJhbGciOi...' });
+
+    const f1 = U.el('div', { class: 'field' }, [U.el('label', { text: 'URL del proyecto' }), url]);
+    const f2 = U.el('div', { class: 'field' }, [U.el('label', { text: 'Clave pública (anon)' }), key]);
+    frag.appendChild(f1);
+    frag.appendChild(f2);
+
+    frag.appendChild(U.el('div', { class: 'row row--wrap' }, [
+      U.el('button', {
+        class: 'btn btn--primary', text: 'Guardar y continuar',
+        onclick: function () {
+          if (!/^https:\/\/.+/.test(url.value.trim()) || key.value.trim().length < 20) {
+            UI.toast('Revisa la URL y la clave');
+            return;
+          }
+          Sync.setConfig(url.value, key.value);
+          Settings.renderSync();
+        }
+      }),
+      U.el('button', { class: 'btn btn--ghost', text: 'Ver el SQL de la tabla', onclick: showSQL })
+    ]));
+
+    return frag;
+  }
+
+  /** El SQL que hay que ejecutar una vez en el proyecto. */
+  function showSQL() {
+    UI.modal({
+      title: 'Tabla y permisos',
+      sub: 'Pega esto en el SQL Editor de Supabase y ejecútalo una sola vez. Crea la tabla y la regla que hace que cada cuenta solo pueda ver sus propios datos.',
+      build: function () {
+        const pre = U.el('pre', { class: 'sqlbox', text: Sync.SQL });
+        return U.el('div', {}, [
+          pre,
+          U.el('div', { class: 'row row--wrap', style: { marginTop: '10px' } }, [
+            U.el('button', {
+              class: 'btn btn--ghost btn--sm', text: 'Copiar',
+              onclick: function () {
+                if (navigator.clipboard) navigator.clipboard.writeText(Sync.SQL).then(function () { UI.toast('SQL copiado'); });
+              }
+            })
+          ])
+        ]);
+      },
+      actions: function (close) {
+        return [U.el('button', { class: 'btn btn--primary', text: 'Cerrar', onclick: function () { close(true); } })];
+      }
+    });
+  }
+
+  /** Paso 2: crear la cuenta o entrar. */
+  function loginForm() {
+    const frag = document.createDocumentFragment();
+    const email = U.el('input', { type: 'email', class: 'sync-input', placeholder: 'tu@correo.com', autocomplete: 'username' });
+    const pass = U.el('input', { type: 'password', class: 'sync-input', placeholder: 'Contraseña', autocomplete: 'current-password' });
+
+    frag.appendChild(U.el('p', { class: 'hint', text: 'Entra con tu cuenta en los dos dispositivos. Si es la primera vez, crea la cuenta; puede que Supabase te pida confirmar el correo.' }));
+    frag.appendChild(U.el('div', { class: 'field' }, [U.el('label', { text: 'Correo' }), email]));
+    frag.appendChild(U.el('div', { class: 'field' }, [U.el('label', { text: 'Contraseña' }), pass]));
+
+    function attempt(fn, okMessage) {
+      const e = email.value.trim(), p = pass.value;
+      if (!e || p.length < 6) { UI.toast('Correo y contraseña de al menos 6 caracteres'); return; }
+      UI.toast('Conectando…');
+      fn(e, p).then(function (res) {
+        if (res && res.signedIn === false) {
+          UI.toast('Cuenta creada: confirma el correo y vuelve a entrar', 5000);
+          return;
+        }
+        UI.toast(okMessage);
+        Settings.renderSync();
+        Sync.run().catch(function () { /* el aviso ya lo da run() */ });
+      }).catch(function (err) { UI.toast(err.message, 4500); });
+    }
+
+    frag.appendChild(U.el('div', { class: 'row row--wrap' }, [
+      U.el('button', { class: 'btn btn--primary', text: 'Entrar', onclick: function () { attempt(Sync.signIn, 'Sesión iniciada'); } }),
+      U.el('button', { class: 'btn btn--ghost', text: 'Crear cuenta', onclick: function () { attempt(Sync.signUp, 'Cuenta creada'); } }),
+      U.el('button', { class: 'btn btn--ghost', text: 'Ver el SQL de la tabla', onclick: showSQL }),
+      U.el('button', {
+        class: 'btn btn--danger-ghost', text: 'Cambiar de proyecto',
+        onclick: function () { Sync.forget(); Settings.renderSync(); }
+      })
+    ]));
+    return frag;
+  }
+
+  /** Paso 3: ya sincroniza. */
+  function signedInPanel() {
+    const frag = document.createDocumentFragment();
+    const last = Sync.lastSync();
+
+    frag.appendChild(U.el('p', { class: 'hint' }, [
+      U.el('span', { text: 'Conectado como ' }),
+      U.el('strong', { text: Sync.email() || 'tu cuenta' }),
+      U.el('span', { text: last ? '. Última sincronización: ' + U.fmtDate(last) + ' a las ' + U.fmtClock(new Date(last)) + '.' : '. Todavía no has sincronizado.' })
+    ]));
+
+    const auto = U.el('input', {
+      type: 'checkbox', checked: Sync.auto() ? true : null,
+      onchange: function () { Sync.setAuto(auto.checked); }
+    });
+    frag.appendChild(row('Sincronizar automáticamente',
+      'Al abrir la aplicación y al terminar cada sesión de estudio.',
+      U.el('label', { class: 'switch' }, [auto, U.el('i')])));
+
+    frag.appendChild(U.el('div', { class: 'row row--wrap', style: { marginTop: '12px' } }, [
+      U.el('button', {
+        class: 'btn btn--primary', text: 'Sincronizar ahora',
+        onclick: function () {
+          UI.toast('Sincronizando…');
+          Sync.run().then(function () { Settings.renderSync(); }).catch(function () { /* avisado */ });
+        }
+      }),
+      U.el('button', {
+        class: 'btn btn--ghost', text: 'Cerrar sesión',
+        onclick: function () { Sync.signOut(); Settings.renderSync(); }
+      }),
+      U.el('button', {
+        class: 'btn btn--danger-ghost', text: 'Olvidar el proyecto',
+        onclick: function () {
+          UI.confirm('¿Olvidar la configuración de sincronización?',
+            'Se borran de este navegador la URL, la clave y tu sesión. Los datos del servidor y los de aquí no se tocan.',
+            'Olvidar', true).then(function (ok) {
+              if (!ok) return;
+              Sync.forget();
+              Settings.renderSync();
+            });
+        }
+      })
+    ]));
+
+    frag.appendChild(U.el('p', { class: 'hint', style: { marginTop: '12px' }, text: 'Al sincronizar no se pisa nada: se unen las sesiones de los dos dispositivos por su identificador, y lo que borres en uno se queda borrado en el otro.' }));
+    return frag;
+  }
+
   Settings.exportData = function () {
     const blob = new Blob([Store.exportJSON()], { type: 'application/json' });
     const a = U.el('a', { href: URL.createObjectURL(blob), download: 'mir2027-temporizador-' + U.dayKey() + '.json' });
@@ -234,13 +406,28 @@
   Settings.importData = function (file) {
     const reader = new FileReader();
     reader.onload = function () {
-      try {
-        Store.importJSON(String(reader.result));
-        App.renderAll();
-        UI.toast('Copia importada correctamente');
-      } catch (e) {
-        UI.toast('No se pudo leer el archivo');
-      }
+      UI.modal({
+        title: 'Importar copia',
+        sub: 'Lo normal es fusionar: se añade lo que falte sin tocar lo que ya tienes aquí. Reemplazar borra los datos de este navegador.',
+        actions: function (close) {
+          return [
+            U.el('button', { class: 'btn btn--ghost', text: 'Cancelar', onclick: function () { close(null); } }),
+            U.el('button', { class: 'btn btn--danger-ghost', text: 'Reemplazar', onclick: function () { close('replace'); } }),
+            U.el('button', { class: 'btn btn--primary', text: 'Fusionar', onclick: function () { close('merge'); } })
+          ];
+        }
+      }).then(function (mode) {
+        if (!mode) return;
+        try {
+          const res = Store.importJSON(String(reader.result), mode === 'replace');
+          App.renderAll();
+          UI.toast(mode === 'replace'
+            ? 'Copia importada (reemplazada)'
+            : 'Copia fusionada · ' + U.plural(res.sessions, 'sesión', 'sesiones') + ' en total');
+        } catch (e) {
+          UI.toast('No se pudo leer el archivo');
+        }
+      });
     };
     reader.readAsText(file);
   };

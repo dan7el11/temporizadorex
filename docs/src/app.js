@@ -8,7 +8,7 @@
     U.$$('.view').forEach(function (v) { v.classList.toggle('is-active', v.id === 'view-' + name); });
     U.$$('.tab').forEach(function (t) { t.classList.toggle('is-active', t.dataset.view === name); });
     if (name === 'history') History.render();
-    if (name === 'settings') { Settings.render(); Reasons.render(); Topics.render(); }
+    if (name === 'settings') { Settings.render(); Reasons.render(); Topics.render(); Settings.renderSync(); }
     if (name === 'library') Library.render();
   };
 
@@ -20,6 +20,7 @@
     Settings.render();
     Reasons.render();
     Topics.render();
+    Settings.renderSync();
     App.renderCountdown();
   };
 
@@ -167,6 +168,8 @@
     App.showView('plan');
     recoverRun();
     registerSW();
+    Sync.load();
+    Sync.maybeRun();
     setInterval(App.renderCountdown, 60000);
   };
 

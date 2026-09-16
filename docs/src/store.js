@@ -69,8 +69,15 @@
     mini: DEFAULT_MINI
   };
 
+  // Colecciones que se fusionan por id al sincronizar.
+  const MERGEABLE = ['sessions', 'presets', 'reasons', 'topics', 'plans'];
+
   const DEFAULT_DATA = {
     version: 1,
+    // Marca de la última escritura y quién la hizo; y qué se ha borrado, para
+    // que un borrado no reaparezca al sincronizar con otro dispositivo.
+    meta: { updatedAt: 0, deviceId: '' },
+    tombstones: {},
     presets: DEFAULT_PRESETS,
     reasons: DEFAULT_REASONS,
     topics: DEFAULT_TOPICS,
@@ -111,6 +118,9 @@
       this.data = Object.assign(deepClone(DEFAULT_DATA), stored || {});
       this.data.settings = Object.assign({}, DEFAULT_SETTINGS, this.data.settings || {});
       this.data.settings.mini = Object.assign({}, DEFAULT_MINI, this.data.settings.mini || {});
+      this.data.meta = Object.assign({ updatedAt: 0, deviceId: '' }, this.data.meta || {});
+      if (!this.data.meta.deviceId) this.data.meta.deviceId = U.uid('dev');
+      if (!this.data.tombstones || typeof this.data.tombstones !== 'object') this.data.tombstones = {};
       if (!Array.isArray(this.data.presets) || !this.data.presets.length) this.data.presets = deepClone(DEFAULT_PRESETS);
       if (!Array.isArray(this.data.reasons) || !this.data.reasons.length) this.data.reasons = deepClone(DEFAULT_REASONS);
       if (!Array.isArray(this.data.topics)) this.data.topics = deepClone(DEFAULT_TOPICS);
@@ -124,7 +134,22 @@
       return this.data;
     },
 
-    save: function () { write(KEY, this.data); },
+    save: function (keepStamp) {
+      if (!keepStamp) this.data.meta.updatedAt = Date.now();
+      write(KEY, this.data);
+    },
+
+    /** Deja constancia de un borrado para que no vuelva desde otro dispositivo. */
+    tomb: function (kind, id) {
+      if (!this.data.tombstones[kind]) this.data.tombstones[kind] = {};
+      this.data.tombstones[kind][id] = Date.now();
+    },
+
+    /** Marca un elemento como editado: en un empate al fusionar, gana el más reciente. */
+    touch: function (item) {
+      if (item) item.touchedAt = Date.now();
+      return item;
+    },
 
     /* ── Biblioteca ──────────────────────────────────────── */
     addPreset: function (preset) {
@@ -135,11 +160,12 @@
     },
     updatePreset: function (id, patch) {
       const p = this.data.presets.find(function (x) { return x.id === id; });
-      if (p) { Object.assign(p, patch); this.save(); }
+      if (p) { Object.assign(p, patch); this.touch(p); this.save(); }
       return p;
     },
     removePreset: function (id) {
       this.data.presets = this.data.presets.filter(function (x) { return x.id !== id; });
+      this.tomb('presets', id);
       this.save();
     },
     getPreset: function (id) {
@@ -155,7 +181,7 @@
     },
     updateReason: function (id, label) {
       const r = this.data.reasons.find(function (x) { return x.id === id; });
-      if (r) { r.label = label; this.save(); }
+      if (r) { r.label = label; this.touch(r); this.save(); }
       return r;
     },
     /** Al borrar una razón, las distracciones ya registradas conservan su texto. */
@@ -171,6 +197,7 @@
         });
       });
       this.data.reasons = this.data.reasons.filter(function (x) { return x.id !== id; });
+      this.tomb('reasons', id);
       this.save();
     },
     moveReason: function (id, delta) {
@@ -211,11 +238,12 @@
     },
     updateTopic: function (id, label) {
       const t = this.data.topics.find(function (x) { return x.id === id; });
-      if (t) { t.label = label; this.save(); }
+      if (t) { t.label = label; this.touch(t); this.save(); }
       return t;
     },
     removeTopic: function (id) {
       this.data.topics = this.data.topics.filter(function (x) { return x.id !== id; });
+      this.tomb('topics', id);
       this.save();
     },
     moveTopic: function (id, delta) {
@@ -244,6 +272,7 @@
     },
     removePlan: function (id) {
       this.data.plans = this.data.plans.filter(function (x) { return x.id !== id; });
+      this.tomb('plans', id);
       this.save();
     },
 
@@ -256,6 +285,7 @@
     },
     removeSession: function (id) {
       this.data.sessions = this.data.sessions.filter(function (s) { return s.id !== id; });
+      this.tomb('sessions', id);
       this.save();
     },
 
@@ -278,6 +308,75 @@
     clearRun: function () { try { localStorage.removeItem(RUN_KEY); } catch (e) { /* noop */ } },
 
     /* ── Copia de seguridad ──────────────────────────────── */
+    /**
+     * Fusiona estos datos con los de otro dispositivo sin perder nada:
+     * las colecciones se unen por id, un elemento que está en los dos se
+     * resuelve por su marca de edición, y lo borrado en cualquiera de los dos
+     * se queda borrado. Ajustes y plan del día: gana el documento más reciente.
+     */
+    mergeWith: function (remote) {
+      if (!remote || typeof remote !== 'object') return this.data;
+      const local = this.data;
+      const localStamp = (local.meta && local.meta.updatedAt) || 0;
+      const remoteStamp = (remote.meta && remote.meta.updatedAt) || 0;
+      const localWins = localStamp >= remoteStamp;
+      const base = localWins ? local : remote;
+      const other = localWins ? remote : local;
+
+      const out = deepClone(base);
+      out.settings = Object.assign({}, DEFAULT_SETTINGS, base.settings || {});
+      out.settings.mini = Object.assign({}, DEFAULT_MINI, (base.settings || {}).mini || {});
+
+      // Marcas de borrado: la unión, con la fecha más alta de cada una.
+      const tombs = {};
+      MERGEABLE.forEach(function (kind) {
+        const a = (local.tombstones || {})[kind] || {};
+        const b = (remote.tombstones || {})[kind] || {};
+        const t = {};
+        Object.keys(a).concat(Object.keys(b)).forEach(function (id) {
+          t[id] = Math.max(a[id] || 0, b[id] || 0);
+        });
+        if (Object.keys(t).length) tombs[kind] = t;
+      });
+      out.tombstones = tombs;
+
+      MERGEABLE.forEach(function (kind) {
+        const baseList = Array.isArray(base[kind]) ? base[kind] : [];
+        const otherList = Array.isArray(other[kind]) ? other[kind] : [];
+        const byId = {};
+        const order = [];
+
+        baseList.forEach(function (item) {
+          if (!item || !item.id) return;
+          byId[item.id] = item;
+          order.push(item.id);
+        });
+        otherList.forEach(function (item) {
+          if (!item || !item.id) return;
+          const mine = byId[item.id];
+          if (!mine) { byId[item.id] = item; order.push(item.id); return; }
+          // Los dos lo tienen: gana el editado más tarde; si empatan, el del documento más reciente.
+          if ((item.touchedAt || 0) > (mine.touchedAt || 0)) byId[item.id] = item;
+        });
+
+        const dead = tombs[kind] || {};
+        out[kind] = order
+          .filter(function (id) { return !dead[id]; })
+          .map(function (id) { return byId[id]; });
+      });
+
+      out.sessions.sort(function (a, b) { return b.startedAt - a.startedAt; });
+      out.meta = { updatedAt: Date.now(), deviceId: local.meta.deviceId };
+      return out;
+    },
+
+    /** Sustituye los datos por el resultado de una fusión. */
+    replaceAll: function (data) {
+      this.data = data;
+      this.save(true);
+      return this.data;
+    },
+
     exportJSON: function () {
       return JSON.stringify({ app: 'mir2027-timer', exportedAt: new Date().toISOString(), data: this.data }, null, 2);
     },
@@ -288,6 +387,9 @@
       this.data = Object.assign(deepClone(DEFAULT_DATA), incoming);
       this.data.settings = Object.assign({}, DEFAULT_SETTINGS, this.data.settings || {});
       this.data.settings.mini = Object.assign({}, DEFAULT_MINI, this.data.settings.mini || {});
+      this.data.meta = Object.assign({ updatedAt: 0, deviceId: '' }, this.data.meta || {});
+      if (!this.data.meta.deviceId) this.data.meta.deviceId = U.uid('dev');
+      if (!this.data.tombstones || typeof this.data.tombstones !== 'object') this.data.tombstones = {};
       this.save();
     },
     resetAll: function () {
@@ -297,7 +399,10 @@
     },
 
     /** Guarda una sesión editada del historial. */
-    saveSessions: function () { this.save(); },
+    saveSessions: function (session) {
+      if (session) this.touch(session);
+      this.save();
+    },
 
     DEFAULT_PRESETS: DEFAULT_PRESETS,
     DEFAULT_REASONS: DEFAULT_REASONS,

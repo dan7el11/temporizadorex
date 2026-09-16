@@ -154,9 +154,38 @@ desaparece también la barra inferior y la miniatura queda limpia del todo.
 | `F` | Pantalla completa |
 
 ### Tus datos
-Todo se guarda en el `localStorage` del navegador; nada sale de tu equipo. Si cierras la pestaña a
-media sesión, al volver te ofrece **continuarla** (y si estaba en pausa, ese tiempo sigue contando
-como distracción). En *Ajustes* puedes **exportar e importar** una copia en `.json`.
+Todo se guarda en el `localStorage` del navegador. Si cierras la pestaña a media sesión, al volver te
+ofrece **continuarla** (y si estaba en pausa, ese tiempo sigue contando como distracción). En
+*Ajustes* puedes **exportar e importar** una copia en `.json`; al importar eliges entre **fusionar**
+(lo habitual: añade lo que falte sin tocar lo de aquí) y reemplazar.
+
+### Sincronizar entre dispositivos
+Opcional y desactivado mientras no lo configures. Usa un proyecto gratuito de **Supabase** como
+buzón: la app no lleva ninguna clave dentro, las introduces tú y se quedan en tu navegador.
+
+1. Crea un proyecto en [supabase.com](https://supabase.com) (plan gratuito).
+2. En *Project Settings → API* copia la **Project URL** y la clave **anon public**.
+3. Pégalas en *Ajustes → Sincronizar entre dispositivos*.
+4. Pulsa **Ver el SQL de la tabla**, copia lo que sale y ejecútalo una vez en el *SQL Editor* de
+   Supabase. Crea la tabla `sync_data` y la regla que hace que **cada cuenta solo pueda leer y
+   escribir sus propios datos**.
+5. Crea una cuenta con correo y contraseña desde la propia app. Si Supabase te pide confirmar el
+   correo, confírmalo (o desactiva la confirmación en *Authentication → Providers → Email*).
+6. Repite los pasos 3 y 5 en el otro dispositivo, **con la misma cuenta**.
+
+A partir de ahí sincroniza sola al abrir la aplicación y al terminar cada sesión, y tienes un botón
+para hacerlo a mano. Si no hay conexión, avisa y lo reintenta la próxima vez; nada se pierde.
+
+**Cómo se resuelven los choques.** No se pisa nada: las sesiones, los bloques de la biblioteca, los
+temas, las razones y las plantillas se **unen por identificador**; si el mismo elemento se editó en
+los dos sitios gana la edición más reciente; lo que borras en un dispositivo **queda borrado** en el
+otro (se guarda constancia del borrado, así no reaparece); y los ajustes y el plan del día se toman
+del dispositivo que guardó más tarde. La sesión que esté corriendo en ese momento es local y no se
+sincroniza hasta que termina.
+
+**Sobre la seguridad.** La clave *anon* está pensada para vivir en el cliente: lo que protege tus
+datos es la regla de acceso del paso 4, que ata cada fila a tu usuario. Tu sesión se guarda en el
+navegador, como la de cualquier web. Si usas un equipo compartido, usa *Cerrar sesión* al terminar.
 
 ## Estructura
 
@@ -171,6 +200,7 @@ docs/                         Lo que se publica en GitHub Pages
   src/reasons.js              Catálogo de razones de distracción y su selector
   src/topics.js               Catálogo de temas o asignaturas y su selector
   src/notify.js               Avisos del sistema cuando la pestaña no está a la vista
+  src/sync.js                 Sincronización con Supabase por API REST, sin dependencias
   src/library.js              Biblioteca de tipos de temporizador
   src/planner.js              Plan del día: orden, tiempos y plantillas
   src/runner.js               Motor del temporizador y pantalla completa

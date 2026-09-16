@@ -698,6 +698,7 @@
     document.getElementById('runner').hidden = true;
     document.body.style.overflow = '';
     History.render();
+    if (window.Sync) Sync.maybeRun();
   };
 
   function showSummary(session) {
