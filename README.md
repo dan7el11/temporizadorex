@@ -75,6 +75,20 @@ historial también puedes «repetir» un día ya hecho.
 - Opcionalmente, **aviso del sistema** al terminar un bloque cuando la pestaña está en segundo
   plano. Se activa en *Ajustes* (el navegador pedirá permiso).
 
+### Los bloques, con la sesión ya empezada
+Bajo la cabecera hay una **tira con todos los bloques del día** a escala según su duración: los
+hechos rellenos, el actual con su progreso y borde blanco, los que vienen en gris. Pulsándola —o con
+el botón *Bloques*, o la tecla `B`— se abre el panel de la sesión, donde puedes:
+
+- **cambiar el tiempo** del bloque en curso y de los siguientes, escribiéndolo o con −5 / +5 / +15;
+  el bloque en curso **no se reinicia**, solo cambia lo que le queda (y si lo dejas por debajo de lo
+  ya transcurrido, se da por terminado);
+- **reordenar** y **quitar** los que aún no han empezado;
+- **añadir** otro bloque de la biblioteca al final, a media sesión;
+- **saltar** el bloque en curso, con confirmación, que se guarda como saltado.
+
+Abajo ves cuánto queda de sesión y a qué hora terminarías, recalculado a cada cambio.
+
 ### Distracciones
 - **Un bloque iniciado no se puede reiniciar: solo pausar.** Cada pausa se registra como una
   distracción con **su propio cronómetro**, que se va sumando.
@@ -135,6 +149,7 @@ desaparece también la barra inferior y la miniatura queda limpia del todo.
 |---|---|
 | `Espacio` | Pausar / reanudar (la pausa cuenta como distracción) |
 | `D` | Registrar distracción sin parar el reloj |
+| `B` | Bloques de la sesión: tiempos, orden, añadir y saltar |
 | `P` | Abrir o cerrar la miniatura |
 | `F` | Pantalla completa |
 

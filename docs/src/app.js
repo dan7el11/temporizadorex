@@ -58,7 +58,10 @@
     document.getElementById('btnPause').addEventListener('click', function () { Runner.togglePause(); });
     document.getElementById('btnDistraction').addEventListener('click', function () { Runner.quickDistraction(); });
     document.getElementById('btnPip').addEventListener('click', function () { PiP.toggle(); });
-    document.getElementById('btnSkip').addEventListener('click', function () { Runner.skip(); });
+    document.getElementById('btnBlocks').addEventListener('click', function () {
+      Runner.showChrome('stick');
+      Runner.openQueue();
+    });
     document.getElementById('btnEnd').addEventListener('click', function () { Runner.confirmEnd(); });
     document.getElementById('btnFull').addEventListener('click', function () { Runner.toggleFullscreen(); });
     document.getElementById('btnMiniCfg').addEventListener('click', function () {
@@ -93,6 +96,7 @@
       const k = e.key.toLowerCase();
       if (e.code === 'Space' || k === ' ') { e.preventDefault(); Runner.togglePause(); }
       else if (k === 'd') { e.preventDefault(); Runner.quickDistraction(); }
+      else if (k === 'b') { e.preventDefault(); Runner.showChrome('stick'); Runner.openQueue(); }
       else if (k === 'p') { e.preventDefault(); PiP.toggle(); }
       else if (k === 'f') { e.preventDefault(); Runner.toggleFullscreen(); }
     });

@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="assets/styles.css?v=4">
+<link rel="stylesheet" href="assets/styles.css?v=5">
 </head>
 <body>
 
@@ -198,6 +198,7 @@
         <ul class="keys">
           <li><kbd>Espacio</kbd> Pausar / reanudar (la pausa cuenta como distracción)</li>
           <li><kbd>D</kbd> Registrar distracción rápida sin pausar</li>
+          <li><kbd>B</kbd> Bloques de la sesión: tiempos, orden y saltar</li>
           <li><kbd>P</kbd> Ventana miniatura (Picture in Picture)</li>
           <li><kbd>F</kbd> Pantalla completa</li>
           <li><kbd>Esc</kbd> Salir de pantalla completa</li>
@@ -253,11 +254,13 @@
       </div>
     </div>
 
+    <div class="runner__timeline" id="runnerTimeline" title="Bloques de la sesión"></div>
+
     <div class="runner__controls">
       <button class="ctrl ctrl--primary" id="btnPause" title="Pausar (Espacio)">Pausar</button>
       <button class="ctrl" id="btnDistraction" title="Distracción rápida sin pausar (D)">+ Distracción</button>
       <button class="ctrl" id="btnPip" title="Miniatura Picture in Picture (P)">Miniatura</button>
-      <button class="ctrl" id="btnSkip" title="Saltar al siguiente bloque">Saltar bloque</button>
+      <button class="ctrl" id="btnBlocks" title="Ver y cambiar los bloques de la sesión (B)">Bloques</button>
       <button class="ctrl ctrl--danger" id="btnEnd" title="Terminar la sesión">Terminar</button>
     </div>
   </div>
@@ -268,19 +271,19 @@
 <video id="pipVideo" playsinline muted hidden></video>
 <canvas id="pipCanvas" width="640" height="360" hidden></canvas>
 
-<script src="src/utils.js?v=4"></script>
-<script src="src/store.js?v=4"></script>
-<script src="src/audio.js?v=4"></script>
-<script src="src/ui.js?v=4"></script>
-<script src="src/reasons.js?v=4"></script>
-<script src="src/topics.js?v=4"></script>
-<script src="src/notify.js?v=4"></script>
-<script src="src/library.js?v=4"></script>
-<script src="src/planner.js?v=4"></script>
-<script src="src/pip.js?v=4"></script>
-<script src="src/runner.js?v=4"></script>
-<script src="src/history.js?v=4"></script>
-<script src="src/settings.js?v=4"></script>
-<script src="src/app.js?v=4"></script>
+<script src="src/utils.js?v=5"></script>
+<script src="src/store.js?v=5"></script>
+<script src="src/audio.js?v=5"></script>
+<script src="src/ui.js?v=5"></script>
+<script src="src/reasons.js?v=5"></script>
+<script src="src/topics.js?v=5"></script>
+<script src="src/notify.js?v=5"></script>
+<script src="src/library.js?v=5"></script>
+<script src="src/planner.js?v=5"></script>
+<script src="src/pip.js?v=5"></script>
+<script src="src/runner.js?v=5"></script>
+<script src="src/history.js?v=5"></script>
+<script src="src/settings.js?v=5"></script>
+<script src="src/app.js?v=5"></script>
 </body>
 </html>

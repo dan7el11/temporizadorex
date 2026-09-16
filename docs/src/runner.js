@@ -307,9 +307,9 @@
   function completeBlock(skipped) {
     const b = block();
     if (!b || state.gate) return;
-    // Si quedaba abierto un diálogo opcional (p. ej. la razón de una
-    // distracción rápida), se cierra para no apilarlo con el de fin de bloque.
-    UI.closeTransient();
+    // El cierre de diálogos va DESPUÉS de marcar el bloque: al cerrarse, el
+    // foco vuelve a donde estaba y eso puede disparar un `change` pendiente
+    // que volvería a entrar aquí antes de tiempo.
     b.elapsedBefore = elapsedMs();
     b.endedAt = Date.now();
     b.status = skipped ? 'skipped' : 'done';
@@ -317,6 +317,9 @@
     state.pausedAt = null;
     state.gate = true;
     stopLoop();
+    // Si quedaba abierto un diálogo opcional (la razón de una distracción
+    // rápida, el panel de bloques…), se cierra para no apilarlo con este.
+    UI.closeTransient();
     document.getElementById('stage').classList.remove('is-paused');
     document.getElementById('btnPause').textContent = 'Pausar';
     if (!skipped) {
@@ -445,6 +448,187 @@
         return acts;
       }
     });
+  }
+
+  /* ── Bloques de la sesión en marcha ────────────────────── */
+  /**
+   * Cambia la duración de un bloque sin tocar lo ya transcurrido: el bloque en
+   * curso no se reinicia. Si el tiempo nuevo es menor que el ya consumido, el
+   * bloque termina en el siguiente tic, que es lo que significa recortarlo.
+   */
+  Runner.setBlockMinutes = function (index, minutes) {
+    if (!state) return;
+    const b = state.blocks[index];
+    if (!b || index < state.index) return;
+    b.plannedMs = U.clamp(Math.round(minutes * 60000), 60000, 600 * 60000);
+    persist();
+    tick();
+  };
+
+  Runner.moveBlock = function (index, delta) {
+    if (!state) return;
+    const to = index + delta;
+    // Solo se reordena lo que aún no ha empezado.
+    if (index <= state.index || to <= state.index || to >= state.blocks.length) return;
+    const arr = state.blocks;
+    const tmp = arr[index]; arr[index] = arr[to]; arr[to] = tmp;
+    persist();
+    tick();
+  };
+
+  Runner.removeBlock = function (index) {
+    if (!state || index <= state.index) return;
+    state.blocks.splice(index, 1);
+    persist();
+    tick();
+  };
+
+  /** Añade un bloque de la biblioteca al final de la sesión, ya empezada. */
+  Runner.addBlock = function (presetId) {
+    if (!state) return;
+    const p = Store.getPreset(presetId);
+    if (!p) return;
+    state.blocks.push({
+      uid: U.uid('b'), presetId: p.id, name: p.name, color: p.color,
+      topicId: '', isBreak: !!p.isBreak,
+      plannedMs: Math.round(p.minutes * 60000),
+      elapsedBefore: 0, startedAt: null, endedAt: null,
+      status: 'pending', distractions: []
+    });
+    persist();
+    tick();
+  };
+
+  /** Lista de todos los bloques: hechos, el actual y los que vienen. */
+  Runner.openQueue = function () {
+    if (!state) return;
+    let refresh = null;
+    let ticker = null;
+
+    UI.modal({
+      title: 'Bloques de la sesión',
+      sub: 'Puedes cambiar el tiempo del bloque en curso y de los siguientes, reordenarlos, quitarlos o añadir uno más.',
+      build: function (close) {
+        const box = U.el('div', { class: 'qlist' });
+
+        const foot = U.el('div', { class: 'qlist__foot' });
+        function updateFoot() {
+          if (!state) return;
+          const restMs = sessionRemainingMs();
+          U.clear(foot);
+          foot.appendChild(U.el('span', { text: 'Queda ' + U.fmtHuman(restMs) }));
+          foot.appendChild(U.el('span', { text: 'Terminarías a las ' + U.fmtClock(new Date(Date.now() + restMs)) }));
+        }
+
+        refresh = function () {
+          if (!state) { close(null); return; }
+          U.clear(box);
+          state.blocks.forEach(function (b, i) { box.appendChild(queueRow(b, i, refresh, updateFoot, close)); });
+          updateFoot();
+          box.appendChild(foot);
+
+          const add = U.el('select', { class: 'topic-select' });
+          add.appendChild(U.el('option', { value: '', text: '+ Añadir un bloque al final…' }));
+          Store.data.presets.forEach(function (p) {
+            add.appendChild(U.el('option', { value: p.id, text: p.name + ' · ' + U.fmtHuman(p.minutes * 60000) }));
+          });
+          add.addEventListener('change', function () {
+            if (!add.value) return;
+            Runner.addBlock(add.value);
+            refresh();
+          });
+          box.appendChild(add);
+        };
+
+        refresh();
+        // El tiempo que queda del bloque en curso se refresca solo.
+        ticker = setInterval(function () {
+          const live = box.querySelector('.qrow__live');
+          if (live && state) live.textContent = 'quedan ' + U.fmt(remainingMs());
+        }, 1000);
+
+        return box;
+      },
+      actions: function (close) {
+        return [U.el('button', { class: 'btn btn--primary', text: 'Listo', onclick: function () { close(true); } })];
+      }
+    }).then(function () {
+      if (ticker) clearInterval(ticker);
+    });
+  };
+
+  function queueRow(b, i, refresh, updateFoot, close) {
+    const done = i < state.index;
+    const current = i === state.index;
+    const row = U.el('div', {
+      class: 'qrow' + (done ? ' is-done' : '') + (current ? ' is-current' : '')
+    });
+
+    const head = U.el('div', { class: 'qrow__head' }, [
+      U.el('span', { class: 'qrow__dot', style: { background: b.color } }),
+      U.el('span', { class: 'qrow__name', text: (i + 1) + '. ' + b.name }),
+      done
+        ? U.el('span', { class: 'qrow__state', text: U.fmtHuman(b.elapsedBefore) + ' · ' + statusLabel(b.status) })
+        : current
+          ? U.el('span', { class: 'qrow__state qrow__live', text: 'quedan ' + U.fmt(remainingMs()) })
+          : U.el('span', { class: 'qrow__state', text: U.fmtHuman(b.plannedMs) })
+    ]);
+    row.appendChild(head);
+
+    if (done) return row;
+
+    const minInput = U.el('input', {
+      type: 'number', min: '1', max: '600', step: '1',
+      value: String(Math.round(b.plannedMs / 60000)),
+      'aria-label': 'Minutos de ' + b.name,
+      onchange: function () {
+        Runner.setBlockMinutes(i, parseInt(minInput.value, 10) || 1);
+        minInput.value = String(Math.round(b.plannedMs / 60000));
+        updateFoot();
+      }
+    });
+
+    const ctrls = U.el('div', { class: 'qrow__ctrls' }, [
+      minInput,
+      U.el('span', { class: 'qitem__unit', text: 'min' })
+    ]);
+    [-5, 5, 15].forEach(function (d) {
+      ctrls.appendChild(U.el('button', {
+        class: 'mini', type: 'button', text: (d > 0 ? '+' : '') + d,
+        title: (d > 0 ? 'Añadir ' : 'Quitar ') + Math.abs(d) + ' minutos',
+        onclick: function () {
+          Runner.setBlockMinutes(i, Math.round(b.plannedMs / 60000) + d);
+          refresh();
+        }
+      }));
+    });
+
+    if (current) {
+      ctrls.appendChild(U.el('button', {
+        class: 'mini mini--danger', type: 'button', text: 'Saltar',
+        title: 'Dar por terminado este bloque',
+        onclick: function () { close(true); Runner.skip(); }
+      }));
+    } else {
+      ctrls.appendChild(U.el('button', {
+        class: 'qbtn qbtn--xs', type: 'button', title: 'Subir', 'aria-label': 'Subir ' + b.name,
+        disabled: i <= state.index + 1 ? true : null,
+        onclick: function () { Runner.moveBlock(i, -1); refresh(); }
+      }, [U.icon('up', 15)]));
+      ctrls.appendChild(U.el('button', {
+        class: 'qbtn qbtn--xs', type: 'button', title: 'Bajar', 'aria-label': 'Bajar ' + b.name,
+        disabled: i >= state.blocks.length - 1 ? true : null,
+        onclick: function () { Runner.moveBlock(i, 1); refresh(); }
+      }, [U.icon('down', 15)]));
+      ctrls.appendChild(U.el('button', {
+        class: 'qbtn qbtn--xs qbtn--danger', type: 'button', title: 'Quitar de la sesión',
+        'aria-label': 'Quitar ' + b.name,
+        onclick: function () { Runner.removeBlock(i); refresh(); }
+      }, [U.icon('trash', 15)]));
+    }
+
+    row.appendChild(ctrls);
+    return row;
   }
 
   /* ── Saltar / terminar ─────────────────────────────────── */
@@ -600,6 +784,7 @@
       pausedNodes.forEach(function (n) { n.hidden = true; });
     }
 
+    renderTimeline();
     document.getElementById('hudProgress').textContent = 'Bloque ' + (state.index + 1) + ' / ' + state.blocks.length;
     const next = state.blocks[state.index + 1];
     document.getElementById('hudNext').textContent = next ? 'Después: ' + next.name : 'Último bloque';
@@ -610,9 +795,36 @@
     const hudPauses = document.getElementById('hudPauses');
     hudPauses.textContent = pauses || limit ? 'Pausas: ' + pauses + (limit ? ' / ' + limit : '') : '';
     hudPauses.classList.toggle('is-over', !!limit && pauses >= limit);
-    document.getElementById('btnSkip').disabled = state.gate;
 
     document.title = (state.pausedAt ? '⏸ ' : '') + timeText + ' · ' + b.name;
+  }
+
+  /** Tira superior con todos los bloques, a escala según su duración. */
+  let timelineSig = '';
+  function renderTimeline() {
+    const strip = document.getElementById('runnerTimeline');
+    const sig = state.blocks.map(function (b) { return b.uid + ':' + b.plannedMs; }).join('|') + '#' + state.index;
+
+    if (sig !== timelineSig) {
+      timelineSig = sig;
+      U.clear(strip);
+      state.blocks.forEach(function (b, i) {
+        const seg = U.el('div', {
+          class: 'tl__seg' + (i < state.index ? ' is-done' : '') + (i === state.index ? ' is-current' : ''),
+          // El tono aclarado se lee tanto sobre el color del bloque como sobre el negro.
+          style: { flexGrow: String(Math.max(1, b.plannedMs / 60000)), color: U.glowColor(b.color) },
+          title: (i + 1) + '. ' + b.name + ' · ' + U.fmtHuman(b.plannedMs),
+          onclick: function () { Runner.openQueue(); }
+        }, [U.el('i')]);
+        strip.appendChild(seg);
+      });
+    }
+
+    const cur = strip.children[state.index];
+    if (cur) {
+      const b = block();
+      cur.style.setProperty('--p', U.clamp((elapsedMs() / b.plannedMs) * 100, 0, 100).toFixed(2) + '%');
+    }
   }
 
   /** Datos compactos para la ventana miniatura. */

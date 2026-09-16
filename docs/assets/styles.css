@@ -487,6 +487,45 @@ input[type=range]{accent-color:var(--accent);width:150px}
 }
 .hud__pill:empty{display:none}
 
+/* Tira con todos los bloques, a escala según su duración */
+.runner__timeline{
+  position:absolute;left:16px;right:16px;
+  top:calc(max(14px, env(safe-area-inset-top)) + 48px);
+  display:flex;gap:4px;height:16px;padding:4px;pointer-events:auto;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.14);border-radius:20px;
+}
+.tl__seg{
+  position:relative;flex:1 1 0;min-width:6px;border-radius:4px;overflow:hidden;
+  background:rgba(255,255,255,.14);cursor:pointer;
+}
+.tl__seg i{position:absolute;inset:0 auto 0 0;width:var(--p,0%);background:currentColor;transition:width .25s linear}
+.tl__seg.is-done i{width:100%;opacity:.5}
+.tl__seg.is-current{box-shadow:0 0 0 1.5px rgba(255,255,255,.85)}
+.tl__seg:hover{filter:brightness(1.25)}
+
+/* Panel de bloques de la sesión */
+.qlist{display:flex;flex-direction:column;gap:8px}
+.qrow{border:1px solid var(--line);border-radius:11px;padding:9px 10px;background:var(--card-2)}
+.qrow.is-done{opacity:.55}
+.qrow.is-current{border-color:var(--accent);background:rgba(91,140,255,.09)}
+.qrow__head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.qrow__dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.qrow__name{font-weight:560;flex:1 1 120px;min-width:0;overflow-wrap:anywhere}
+.qrow__state{color:var(--text-dim);font-size:.82rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.qrow__ctrls{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:8px}
+.qrow__ctrls input[type=number]{
+  width:66px;background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;
+  color:var(--text);padding:5px 8px;font-variant-numeric:tabular-nums;
+}
+.mini--danger{border-color:#5c2a35;color:#ff9aa4}
+.mini--danger:hover{background:#3a1c24;color:#ffb9c0}
+.qlist__foot{
+  display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  padding-top:10px;margin-top:2px;border-top:1px solid var(--line-soft);
+  color:var(--text-dim);font-size:.85rem;
+}
+
 .runner__controls{
   position:absolute;left:50%;transform:translateX(-50%);
   bottom:max(20px, env(safe-area-inset-bottom));
