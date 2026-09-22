@@ -203,6 +203,12 @@
       });
   };
 
+  /* ── Acceso para otros módulos (la sala usa la misma cuenta) ── */
+  Sync.ready = function () { return Sync.configured() && Sync.signedIn(); };
+  Sync.userId = function () { return session ? session.userId : null; };
+  /** Petición autenticada a la API del proyecto, renovando el token si hace falta. */
+  Sync.request = function (path, options) { return authed(path, options); };
+
   /** Sincronización automática: al abrir la app y al terminar una sesión. */
   Sync.maybeRun = function () {
     if (!Sync.configured() || !Sync.signedIn() || !Sync.auto()) return;

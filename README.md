@@ -144,6 +144,35 @@ contador de distracciones o el botón de pausa, añadir el «Bloque X de N», y 
 vacíe con el tiempo, color fijo o solo negro. Si quitas el botón de pausa y las distracciones,
 desaparece también la barra inferior y la miniatura queda limpia del todo.
 
+### Estudiar acompañado
+Opcional, encima de la sincronización: una **sala** donde dos personas ven en qué anda la otra y
+acuerdan descansos a la misma hora.
+
+Los dos tenéis que usar **el mismo proyecto** de Supabase (le pasas la URL y la clave *anon*), cada
+uno con su cuenta. Se ejecuta una vez más de SQL —el botón *Ver el SQL de la sala* lo da hecho— que
+crea `room_presence` con sus reglas: **solo puedes escribir tu propia fila**. Después, en *Ajustes →
+Estudiar acompañado*, entráis los dos con el mismo código de sala.
+
+- **Durante la sesión** aparece arriba una píldora con lo que está haciendo el otro («Ana · Repaso
+  ANKI · 24:40»), y un botón **Descanso juntos**.
+- **Proponer un descanso**: eliges cuándo (en 1, 5, 10 o 15 minutos) y cuánto dura. Al otro le llega
+  un aviso —con sonido y, si tiene la pestaña detrás, notificación— para **aceptar o rechazar**.
+- Si acepta, el descanso se coloca en los dos a la **misma hora exacta**: se guarda el instante
+  absoluto, así que da igual que el aviso tarde unos segundos. Si el bloque en curso terminaba más
+  tarde, **se parte**: acaba justo a la hora acordada y el resto se retoma después del descanso, sin
+  perder tiempo de estudio.
+- En el plan del día también ves una barra con el estado del otro.
+
+**Lo que se comparte y lo que no.** En la sala solo se publica el estado mínimo: nombre, bloque
+actual, cuándo termina, si estás en pausa y las propuestas. Tu historial, tus temas y tus
+distracciones se quedan en tu fila privada de la sincronización, que nadie más puede leer.
+
+**Límites.** Cada app consulta la sala cada 8 segundos (4 mientras hay una propuesta en el aire), así
+que un aviso puede tardar ese poco en aparecer. Si el móvil del otro se duerme o pierde cobertura,
+su estado envejece y pasa a mostrarse como **desconectado**. Y ojo con la regla de lectura: cualquiera
+con cuenta **en tu proyecto** y que sepa el código puede leer la presencia de esa sala; con dos
+personas de confianza no es problema, pero no pongas el código a la vista de nadie más.
+
 ### Atajos durante la sesión
 | Tecla | Acción |
 |---|---|
@@ -201,6 +230,7 @@ docs/                         Lo que se publica en GitHub Pages
   src/topics.js               Catálogo de temas o asignaturas y su selector
   src/notify.js               Avisos del sistema cuando la pestaña no está a la vista
   src/sync.js                 Sincronización con Supabase por API REST, sin dependencias
+  src/room.js                 Sala compartida: estado del compañero y descansos acordados
   src/library.js              Biblioteca de tipos de temporizador
   src/planner.js              Plan del día: orden, tiempos y plantillas
   src/runner.js               Motor del temporizador y pantalla completa

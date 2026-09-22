@@ -395,6 +395,132 @@
     return frag;
   }
 
+  /* ── Sala para estudiar acompañado ─────────────────────── */
+  Settings.renderRoom = function () {
+    const box = document.getElementById('roomPanel');
+    if (!box) return;
+    U.clear(box);
+    Room.load();
+
+    if (!Room.available()) {
+      box.appendChild(U.el('p', {
+        class: 'hint',
+        text: 'Primero configura la sincronización de arriba e inicia sesión: la sala usa la misma cuenta y el mismo proyecto. La otra persona necesita entrar con su propia cuenta en ese mismo proyecto (le pasas la URL y la clave).'
+      }));
+      return;
+    }
+
+    if (!Room.joined()) { box.appendChild(joinForm()); return; }
+    box.appendChild(roomPanel());
+  };
+
+  function joinForm() {
+    const frag = document.createDocumentFragment();
+    frag.appendChild(U.el('p', {
+      class: 'hint',
+      text: 'Inventad un código de sala y entrad los dos con el mismo. Solo se comparte lo que estás haciendo ahora (bloque, tiempo que queda, si estás en pausa) y las propuestas de descanso: ni tu historial ni tus distracciones salen de aquí.'
+    }));
+
+    const code = U.el('input', { type: 'text', class: 'sync-input', placeholder: 'Ej. MIR2027', maxlength: '24' });
+    const name = U.el('input', { type: 'text', class: 'sync-input', placeholder: 'Cómo te verá tu compañero', maxlength: '32' });
+    name.value = (Sync.email() || '').split('@')[0] || '';
+
+    frag.appendChild(U.el('div', { class: 'field' }, [U.el('label', { text: 'Código de la sala' }), code]));
+    frag.appendChild(U.el('div', { class: 'field' }, [U.el('label', { text: 'Tu nombre' }), name]));
+    frag.appendChild(U.el('div', { class: 'row row--wrap' }, [
+      U.el('button', {
+        class: 'btn btn--primary', text: 'Entrar en la sala',
+        onclick: function () {
+          if (!code.value.trim()) { UI.toast('Pon un código de sala'); return; }
+          Room.join(code.value, name.value)
+            .then(function () { UI.toast('Estás en la sala ' + Room.code()); Settings.renderRoom(); })
+            .catch(function (err) {
+              UI.toast(err.message.indexOf('room_presence') >= 0 || err.status === 404
+                ? 'Falta crear la tabla de la sala: mira el SQL'
+                : err.message, 5000);
+            });
+        }
+      }),
+      U.el('button', { class: 'btn btn--ghost', text: 'Ver el SQL de la sala', onclick: showRoomSQL })
+    ]));
+    return frag;
+  }
+
+  function showRoomSQL() {
+    UI.modal({
+      title: 'Tabla de la sala',
+      sub: 'Ejecútalo una vez en el SQL Editor de Supabase, igual que el de la sincronización. Cada uno solo puede escribir su propia fila.',
+      build: function () {
+        return U.el('div', {}, [
+          U.el('pre', { class: 'sqlbox', text: Room.SQL }),
+          U.el('div', { class: 'row', style: { marginTop: '10px' } }, [
+            U.el('button', {
+              class: 'btn btn--ghost btn--sm', text: 'Copiar',
+              onclick: function () {
+                if (navigator.clipboard) navigator.clipboard.writeText(Room.SQL).then(function () { UI.toast('SQL copiado'); });
+              }
+            })
+          ])
+        ]);
+      },
+      actions: function (close) {
+        return [U.el('button', { class: 'btn btn--primary', text: 'Cerrar', onclick: function () { close(true); } })];
+      }
+    });
+  }
+
+  function roomPanel() {
+    const frag = document.createDocumentFragment();
+    const peers = Room.peers();
+
+    frag.appendChild(U.el('p', { class: 'hint' }, [
+      U.el('span', { text: 'En la sala ' }),
+      U.el('strong', { text: Room.code() }),
+      U.el('span', { text: ' como ' }),
+      U.el('strong', { text: Room.myName() }),
+      U.el('span', { text: '.' })
+    ]));
+
+    const list = U.el('div', { class: 'peer-list' });
+    if (!peers.length) {
+      list.appendChild(U.el('p', { class: 'empty-note', text: 'Todavía no hay nadie más. Pásale el código a tu compañero.' }));
+    } else {
+      peers.forEach(function (p) {
+        list.appendChild(U.el('div', { class: 'peer-row' + (p.online ? '' : ' is-off') }, [
+          U.el('span', { class: 'peer-dot' }),
+          U.el('span', { text: Room.peerLine(p) })
+        ]));
+      });
+    }
+    frag.appendChild(list);
+
+    if (Room.error()) {
+      frag.appendChild(U.el('p', { class: 'hint', text: 'Último intento fallido: ' + Room.error() }));
+    }
+
+    frag.appendChild(U.el('div', { class: 'row row--wrap', style: { marginTop: '12px' } }, [
+      U.el('button', {
+        class: 'btn btn--primary', text: 'Proponer descanso',
+        onclick: function () { Runner.proposeBreak(); }
+      }),
+      U.el('button', {
+        class: 'btn btn--ghost', text: 'Actualizar',
+        onclick: function () { Room.restart(); UI.toast('Consultando…'); }
+      }),
+      U.el('button', { class: 'btn btn--ghost', text: 'Ver el SQL de la sala', onclick: showRoomSQL }),
+      U.el('button', {
+        class: 'btn btn--danger-ghost', text: 'Salir de la sala',
+        onclick: function () { Room.leave().then(function () { Settings.renderRoom(); UI.toast('Has salido de la sala'); }); }
+      })
+    ]));
+
+    frag.appendChild(U.el('p', {
+      class: 'hint', style: { marginTop: '12px' },
+      text: 'Durante la sesión verás arriba lo que está haciendo tu compañero y tendrás el botón «Descanso juntos». Si su móvil se duerme o pierde cobertura, su estado se queda viejo y aparece como desconectado.'
+    }));
+    return frag;
+  }
+
   Settings.exportData = function () {
     const blob = new Blob([Store.exportJSON()], { type: 'application/json' });
     const a = U.el('a', { href: URL.createObjectURL(blob), download: 'mir2027-temporizador-' + U.dayKey() + '.json' });

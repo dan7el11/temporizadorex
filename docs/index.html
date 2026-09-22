@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="assets/styles.css?v=6">
+<link rel="stylesheet" href="assets/styles.css?v=7">
 </head>
 <body>
 
@@ -66,6 +66,7 @@
                 <button class="btn btn--ghost btn--sm" id="clearQueue">Vaciar</button>
               </div>
             </div>
+            <div class="peerbar" id="peerBar" hidden></div>
             <ol class="queue" id="queue"></ol>
             <div class="queue__empty" id="queueEmpty">
               Todavía no has añadido bloques. Elige uno de la izquierda para empezar a montar el día.
@@ -188,6 +189,10 @@
         <div id="syncPanel"></div>
       </div>
       <div class="card">
+        <h2>Estudiar acompañado</h2>
+        <div id="roomPanel"></div>
+      </div>
+      <div class="card">
         <h2>Datos</h2>
         <p class="hint">Todo se guarda en este navegador. Exporta de vez en cuando para no perder el historial.</p>
         <div class="row row--wrap">
@@ -250,6 +255,7 @@
         <span class="hud__pill" id="hudProgress">Bloque 1 / 1</span>
         <span class="hud__pill" id="hudNext"></span>
         <span class="hud__pill" id="hudPauses"></span>
+        <span class="hud__pill hud__pill--peer" id="hudPeer" hidden></span>
       </div>
       <div class="hud__right">
         <span class="hud__pill" id="hudSession"></span>
@@ -265,6 +271,7 @@
       <button class="ctrl" id="btnDistraction" title="Distracción rápida sin pausar (D)">+ Distracción</button>
       <button class="ctrl" id="btnPip" title="Miniatura Picture in Picture (P)">Miniatura</button>
       <button class="ctrl" id="btnBlocks" title="Ver y cambiar los bloques de la sesión (B)">Bloques</button>
+      <button class="ctrl" id="btnTogether" title="Proponer un descanso a la sala" hidden>Descanso juntos</button>
       <button class="ctrl ctrl--danger" id="btnEnd" title="Terminar la sesión">Terminar</button>
     </div>
   </div>
@@ -275,20 +282,21 @@
 <video id="pipVideo" playsinline muted hidden></video>
 <canvas id="pipCanvas" width="640" height="360" hidden></canvas>
 
-<script src="src/utils.js?v=6"></script>
-<script src="src/store.js?v=6"></script>
-<script src="src/audio.js?v=6"></script>
-<script src="src/ui.js?v=6"></script>
-<script src="src/reasons.js?v=6"></script>
-<script src="src/topics.js?v=6"></script>
-<script src="src/notify.js?v=6"></script>
-<script src="src/sync.js?v=6"></script>
-<script src="src/library.js?v=6"></script>
-<script src="src/planner.js?v=6"></script>
-<script src="src/pip.js?v=6"></script>
-<script src="src/runner.js?v=6"></script>
-<script src="src/history.js?v=6"></script>
-<script src="src/settings.js?v=6"></script>
-<script src="src/app.js?v=6"></script>
+<script src="src/utils.js?v=7"></script>
+<script src="src/store.js?v=7"></script>
+<script src="src/audio.js?v=7"></script>
+<script src="src/ui.js?v=7"></script>
+<script src="src/reasons.js?v=7"></script>
+<script src="src/topics.js?v=7"></script>
+<script src="src/notify.js?v=7"></script>
+<script src="src/sync.js?v=7"></script>
+<script src="src/room.js?v=7"></script>
+<script src="src/library.js?v=7"></script>
+<script src="src/planner.js?v=7"></script>
+<script src="src/pip.js?v=7"></script>
+<script src="src/runner.js?v=7"></script>
+<script src="src/history.js?v=7"></script>
+<script src="src/settings.js?v=7"></script>
+<script src="src/app.js?v=7"></script>
 </body>
 </html>

@@ -8,7 +8,10 @@
     U.$$('.view').forEach(function (v) { v.classList.toggle('is-active', v.id === 'view-' + name); });
     U.$$('.tab').forEach(function (t) { t.classList.toggle('is-active', t.dataset.view === name); });
     if (name === 'history') History.render();
-    if (name === 'settings') { Settings.render(); Reasons.render(); Topics.render(); Settings.renderSync(); }
+    if (name === 'settings') {
+      Settings.render(); Reasons.render(); Topics.render();
+      Settings.renderSync(); Settings.renderRoom();
+    }
     if (name === 'library') Library.render();
   };
 
@@ -21,7 +24,29 @@
     Reasons.render();
     Topics.render();
     Settings.renderSync();
+    Settings.renderRoom();
+    App.renderPeerBar();
     App.renderCountdown();
+  };
+
+  /** Aviso en el plan del día de qué está haciendo el compañero. */
+  App.renderPeerBar = function () {
+    const bar = document.getElementById('peerBar');
+    if (!bar) return;
+    if (!window.Room || !Room.joined() || !Room.available()) { bar.hidden = true; return; }
+    const peers = Room.peers();
+    U.clear(bar);
+    bar.hidden = false;
+    if (!peers.length) {
+      bar.appendChild(U.el('span', { text: 'Sala ' + Room.code() + ' · esperando a tu compañero' }));
+      return;
+    }
+    peers.forEach(function (p) {
+      bar.appendChild(U.el('span', { class: 'peerbar__item' + (p.online ? '' : ' is-off') }, [
+        U.el('span', { class: 'peer-dot' }),
+        U.el('span', { text: Room.peerLine(p) })
+      ]));
+    });
   };
 
   App.renderCountdown = function () {
@@ -64,6 +89,10 @@
       Runner.openQueue();
     });
     document.getElementById('btnEnd').addEventListener('click', function () { Runner.confirmEnd(); });
+    document.getElementById('btnTogether').addEventListener('click', function () {
+      Runner.showChrome('stick');
+      Runner.proposeBreak();
+    });
     document.getElementById('btnFull').addEventListener('click', function () { Runner.toggleFullscreen(); });
     document.getElementById('btnMiniCfg').addEventListener('click', function () {
       Runner.showChrome('stick');
@@ -170,6 +199,14 @@
     registerSW();
     Sync.load();
     Sync.maybeRun();
+
+    // La sala se refresca sola y avisa a la interfaz de cada cambio.
+    Room.load();
+    Room.onChange = function () {
+      App.renderPeerBar();
+      if (document.getElementById('view-settings').classList.contains('is-active')) Settings.renderRoom();
+    };
+    Room.restart();
     setInterval(App.renderCountdown, 60000);
   };
 

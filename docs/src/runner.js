@@ -15,6 +15,8 @@
   /* ── Acceso al estado ──────────────────────────────────── */
   Runner.isActive = function () { return !!state && !state.finished; };
   Runner.getState = function () { return state; };
+  /** Lo que le queda al bloque en curso, para quien lo necesite fuera. */
+  Runner.remaining = function () { return state ? remainingMs() : 0; };
 
   function block() { return state ? state.blocks[state.index] : null; }
 
@@ -499,6 +501,58 @@
     tick();
   };
 
+  function breakBlockFrom(minutes) {
+    const p = Store.getPreset(Store.data.settings.breakPresetId);
+    return {
+      uid: U.uid('b'), presetId: p ? p.id : null,
+      name: p ? p.name : 'Descanso', color: p ? p.color : '#0ea5b7',
+      topicId: '', isBreak: true,
+      plannedMs: Math.max(1, minutes) * 60000,
+      elapsedBefore: 0, startedAt: null, endedAt: null,
+      status: 'pending', distractions: []
+    };
+  }
+
+  /**
+   * Coloca un descanso a una hora concreta, acordada con otra persona.
+   * Si el bloque en curso termina más tarde, se parte: la primera mitad acaba
+   * justo a esa hora y el resto se retoma después del descanso, de modo que no
+   * se pierde tiempo de estudio.
+   */
+  Runner.scheduleBreak = function (startsAt, minutes) {
+    if (!state || state.finished) return { ok: false, reason: 'no hay sesión en marcha' };
+    if (state.gate) return { ok: false, reason: 'estás entre bloques' };
+    const b = block();
+    const untilBreak = startsAt - Date.now();
+    if (untilBreak < 0) return { ok: false, reason: 'esa hora ya pasó' };
+    if (b.isBreak) return { ok: false, reason: 'ya estás descansando' };
+
+    const rest = remainingMs();
+    const pause = breakBlockFrom(minutes);
+    let split = false;
+
+    if (rest > untilBreak + 5000) {
+      // El bloque acaba justo a la hora acordada y el resto se retoma luego.
+      const leftover = rest - untilBreak;
+      b.plannedMs = elapsedMs() + untilBreak;
+      const tail = {
+        uid: U.uid('b'), presetId: b.presetId, name: b.name, color: b.color,
+        topicId: b.topicId || '', isBreak: false,
+        plannedMs: leftover, elapsedBefore: 0, startedAt: null, endedAt: null,
+        status: 'pending', distractions: []
+      };
+      state.blocks.splice(state.index + 1, 0, pause, tail);
+      split = true;
+    } else {
+      // Queda menos que eso: el descanso va justo detrás del bloque actual.
+      state.blocks.splice(state.index + 1, 0, pause);
+    }
+
+    persist();
+    tick();
+    return { ok: true, split: split };
+  };
+
   /** Lista de todos los bloques: hechos, el actual y los que vienen. */
   Runner.openQueue = function () {
     if (!state) return;
@@ -791,6 +845,8 @@
     document.getElementById('hudNext').textContent = next ? 'Después: ' + next.name : 'Último bloque';
     document.getElementById('hudSession').textContent = 'Sesión: ' + U.fmtHuman(sessionRemainingMs()) + ' restantes';
 
+    renderPeer();
+
     const limit = Store.data.settings.pauseLimit || 0;
     const pauses = pauseCount();
     const hudPauses = document.getElementById('hudPauses');
@@ -799,6 +855,92 @@
 
     document.title = (state.pausedAt ? '⏸ ' : '') + timeText + ' · ' + b.name;
   }
+
+  /** Lo que está haciendo el compañero de sala, si hay sala. */
+  function renderPeer() {
+    const pill = document.getElementById('hudPeer');
+    const btn = document.getElementById('btnTogether');
+    if (!pill || !btn) return;
+    const active = global.Room && Room.joined() && Room.available();
+    btn.hidden = !active;
+    if (!active) { pill.textContent = ''; pill.hidden = true; return; }
+
+    const peers = Room.peers();
+    const pending = Room.pending();
+    if (pending) {
+      pill.textContent = 'Descanso propuesto para las ' + U.fmtClock(new Date(pending.startsAt)) + ' · esperando';
+    } else if (!peers.length) {
+      pill.textContent = 'Sala ' + Room.code() + ' · nadie más por ahora';
+    } else {
+      pill.textContent = peers.map(Room.peerLine).join('  ·  ');
+    }
+    pill.hidden = false;
+    pill.classList.toggle('is-off', !!peers.length && !peers.some(function (p) { return p.online; }));
+  }
+
+  /** Diálogo para proponer un descanso al compañero. */
+  Runner.proposeBreak = function () {
+    if (!global.Room || !Room.joined()) { UI.toast('No estás en ninguna sala'); return; }
+    const pending = Room.pending();
+    if (pending) {
+      UI.confirm('Ya has propuesto un descanso',
+        'Para las ' + U.fmtClock(new Date(pending.startsAt)) + '. ¿Lo retiras?', 'Retirar', true)
+        .then(function (ok) { if (ok) Room.cancelProposal().then(function () { UI.toast('Propuesta retirada'); }); });
+      return;
+    }
+
+    let delay = 5;
+    let minutes = Store.data.settings.breakMinutes || 10;
+    let delayChips, minInput;
+
+    UI.modal({
+      title: 'Proponer un descanso',
+      sub: 'Le llegará al resto de la sala. Si aceptan, el descanso empieza a la vez en todos.',
+      build: function () {
+        const frag = document.createDocumentFragment();
+
+        const f1 = U.el('div', { class: 'field' });
+        f1.appendChild(U.el('label', { text: '¿Cuándo?' }));
+        delayChips = U.el('div', { class: 'chips' });
+        [[1, 'En 1 minuto'], [5, 'En 5 minutos'], [10, 'En 10 minutos'], [15, 'En 15 minutos']].forEach(function (o) {
+          const c = U.el('button', {
+            class: 'chip' + (o[0] === delay ? ' is-active' : ''), type: 'button', text: o[1],
+            onclick: function () {
+              delay = o[0];
+              U.$$('.chip', delayChips).forEach(function (x) { x.classList.toggle('is-active', x === c); });
+            }
+          });
+          delayChips.appendChild(c);
+        });
+        f1.appendChild(delayChips);
+        frag.appendChild(f1);
+
+        const f2 = U.el('div', { class: 'field' });
+        f2.appendChild(U.el('label', { text: 'Duración del descanso (minutos)' }));
+        minInput = U.el('input', { type: 'number', min: '1', max: '60', step: '1', value: String(minutes) });
+        f2.appendChild(minInput);
+        frag.appendChild(f2);
+        return frag;
+      },
+      actions: function (close) {
+        return [
+          U.el('button', { class: 'btn btn--ghost', text: 'Cancelar', onclick: function () { close(null); } }),
+          U.el('button', {
+            class: 'btn btn--primary', text: 'Proponer',
+            onclick: function () {
+              minutes = U.clamp(parseInt(minInput.value, 10) || 10, 1, 60);
+              close(true);
+            }
+          })
+        ];
+      }
+    }).then(function (ok) {
+      if (!ok) return;
+      Room.propose(delay, minutes).then(function () {
+        UI.toast('Propuesta enviada para las ' + U.fmtClock(new Date(Date.now() + delay * 60000)));
+      }).catch(function (err) { UI.toast(err.message); });
+    });
+  };
 
   /** Tira superior con todos los bloques, a escala según su duración. */
   let timelineSig = '';
