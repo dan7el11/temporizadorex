@@ -25,28 +25,90 @@
     Topics.render();
     Settings.renderSync();
     Settings.renderRoom();
-    App.renderPeerBar();
+    App.renderRoomStrip();
     App.renderCountdown();
   };
 
-  /** Aviso en el plan del día de qué está haciendo el compañero. */
-  App.renderPeerBar = function () {
-    const bar = document.getElementById('peerBar');
-    if (!bar) return;
-    if (!window.Room || !Room.joined() || !Room.available()) { bar.hidden = true; return; }
-    const peers = Room.peers();
-    U.clear(bar);
-    bar.hidden = false;
-    if (!peers.length) {
-      bar.appendChild(U.el('span', { text: 'Sala ' + Room.code() + ' · esperando a tu compañero' }));
+  /**
+   * Tira de «Estudiar acompañado» en la pantalla principal: desde aquí se entra
+   * en la sala, se ve al compañero y se propone el descanso, sin pasar por Ajustes.
+   */
+  App.renderRoomStrip = function () {
+    const strip = document.getElementById('roomStrip');
+    if (!strip || !window.Room) return;
+    U.clear(strip);
+    strip.hidden = false;
+    strip.classList.toggle('is-joined', Room.joined());
+
+    const left = U.el('div', { class: 'roomstrip__info' });
+    const actions = U.el('div', { class: 'roomstrip__actions' });
+
+    if (!Room.joined()) {
+      left.appendChild(U.el('span', { class: 'roomstrip__icon', text: '👥' }));
+      left.appendChild(U.el('span', {
+        text: Room.available()
+          ? 'Estudiar acompañado: coordina los descansos con otra persona'
+          : 'Estudiar acompañado: necesita la sincronización configurada'
+      }));
+      actions.appendChild(U.el('button', {
+        class: 'btn btn--primary btn--sm',
+        text: Room.available() ? 'Entrar en una sala' : 'Configurar',
+        onclick: function () { Settings.roomJoinDialog(); }
+      }));
+      strip.appendChild(left);
+      strip.appendChild(actions);
       return;
     }
-    peers.forEach(function (p) {
-      bar.appendChild(U.el('span', { class: 'peerbar__item' + (p.online ? '' : ' is-off') }, [
+
+    const peers = Room.peers();
+    left.appendChild(U.el('span', { class: 'roomstrip__code', text: 'Sala ' + Room.code() }));
+    if (!peers.length) {
+      left.appendChild(U.el('span', { class: 'peerbar__item is-off' }, [
         U.el('span', { class: 'peer-dot' }),
-        U.el('span', { text: Room.peerLine(p) })
+        U.el('span', { text: 'esperando a tu compañero' })
       ]));
-    });
+    } else {
+      peers.forEach(function (p) {
+        left.appendChild(U.el('span', { class: 'peerbar__item' + (p.online ? '' : ' is-off') }, [
+          U.el('span', { class: 'peer-dot' }),
+          U.el('span', { text: Room.peerLine(p) })
+        ]));
+      });
+    }
+
+    const pending = Room.pending();
+    if (pending) {
+      left.appendChild(U.el('span', {
+        class: 'roomstrip__pending',
+        text: 'descanso propuesto para las ' + U.fmtClock(new Date(pending.startsAt))
+      }));
+    }
+
+    actions.appendChild(U.el('button', {
+      class: 'btn btn--primary btn--sm', text: 'Descanso juntos',
+      onclick: function () { Runner.proposeBreak(); }
+    }));
+    // El nombre es también el botón para cambiarlo.
+    const rename = U.el('button', {
+      class: 'btn btn--ghost btn--sm roomstrip__name',
+      title: 'Cambiar el nombre con el que te ven',
+      'aria-label': 'Cambiar tu nombre, ahora ' + (Room.myName() || 'sin definir'),
+      onclick: function () { Settings.roomNameDialog(); }
+    }, [U.icon('pencil', 14), U.el('span', { text: Room.myName() || 'Tu nombre' })]);
+    actions.appendChild(rename);
+    actions.appendChild(U.el('button', {
+      class: 'btn btn--ghost btn--sm', text: 'Salir',
+      onclick: function () {
+        Room.leave().then(function () {
+          App.renderRoomStrip();
+          Settings.renderRoom();
+          UI.toast('Has salido de la sala');
+        });
+      }
+    }));
+
+    strip.appendChild(left);
+    strip.appendChild(actions);
   };
 
   App.renderCountdown = function () {
@@ -203,7 +265,7 @@
     // La sala se refresca sola y avisa a la interfaz de cada cambio.
     Room.load();
     Room.onChange = function () {
-      App.renderPeerBar();
+      App.renderRoomStrip();
       if (document.getElementById('view-settings').classList.contains('is-active')) Settings.renderRoom();
     };
     Room.restart();

@@ -14,6 +14,7 @@
   'use strict';
 
   const KEY = 'mir2027.room.v1';
+  const PROFILE_KEY = 'mir2027.room.profile.v1';   // el nombre sobrevive a salir de la sala
   const HANDLED_KEY = 'mir2027.room.handled.v1';
   const IDLE_MS = 8000;        // sondeo normal
   const BUSY_MS = 4000;        // con una propuesta en el aire
@@ -21,6 +22,7 @@
 
   const Room = {};
   let conf = null;
+  let profile = null;
   let peers = [];
   let timer = null;
   let handled = {};
@@ -65,27 +67,65 @@
 
   Room.load = function () {
     conf = read(KEY, null);
+    profile = read(PROFILE_KEY, null) || {};
     handled = read(HANDLED_KEY, {}) || {};
+    // Nombre guardado en una sala anterior: se recupera aunque se saliera.
+    if (!profile.name && conf && conf.name) {
+      profile.name = conf.name;
+      write(PROFILE_KEY, profile);
+    }
+  };
+
+  /** Nombre con el que te ven, recordado entre sesiones y entre salas. */
+  Room.savedName = function () {
+    if (!profile) Room.load();
+    if (profile.name) return profile.name;
+    const email = global.Sync && Sync.email();
+    return email ? email.split('@')[0] : '';
+  };
+
+  Room.setName = function (name) {
+    const clean = String(name || '').trim().slice(0, 32);
+    if (!clean) return Promise.resolve(false);
+    profile = Object.assign({}, profile, { name: clean });
+    write(PROFILE_KEY, profile);
+    if (conf) { conf.name = clean; write(KEY, conf); }
+    return publish().then(function () {
+      if (Room.onChange) Room.onChange();
+      return true;
+    }).catch(function () { return true; });
   };
   Room.joined = function () { return !!(conf && conf.code); };
   Room.code = function () { return conf ? conf.code : ''; };
-  Room.myName = function () { return conf ? conf.name : ''; };
+  Room.myName = function () { return (conf && conf.name) || Room.savedName(); };
   Room.peers = function () { return peers; };
   Room.error = function () { return lastError; };
   Room.pending = function () { return myProposal; };
   Room.available = function () { return !!(global.Sync && Sync.ready()); };
 
   Room.join = function (code, name) {
-    conf = { code: String(code || '').trim().toUpperCase().slice(0, 24), name: String(name || '').trim().slice(0, 32) || 'Yo' };
+    const clean = String(name || '').trim().slice(0, 32) || Room.savedName() || 'Yo';
+    profile = Object.assign({}, profile, { name: clean });
+    write(PROFILE_KEY, profile);
+    conf = { code: String(code || '').trim().toUpperCase().slice(0, 24), name: clean };
     write(KEY, conf);
     peers = [];
     Room.restart();
     return publish();
   };
 
+  Room.lastCode = function () {
+    if (!profile) Room.load();
+    return profile.lastCode || '';
+  };
+
   Room.leave = function () {
     const old = conf;
     stopTimer();
+    if (old && old.code) {
+      profile = Object.assign({}, profile, { lastCode: old.code });
+      write(PROFILE_KEY, profile);
+    }
     conf = null; peers = []; myProposal = null;
     write(KEY, null);
     if (old && Room.available()) {

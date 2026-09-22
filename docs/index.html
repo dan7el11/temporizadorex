@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="assets/styles.css?v=7">
+<link rel="stylesheet" href="assets/styles.css?v=8">
 </head>
 <body>
 
@@ -36,6 +36,7 @@
 
     <!-- ══════════════ PLAN ══════════════ -->
     <section class="view is-active" id="view-plan">
+      <div class="roomstrip" id="roomStrip" hidden></div>
       <div class="grid">
         <div class="col">
           <div class="card">
@@ -66,7 +67,6 @@
                 <button class="btn btn--ghost btn--sm" id="clearQueue">Vaciar</button>
               </div>
             </div>
-            <div class="peerbar" id="peerBar" hidden></div>
             <ol class="queue" id="queue"></ol>
             <div class="queue__empty" id="queueEmpty">
               Todavía no has añadido bloques. Elige uno de la izquierda para empezar a montar el día.
@@ -282,21 +282,21 @@
 <video id="pipVideo" playsinline muted hidden></video>
 <canvas id="pipCanvas" width="640" height="360" hidden></canvas>
 
-<script src="src/utils.js?v=7"></script>
-<script src="src/store.js?v=7"></script>
-<script src="src/audio.js?v=7"></script>
-<script src="src/ui.js?v=7"></script>
-<script src="src/reasons.js?v=7"></script>
-<script src="src/topics.js?v=7"></script>
-<script src="src/notify.js?v=7"></script>
-<script src="src/sync.js?v=7"></script>
-<script src="src/room.js?v=7"></script>
-<script src="src/library.js?v=7"></script>
-<script src="src/planner.js?v=7"></script>
-<script src="src/pip.js?v=7"></script>
-<script src="src/runner.js?v=7"></script>
-<script src="src/history.js?v=7"></script>
-<script src="src/settings.js?v=7"></script>
-<script src="src/app.js?v=7"></script>
+<script src="src/utils.js?v=8"></script>
+<script src="src/store.js?v=8"></script>
+<script src="src/audio.js?v=8"></script>
+<script src="src/ui.js?v=8"></script>
+<script src="src/reasons.js?v=8"></script>
+<script src="src/topics.js?v=8"></script>
+<script src="src/notify.js?v=8"></script>
+<script src="src/sync.js?v=8"></script>
+<script src="src/room.js?v=8"></script>
+<script src="src/library.js?v=8"></script>
+<script src="src/planner.js?v=8"></script>
+<script src="src/pip.js?v=8"></script>
+<script src="src/runner.js?v=8"></script>
+<script src="src/history.js?v=8"></script>
+<script src="src/settings.js?v=8"></script>
+<script src="src/app.js?v=8"></script>
 </body>
 </html>

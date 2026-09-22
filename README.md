@@ -150,8 +150,14 @@ acuerdan descansos a la misma hora.
 
 Los dos tenéis que usar **el mismo proyecto** de Supabase (le pasas la URL y la clave *anon*), cada
 uno con su cuenta. Se ejecuta una vez más de SQL —el botón *Ver el SQL de la sala* lo da hecho— que
-crea `room_presence` con sus reglas: **solo puedes escribir tu propia fila**. Después, en *Ajustes →
-Estudiar acompañado*, entráis los dos con el mismo código de sala.
+crea `room_presence` con sus reglas: **solo puedes escribir tu propia fila**.
+
+Después se entra **desde la pantalla principal**: arriba del todo hay una tira *Estudiar
+acompañado* con el botón para entrar en una sala; los dos ponéis el mismo código. Esa misma tira
+muestra quién está dentro y qué está haciendo, y lleva los botones de proponer descanso, cambiar tu
+nombre y salir. **El nombre se recuerda**, así que solo lo escribes la primera vez: sigue ahí al
+recargar, al salir de la sala y al volver a entrar (que además te propone el último código usado).
+En *Ajustes → Estudiar acompañado* está lo mismo junto al SQL, por si prefieres tenerlo allí.
 
 - **Durante la sesión** aparece arriba una píldora con lo que está haciendo el otro («Ana · Repaso
   ANKI · 24:40»), y un botón **Descanso juntos**.

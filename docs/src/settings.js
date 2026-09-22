@@ -414,6 +414,79 @@
     box.appendChild(roomPanel());
   };
 
+  /** Entrar en una sala desde cualquier pantalla. */
+  Settings.roomJoinDialog = function () {
+    if (!Room.available()) {
+      UI.modal({
+        title: 'Falta configurar la sincronización',
+        sub: 'La sala usa la misma cuenta y el mismo proyecto de Supabase. Configúralo en Ajustes y vuelve aquí.',
+        actions: function (close) {
+          return [
+            U.el('button', { class: 'btn btn--ghost', text: 'Ahora no', onclick: function () { close(null); } }),
+            U.el('button', {
+              class: 'btn btn--primary', text: 'Ir a Ajustes',
+              onclick: function () { close(true); App.showView('settings'); }
+            })
+          ];
+        }
+      });
+      return;
+    }
+
+    let code, name;
+    UI.modal({
+      title: 'Estudiar acompañado',
+      sub: 'Inventad un código y entrad los dos con el mismo. Solo se comparte lo que estás haciendo ahora, nunca tu historial.',
+      build: function () {
+        const frag = document.createDocumentFragment();
+        code = U.el('input', { type: 'text', class: 'sync-input', placeholder: 'Ej. MIR2027', maxlength: '24', value: Room.lastCode() });
+        name = U.el('input', { type: 'text', class: 'sync-input', placeholder: 'Cómo te verá tu compañero', maxlength: '32', value: Room.savedName() });
+        frag.appendChild(U.el('div', { class: 'field' }, [U.el('label', { text: 'Código de la sala' }), code]));
+        frag.appendChild(U.el('div', { class: 'field' }, [U.el('label', { text: 'Tu nombre' }), name]));
+        frag.appendChild(U.el('p', { class: 'hint', text: 'El nombre se recuerda para la próxima vez.' }));
+        return frag;
+      },
+      actions: function (close) {
+        return [
+          U.el('button', { class: 'btn btn--ghost', text: 'Ver el SQL de la sala', onclick: showRoomSQL }),
+          U.el('button', {
+            class: 'btn btn--primary', text: 'Entrar',
+            onclick: function () {
+              if (!code.value.trim()) { UI.toast('Pon un código de sala'); return; }
+              close({ code: code.value, name: name.value });
+            }
+          })
+        ];
+      }
+    }).then(function (values) {
+      if (!values) return;
+      Room.join(values.code, values.name)
+        .then(function () {
+          UI.toast('Estás en la sala ' + Room.code());
+          App.renderRoomStrip();
+          Settings.renderRoom();
+        })
+        .catch(function (err) {
+          UI.toast(err.status === 404 || String(err.message).indexOf('room_presence') >= 0
+            ? 'Falta crear la tabla de la sala: mira el SQL'
+            : err.message, 5000);
+        });
+    });
+  };
+
+  /** Cambiar el nombre con el que te ven, dentro o fuera de la sala. */
+  Settings.roomNameDialog = function () {
+    UI.prompt('Tu nombre en la sala', 'Se recuerda para las próximas veces.', Room.savedName(), 'Ej. Daniel')
+      .then(function (name) {
+        if (!name) return;
+        Room.setName(name).then(function () {
+          UI.toast('Te verán como ' + name);
+          App.renderRoomStrip();
+          Settings.renderRoom();
+        });
+      });
+  };
+
   function joinForm() {
     const frag = document.createDocumentFragment();
     frag.appendChild(U.el('p', {
@@ -421,9 +494,9 @@
       text: 'Inventad un código de sala y entrad los dos con el mismo. Solo se comparte lo que estás haciendo ahora (bloque, tiempo que queda, si estás en pausa) y las propuestas de descanso: ni tu historial ni tus distracciones salen de aquí.'
     }));
 
-    const code = U.el('input', { type: 'text', class: 'sync-input', placeholder: 'Ej. MIR2027', maxlength: '24' });
+    const code = U.el('input', { type: 'text', class: 'sync-input', placeholder: 'Ej. MIR2027', maxlength: '24', value: Room.lastCode() });
     const name = U.el('input', { type: 'text', class: 'sync-input', placeholder: 'Cómo te verá tu compañero', maxlength: '32' });
-    name.value = (Sync.email() || '').split('@')[0] || '';
+    name.value = Room.savedName();
 
     frag.appendChild(U.el('div', { class: 'field' }, [U.el('label', { text: 'Código de la sala' }), code]));
     frag.appendChild(U.el('div', { class: 'field' }, [U.el('label', { text: 'Tu nombre' }), name]));
@@ -433,7 +506,7 @@
         onclick: function () {
           if (!code.value.trim()) { UI.toast('Pon un código de sala'); return; }
           Room.join(code.value, name.value)
-            .then(function () { UI.toast('Estás en la sala ' + Room.code()); Settings.renderRoom(); })
+            .then(function () { UI.toast('Estás en la sala ' + Room.code()); Settings.renderRoom(); App.renderRoomStrip(); })
             .catch(function (err) {
               UI.toast(err.message.indexOf('room_presence') >= 0 || err.status === 404
                 ? 'Falta crear la tabla de la sala: mira el SQL'
@@ -507,10 +580,17 @@
         class: 'btn btn--ghost', text: 'Actualizar',
         onclick: function () { Room.restart(); UI.toast('Consultando…'); }
       }),
+      U.el('button', { class: 'btn btn--ghost', text: 'Cambiar mi nombre', onclick: Settings.roomNameDialog }),
       U.el('button', { class: 'btn btn--ghost', text: 'Ver el SQL de la sala', onclick: showRoomSQL }),
       U.el('button', {
         class: 'btn btn--danger-ghost', text: 'Salir de la sala',
-        onclick: function () { Room.leave().then(function () { Settings.renderRoom(); UI.toast('Has salido de la sala'); }); }
+        onclick: function () {
+          Room.leave().then(function () {
+            Settings.renderRoom();
+            App.renderRoomStrip();
+            UI.toast('Has salido de la sala');
+          });
+        }
       })
     ]));
 

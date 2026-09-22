@@ -391,12 +391,20 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .hud__pill.is-over{border-color:rgba(255,120,130,.6);color:#ffb9c0}
 
 /* Sala: compañero de estudio */
-.peerbar{
-  display:flex;flex-wrap:wrap;gap:10px;align-items:center;
-  margin:10px 0 0;padding:9px 11px;border-radius:11px;
-  background:rgba(91,140,255,.08);border:1px solid #2d3550;
-  font-size:.84rem;color:var(--text-dim);
+.roomstrip{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin:0 0 18px;padding:11px 14px;border-radius:13px;
+  background:var(--card);border:1px solid var(--line);
+  font-size:.86rem;color:var(--text-dim);
 }
+.roomstrip.is-joined{background:rgba(91,140,255,.08);border-color:#2d3550}
+.roomstrip__info{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0}
+.roomstrip__icon{font-size:1rem}
+.roomstrip__code{font-weight:640;color:var(--text);letter-spacing:.02em}
+.roomstrip__pending{color:var(--warn)}
+.roomstrip__actions{display:flex;gap:7px;flex-wrap:wrap}
+.roomstrip__name{display:inline-flex;align-items:center;gap:6px}
+.peerbar__item{display:flex;align-items:center;gap:7px}
 .peerbar__item{display:flex;align-items:center;gap:7px}
 .peer-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
 .peer-row{
