@@ -7,7 +7,7 @@
  * VERSION debe coincidir con el ?v= de index.html: así una versión nueva pide
  * URLs distintas y no puede reutilizar nada de la caché anterior.
  */
-const VERSION = '8';
+const VERSION = '9';
 const CACHE = 'mir2027-v' + VERSION;
 
 const ASSETS = [
@@ -24,6 +24,7 @@ const ASSETS = [
   'src/ui.js',
   'src/reasons.js',
   'src/topics.js',
+  'src/pauses.js',
   'src/notify.js',
   'src/sync.js',
   'src/room.js',

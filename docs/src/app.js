@@ -10,7 +10,7 @@
     if (name === 'history') History.render();
     if (name === 'settings') {
       Settings.render(); Reasons.render(); Topics.render();
-      Settings.renderSync(); Settings.renderRoom();
+      Settings.renderSync(); Settings.renderRoom(); Pauses.render();
     }
     if (name === 'library') Library.render();
   };
@@ -23,6 +23,7 @@
     Settings.render();
     Reasons.render();
     Topics.render();
+    Pauses.render();
     Settings.renderSync();
     Settings.renderRoom();
     App.renderRoomStrip();
@@ -170,6 +171,7 @@
     document.getElementById('resetData').addEventListener('click', Settings.resetAll);
     document.getElementById('newReason').addEventListener('click', Reasons.create);
     document.getElementById('newTopic').addEventListener('click', Topics.create);
+    document.getElementById('newPause').addEventListener('click', Pauses.create);
     document.getElementById('autoBreaks').addEventListener('click', Planner.breaksDialog);
     document.getElementById('exportBlocks').addEventListener('click', History.exportBlocks);
     document.getElementById('exportDistractions').addEventListener('click', History.exportDistractions);

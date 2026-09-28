@@ -462,7 +462,8 @@
           Store.setQueue(s.blocks.map(function (b) {
             return {
               uid: U.uid('q'), presetId: b.presetId || null, name: b.name, color: b.color,
-              minutes: Math.round(b.plannedMs / 60000), isBreak: !!b.isBreak, topicId: b.topicId || ''
+              minutes: Math.round(b.plannedMs / 60000), isBreak: !!b.isBreak, topicId: b.topicId || '',
+              pause: b.pause ? JSON.parse(JSON.stringify(b.pause)) : null
             };
           }));
           Planner.render();

@@ -163,8 +163,9 @@
       l.name.hidden = !m.name;
       l.time.textContent = s.time;
       l.time.hidden = !m.time;
-      l.index.textContent = 'Bloque ' + s.index + ' de ' + s.total;
-      l.index.hidden = !m.index;
+      // Durante una pausa guiada, la fase manda sobre el «Bloque X de N».
+      l.index.textContent = s.phase || ('Bloque ' + s.index + ' de ' + s.total);
+      l.index.hidden = s.phase ? false : !m.index;
       l.pause.textContent = 'PAUSA · ' + s.pauseTime;
       l.pause.hidden = !showPause;
     });
@@ -275,7 +276,8 @@
     const lines = [];
     if (m.name) lines.push({ text: s.name.toUpperCase(), size: 20, weight: 600 });
     if (m.time) lines.push({ text: s.time, size: 92, weight: 700, mono: true });
-    if (m.index) lines.push({ text: 'Bloque ' + s.index + ' de ' + s.total, size: 19, weight: 600 });
+    if (s.phase) lines.push({ text: s.phase, size: 22, weight: 600 });
+    else if (m.index) lines.push({ text: 'Bloque ' + s.index + ' de ' + s.total, size: 19, weight: 600 });
     if (m.pauseTimer && s.paused) lines.push({ text: 'PAUSA · ' + s.pauseTime, size: 28, weight: 700, mono: true });
     if (m.distractions) {
       lines.push({

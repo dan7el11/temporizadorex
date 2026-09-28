@@ -89,6 +89,11 @@
       this.play([[660, 0, 0.12, 0.3]], 'triangle');
     },
 
+    /** Cambio de fase en una pausa guiada: un toque suave, nada estridente. */
+    phase: function () {
+      this.play([[587.33, 0, 0.22, 0.18]], 'sine');
+    },
+
     /** Fin de toda la sesión. */
     finish: function () {
       this.play([

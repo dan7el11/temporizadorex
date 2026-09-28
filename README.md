@@ -75,6 +75,30 @@ historial también puedes «repetir» un día ya hecho.
 - Opcionalmente, **aviso del sistema** al terminar un bloque cuando la pestaña está en segundo
   plano. Se activa en *Ajustes* (el navegador pedirá permiso).
 
+### Pausas guiadas
+Descansos cortos entre bloques con su propio motivo, su duración y **su forma de presentarse**. Se
+editan en *Ajustes → Pausas guiadas* y vienen cuatro de serie: respiración 4-7-8, respiración en
+caja, pausa activa por pasos y descanso visual 20-20-20.
+
+Hay tres formas de presentación:
+
+- **Respiración guiada.** Un círculo se abre y se cierra marcando las fases, con la instrucción y los
+  segundos que le quedan bajo el reloj («Inhala · 3 s»). Los tiempos de inhalar, sostener, exhalar y
+  vacío se ponen uno a uno; con 0 se salta una fase. El círculo se dibuja dentro de las mismas capas
+  que el reloj, así que se lee igual sobre el color y sobre la parte vaciada.
+- **Pasos.** Instrucciones que van pasando, cada una con sus segundos («Ponte de pie y estira los
+  brazos · 30 s»). La duración de la pausa es la suma de los pasos.
+- **Solo el reloj.** La pantalla de siempre con el texto que tú escribas.
+
+Cada pausa tiene además color propio y un toque suave al cambiar de fase, que se puede quitar.
+
+**Dónde aparecen.** Al terminar un bloque, en el mismo diálogo donde se pregunta por las
+distracciones: eliges una y ajustas sus minutos ahí mismo, y se coloca justo antes del bloque
+siguiente. También se pueden dejar puestas desde el principio, en *Pausas guiadas* dentro del plan
+del día. Si prefieres que no te pregunte, se desactiva en *Ajustes*.
+
+No cuentan como tiempo de estudio: el historial las suma aparte, como el resto de descansos.
+
 ### Los bloques, con la sesión ya empezada
 Bajo la cabecera hay una **tira con todos los bloques del día** a escala según su duración: los
 hechos rellenos, el actual con su progreso y borde blanco, los que vienen en gris. Pulsándola —o con
@@ -234,6 +258,7 @@ docs/                         Lo que se publica en GitHub Pages
   src/ui.js                   Modales, avisos y selector de color
   src/reasons.js              Catálogo de razones de distracción y su selector
   src/topics.js               Catálogo de temas o asignaturas y su selector
+  src/pauses.js               Pausas guiadas: catálogo, editor y motor de fases
   src/notify.js               Avisos del sistema cuando la pestaña no está a la vista
   src/sync.js                 Sincronización con Supabase por API REST, sin dependencias
   src/room.js                 Sala compartida: estado del compañero y descansos acordados

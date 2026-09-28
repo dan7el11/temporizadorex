@@ -14,6 +14,39 @@
     { id: 'p_descanso', name: 'Descanso', color: '#0ea5b7', minutes: 15, note: 'Levantarse, agua, ventana.', isBreak: true }
   ];
 
+  /*
+   * Pausas guiadas: descansos cortos con su propia forma de presentarse.
+   *   mode 'breath' -> círculo que guía la respiración por fases (segundos)
+   *   mode 'steps'  -> instrucciones que van pasando, cada una con su tiempo
+   *   mode 'plain'  -> solo el reloj y un texto
+   */
+  const DEFAULT_PAUSES = [
+    {
+      id: 'pa_478', name: 'Respiración 4-7-8', color: '#0ea5b7', mode: 'breath',
+      seconds: 120, breath: { inhale: 4, hold1: 7, exhale: 8, hold2: 0 },
+      note: 'Inhala por la nariz, exhala despacio por la boca.', sound: true
+    },
+    {
+      id: 'pa_caja', name: 'Respiración en caja', color: '#7c5cff', mode: 'breath',
+      seconds: 180, breath: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 },
+      note: 'Cuatro tiempos iguales, sin forzar.', sound: true
+    },
+    {
+      id: 'pa_activa', name: 'Pausa activa', color: '#19b562', mode: 'steps', sound: true,
+      note: 'Levántate de la silla.',
+      steps: [
+        { text: 'Ponte de pie y estira los brazos hacia arriba', seconds: 30 },
+        { text: 'Gira el cuello despacio a un lado y al otro', seconds: 30 },
+        { text: 'Estira la espalda y abre los hombros', seconds: 30 },
+        { text: 'Camina un poco y bebe agua', seconds: 60 }
+      ]
+    },
+    {
+      id: 'pa_vista', name: 'Descanso visual 20-20-20', color: '#f0b429', mode: 'plain',
+      seconds: 60, note: 'Mira algo lejano y parpadea despacio.', sound: false
+    }
+  ];
+
   // Temas o asignaturas que se pueden asignar a cada bloque. Editables.
   const DEFAULT_TOPICS = [
     'Cardiología', 'Neumología', 'Digestivo', 'Nefrología', 'Endocrinología',
@@ -65,12 +98,13 @@
     breakEvery: 90,          // minutos de estudio entre descansos automáticos
     breakMinutes: 10,        // duración de cada descanso insertado
     breakPresetId: 'p_descanso',
+    offerPause: true,        // ofrecer una pausa guiada al terminar cada bloque
     askReasonQuick: true,    // preguntar la razón en la distracción rápida
     mini: DEFAULT_MINI
   };
 
   // Colecciones que se fusionan por id al sincronizar.
-  const MERGEABLE = ['sessions', 'presets', 'reasons', 'topics', 'plans'];
+  const MERGEABLE = ['sessions', 'presets', 'reasons', 'topics', 'plans', 'pauses'];
 
   const DEFAULT_DATA = {
     version: 1,
@@ -81,6 +115,7 @@
     presets: DEFAULT_PRESETS,
     reasons: DEFAULT_REASONS,
     topics: DEFAULT_TOPICS,
+    pauses: DEFAULT_PAUSES,
     plans: [],      // plantillas de día
     queue: [],      // sesión de hoy en construcción
     sessions: [],   // historial
@@ -124,6 +159,7 @@
       if (!Array.isArray(this.data.presets) || !this.data.presets.length) this.data.presets = deepClone(DEFAULT_PRESETS);
       if (!Array.isArray(this.data.reasons) || !this.data.reasons.length) this.data.reasons = deepClone(DEFAULT_REASONS);
       if (!Array.isArray(this.data.topics)) this.data.topics = deepClone(DEFAULT_TOPICS);
+      if (!Array.isArray(this.data.pauses)) this.data.pauses = deepClone(DEFAULT_PAUSES);
       // Los «Descanso» guardados antes de existir la marca no contaban aparte.
       this.data.presets.forEach(function (p) {
         if (p.isBreak === undefined && p.id === 'p_descanso') p.isBreak = true;
@@ -227,6 +263,43 @@
         });
       }
       return out;
+    },
+
+    /* ── Pausas guiadas ──────────────────────────────────── */
+    /** Duración total: en el modo por pasos la marcan los propios pasos. */
+    pauseSeconds: function (pause) {
+      if (!pause) return 0;
+      if (pause.mode === 'steps') {
+        return (pause.steps || []).reduce(function (a, s) { return a + (s.seconds || 0); }, 0);
+      }
+      return pause.seconds || 60;
+    },
+    getPause: function (id) {
+      return this.data.pauses.find(function (x) { return x.id === id; }) || null;
+    },
+    addPause: function (pause) {
+      pause.id = pause.id || U.uid('pa');
+      this.data.pauses.push(pause);
+      this.save();
+      return pause;
+    },
+    updatePause: function (id, patch) {
+      const p = this.getPause(id);
+      if (p) { Object.assign(p, patch); this.touch(p); this.save(); }
+      return p;
+    },
+    removePause: function (id) {
+      this.data.pauses = this.data.pauses.filter(function (x) { return x.id !== id; });
+      this.tomb('pauses', id);
+      this.save();
+    },
+    movePause: function (id, delta) {
+      const arr = this.data.pauses;
+      const i = arr.findIndex(function (x) { return x.id === id; });
+      const to = i + delta;
+      if (i < 0 || to < 0 || to >= arr.length) return;
+      const tmp = arr[i]; arr[i] = arr[to]; arr[to] = tmp;
+      this.save();
     },
 
     /* ── Temas / asignaturas ─────────────────────────────── */
@@ -406,7 +479,8 @@
 
     DEFAULT_PRESETS: DEFAULT_PRESETS,
     DEFAULT_REASONS: DEFAULT_REASONS,
-    DEFAULT_TOPICS: DEFAULT_TOPICS
+    DEFAULT_TOPICS: DEFAULT_TOPICS,
+    DEFAULT_PAUSES: DEFAULT_PAUSES
   };
 
   global.Store = Store;

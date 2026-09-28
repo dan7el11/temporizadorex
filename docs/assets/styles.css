@@ -432,6 +432,41 @@ input,select,textarea{font-family:inherit;font-size:inherit}
   color:var(--text-dim);white-space:pre;margin:0;
 }
 
+/* Pausas guiadas */
+.pause-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.pause-row{
+  display:flex;align-items:center;gap:11px;padding:9px 11px;
+  background:var(--card-2);border:1px solid var(--line);border-radius:11px;
+}
+.pause-row__dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.pause-row__body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+.pause-row__name{font-weight:560;overflow-wrap:anywhere}
+.pause-row__meta{color:var(--text-faint);font-size:.78rem}
+.pause-picker{display:flex;flex-direction:column;gap:9px}
+.pause-picker__extra{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pause-picker__extra input[type=number]{
+  width:70px;background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;
+  color:var(--text);padding:6px 9px;font-variant-numeric:tabular-nums;
+}
+.pause-picker__extra input:disabled{opacity:.4}
+.pause-picker__note{color:var(--text-faint);font-size:.8rem}
+.breath-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px}
+.breath-cell{display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:var(--text-dim)}
+.breath-cell input{
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;
+  color:var(--text);padding:7px 9px;font-variant-numeric:tabular-nums;width:100%;
+}
+.steps-list{display:flex;flex-direction:column;gap:7px;margin-bottom:9px}
+.step-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.step-row input[type=text]{
+  flex:1 1 170px;min-width:0;background:var(--bg-soft);border:1px solid var(--line);
+  border-radius:8px;color:var(--text);padding:7px 9px;
+}
+.step-row input[type=number]{
+  width:66px;background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;
+  color:var(--text);padding:7px 9px;font-variant-numeric:tabular-nums;
+}
+
 /* Catálogo de razones */
 .reason-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
 .reason-row{
@@ -508,6 +543,20 @@ input[type=range]{accent-color:var(--accent);width:150px}
   font-variant-numeric:tabular-nums;
 }
 .stage__sub{font-size:clamp(.8rem,1.7vw,1.1rem);opacity:.82;margin-top:.6em;font-weight:520}
+.stage__phase{
+  font-size:clamp(1.05rem,3.4vw,2.1rem);font-weight:600;letter-spacing:.02em;
+  margin-top:.25em;line-height:1.25;max-width:22ch;margin-left:auto;margin-right:auto;
+}
+/* Círculo que marca la respiración; va dentro de cada capa recortada, así
+   toma el mismo color de contraste que el reloj. */
+.stage__breath{
+  position:absolute;top:50%;left:50%;
+  width:min(58vh,58vw);aspect-ratio:1;border-radius:50%;
+  border:3px solid currentColor;opacity:.4;
+  transform:translate(-50%,-50%) scale(var(--breath,.6));
+  transition:transform .25s linear;pointer-events:none;
+}
+.stage.is-guided .stage__time{font-size:clamp(2.8rem,12vw,9rem)}
 .stage__pause{margin-top:1.1em;display:flex;flex-direction:column;align-items:center;gap:.15em;animation:pulse 1.6s ease-in-out infinite}
 .stage__pauseTag{font-size:clamp(.7rem,1.5vw,.95rem);letter-spacing:.22em;text-transform:uppercase;font-weight:600}
 .stage__pauseTime{font-family:var(--mono);font-size:clamp(1.5rem,5vw,3rem);font-weight:700;font-variant-numeric:tabular-nums}

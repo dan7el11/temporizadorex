@@ -71,6 +71,8 @@
           color: i.color,
           topicId: i.topicId || '',
           isBreak: !!i.isBreak,
+          // Configuración de la pausa guiada, si el bloque es una de ellas.
+          pause: i.pause ? JSON.parse(JSON.stringify(i.pause)) : null,
           plannedMs: Math.round(i.minutes * 60000),
           elapsedBefore: 0,
           startedAt: null,
@@ -104,6 +106,7 @@
     state.runningSince = Date.now();
     state.pausedAt = null;
     lastBeepSecond = -1;
+    lastPhaseIndex = -1;
     applyColors();
     Sound.start();
     startLoop();
@@ -336,6 +339,8 @@
     showChrome(true);
 
     const proceed = function () {
+      // La sesión puede haberse terminado mientras el diálogo estaba abierto.
+      if (!state || state.finished) return;
       if (state.index + 1 < state.blocks.length) {
         if (Store.data.settings.autoNext) { state.index++; beginBlock(); }
         else showGate();
@@ -344,23 +349,43 @@
       }
     };
 
-    if (Store.data.settings.askDistractions) askUndetected(b).then(proceed);
+    const cfg = Store.data.settings;
+    const hasNext = state.index + 1 < state.blocks.length;
+    const offerPause = cfg.offerPause !== false && hasNext && !b.isBreak && Store.data.pauses.length;
+    if (cfg.askDistractions || offerPause) askAfterBlock(b, offerPause).then(proceed);
     else proceed();
   }
 
-  /** Al terminar un bloque: registrar distracciones que no se detectaron en el momento. */
-  function askUndetected(b) {
+  /**
+   * Al terminar un bloque: registrar lo que no quedó anotado y, si quieres,
+   * meter una pausa guiada antes de seguir.
+   */
+  function askAfterBlock(b, offerPause) {
     let count = 0;
     let minutes = 0;
     let picker;
+    let pausePicker = null;
     let topicId = b.topicId || '';
+    const ask = Store.data.settings.askDistractions;
 
     return UI.modal({
       title: 'Bloque terminado: ' + b.name,
-      sub: 'Registradas ' + U.plural(blockDistractionCountFor(b), 'distracción', 'distracciones') + ' (' + U.fmtHuman(distractionMsFor(b)) + '). ¿Hubo alguna más que no quedó registrada?',
+      sub: ask
+        ? 'Registradas ' + U.plural(blockDistractionCountFor(b), 'distracción', 'distracciones') + ' (' + U.fmtHuman(distractionMsFor(b)) + '). ¿Hubo alguna más que no quedó registrada?'
+        : 'Antes de seguir con el siguiente bloque.',
       dismissible: false,
       build: function () {
         const frag = document.createDocumentFragment();
+
+        if (offerPause) {
+          const fp = U.el('div', { class: 'field' });
+          fp.appendChild(U.el('label', { text: '¿Quieres una pausa antes de seguir?' }));
+          pausePicker = Pauses.picker();
+          fp.appendChild(pausePicker.node);
+          frag.appendChild(fp);
+        }
+
+        if (!ask) return frag;
 
         if (!b.isBreak) {
           const ft = U.el('div', { class: 'field' });
@@ -395,13 +420,20 @@
       actions: function (close) {
         return [
           U.el('button', {
-            class: 'btn btn--ghost', text: 'Ninguna más',
-            onclick: function () { b.topicId = topicId; persist(); close(false); }
-          }),
-          U.el('button', {
-            class: 'btn btn--primary', text: 'Registrar y seguir',
+            class: 'btn btn--ghost', text: ask ? 'Ninguna más' : 'Seguir sin pausa',
             onclick: function () {
               b.topicId = topicId;
+              applyChosenPause(pausePicker);
+              persist();
+              close(false);
+            }
+          }),
+          U.el('button', {
+            class: 'btn btn--primary', text: ask ? 'Registrar y seguir' : 'Continuar',
+            onclick: function () {
+              b.topicId = topicId;
+              applyChosenPause(pausePicker);
+              if (!ask) { persist(); close(true); return; }
               const chosen = picker.value;
               if (count > 0 || minutes > 0 || chosen.reasons.length || chosen.freeText) {
                 b.distractions.push({
@@ -418,6 +450,17 @@
         ];
       }
     });
+  }
+
+  /** Mete la pausa elegida justo antes del siguiente bloque. */
+  function applyChosenPause(pausePicker) {
+    if (!pausePicker || !state || state.finished) return;
+    const choice = pausePicker.value;
+    if (!choice) return;
+    const pauseBlock = Pauses.toBlock(choice.pause, choice.minutes);
+    state.blocks.splice(state.index + 1, 0, pauseBlock);
+    timelineSig = '';   // la tira tiene que redibujarse con el bloque nuevo
+    persist();
   }
 
   function distractionMsFor(b) {
@@ -730,6 +773,7 @@
         return {
           name: x.name, color: x.color, presetId: x.presetId,
           topicId: x.topicId || '', isBreak: !!x.isBreak,
+          pause: x.pause || null,
           plannedMs: x.plannedMs, actualMs: x.elapsedBefore,
           status: x.status, distractions: x.distractions
         };
@@ -810,6 +854,34 @@
     U.$$('#stage ' + sel).forEach(function (n) { n.textContent = text; });
   }
 
+  let lastPhaseIndex = -1;
+  let timelineSig = '';
+
+  /** Dibuja la fase de una pausa guiada: círculo, instrucción y su cuenta. */
+  function renderPause(b, stage) {
+    const phase = b.pause ? Pauses.phaseAt(b.pause, elapsedMs()) : null;
+    stage.classList.toggle('is-guided', !!phase);
+    if (!phase) {
+      setLayers('.js-phase', '');
+      U.$$('#stage .js-phase').forEach(function (n) { n.hidden = true; });
+      U.$$('#stage .stage__breath').forEach(function (n) { n.hidden = true; });
+      lastPhaseIndex = -1;
+      return phase;
+    }
+
+    stage.style.setProperty('--breath', phase.scale.toFixed(3));
+    setLayers('.js-phase', phase.label + (phase.hint ? '  ·  ' + phase.hint : ''));
+    U.$$('#stage .js-phase').forEach(function (n) { n.hidden = false; });
+    U.$$('#stage .stage__breath').forEach(function (n) { n.hidden = b.pause.mode !== 'breath'; });
+
+    // Un toque al cambiar de fase, para poder cerrar los ojos.
+    if (phase.index !== lastPhaseIndex) {
+      if (lastPhaseIndex >= 0 && b.pause.sound !== false && !state.pausedAt) Sound.phase();
+      lastPhaseIndex = phase.index;
+    }
+    return phase;
+  }
+
   function render() {
     const b = block();
     if (!b) return;
@@ -822,6 +894,8 @@
     const timeText = state.gate ? U.fmt(0) : U.fmt(left);
     setLayers('.js-name', state.gate ? b.name + ' · completado' : b.name);
     setLayers('.js-time', timeText);
+
+    const phase = renderPause(b, stage);
 
     const distN = blockDistractionCount();
     const distMs = blockDistractionMs();
@@ -943,7 +1017,6 @@
   };
 
   /** Tira superior con todos los bloques, a escala según su duración. */
-  let timelineSig = '';
   function renderTimeline() {
     const strip = document.getElementById('runnerTimeline');
     const sig = state.blocks.map(function (b) { return b.uid + ':' + b.plannedMs; }).join('|') + '#' + state.index;
@@ -988,6 +1061,10 @@
       distractionCount: blockDistractionCount(),
       index: state.index + 1,
       total: state.blocks.length,
+      phase: b.pause ? (function () {
+        const p = Pauses.phaseAt(b.pause, elapsedMs());
+        return p ? p.label + (p.hint ? ' · ' + p.hint : '') : '';
+      })() : '',
       gate: !!state.gate
     };
   };

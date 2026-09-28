@@ -24,6 +24,34 @@
         ])
       ]));
     });
+
+    // Pausas guiadas: se pueden dejar puestas desde el principio.
+    const pbox = U.clear(document.getElementById('pausePicker'));
+    Store.data.pauses.forEach(function (p) {
+      pbox.appendChild(U.el('button', {
+        class: 'preset-chip', type: 'button', title: p.note || '',
+        onclick: function () { Planner.addPause(p.id); }
+      }, [
+        U.el('span', { class: 'preset-chip__dot', style: { background: p.color, color: p.color } }),
+        U.el('span', { class: 'preset-chip__body' }, [
+          U.el('span', { class: 'preset-chip__name', text: p.name }),
+          U.el('span', { class: 'preset-chip__time', text: U.fmtHuman(Pauses.total(p) * 1000) })
+        ])
+      ]));
+    });
+  };
+
+  /** Añade una pausa guiada al día, como un bloque más. */
+  Planner.addPause = function (id) {
+    const p = Store.getPause(id);
+    if (!p) return;
+    queue().push({
+      uid: U.uid('q'), presetId: null, name: p.name, color: p.color,
+      minutes: Math.max(1, Math.round(Pauses.total(p) / 60)),
+      isBreak: true, topicId: '', pauseId: p.id, pause: JSON.parse(JSON.stringify(p))
+    });
+    persist();
+    Planner.render();
   };
 
   Planner.addFromPreset = function (id) {
@@ -354,7 +382,8 @@
     const copies = plan.items.map(function (i) {
       return {
         uid: U.uid('q'), presetId: i.presetId || null, name: i.name, color: i.color,
-        minutes: i.minutes, isBreak: !!i.isBreak, autoBreak: !!i.autoBreak, topicId: i.topicId || ''
+        minutes: i.minutes, isBreak: !!i.isBreak, autoBreak: !!i.autoBreak, topicId: i.topicId || '',
+        pauseId: i.pauseId || null, pause: i.pause ? JSON.parse(JSON.stringify(i.pause)) : null
       };
     });
     Store.setQueue(append ? queue().concat(copies) : copies);
@@ -370,7 +399,8 @@
         Store.addPlan(name, queue().map(function (i) {
           return {
             presetId: i.presetId, name: i.name, color: i.color, minutes: i.minutes,
-            isBreak: !!i.isBreak, autoBreak: !!i.autoBreak, topicId: i.topicId || ''
+            isBreak: !!i.isBreak, autoBreak: !!i.autoBreak, topicId: i.topicId || '',
+            pauseId: i.pauseId || null, pause: i.pause ? JSON.parse(JSON.stringify(i.pause)) : null
           };
         }));
         Planner.renderTemplates();
