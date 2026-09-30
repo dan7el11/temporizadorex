@@ -9,8 +9,12 @@
   function distMs(b) { return (b.distractions || []).reduce(function (a, d) { return a + (d.ms || 0); }, 0); }
   function distN(b) { return (b.distractions || []).reduce(function (a, d) { return a + (d.count || 1); }, 0); }
   function isBreak(b) { return !!b.isBreak; }
-  /** El tiempo de descanso no cuenta como estudio. */
-  function studyMs(b) { return isBreak(b) ? 0 : (b.actualMs || 0); }
+  /**
+   * Tiempo efectivo: lo que marcó el reloj menos las distracciones que
+   * ocurrieron con el reloj en marcha (las pausas ya no están contadas).
+   */
+  function studyMs(b) { return isBreak(b) ? 0 : Store.effectiveMs(b); }
+  function rawMs(b) { return isBreak(b) ? 0 : (b.actualMs || 0); }
   function breakMs(b) { return isBreak(b) ? (b.actualMs || 0) : 0; }
   function sessionStudy(s) { return s.blocks.reduce(function (a, b) { return a + studyMs(b); }, 0); }
   function topicOf(b) { return b.topicId || ''; }
@@ -35,7 +39,7 @@
     const presets = {};    // nombre de bloque -> { ms, count, color }
     const topics = {};     // tema -> { ms, count }
     const hours = new Array(24).fill(0);
-    let study = 0, lost = 0, count = 0, blocksDone = 0, rest = 0;
+    let study = 0, lost = 0, count = 0, blocksDone = 0, rest = 0, raw = 0;
 
     sessions.forEach(function (s) {
       const key = U.dayKey(s.startedAt);
@@ -47,7 +51,7 @@
         if (topicFilter && topicOf(b) !== topicFilter) return;
         const st = studyMs(b), dm = distMs(b), dn = distN(b), br = breakMs(b);
         day.study += st; day.lost += dm; day.count += dn; day.rest += br;
-        study += st; lost += dm; count += dn; rest += br;
+        study += st; lost += dm; count += dn; rest += br; raw += rawMs(b);
         if (b.status === 'done') blocksDone++;
 
         if (!isBreak(b)) {
@@ -86,7 +90,7 @@
         .sort(function (a, b) { return b.ms - a.ms; }),
       topics: Object.keys(topics).map(function (k) { return topics[k]; })
         .sort(function (a, b) { return b.ms - a.ms; }),
-      study: study, lost: lost, count: count, blocksDone: blocksDone, rest: rest
+      study: study, lost: lost, count: count, blocksDone: blocksDone, rest: rest, raw: raw
     };
   }
 
@@ -173,8 +177,11 @@
       ]);
     }
 
-    box.appendChild(tile(U.fmtHuman(data.study), 'Estudio en el periodo',
-      data.rest ? U.el('span', { text: '+ ' + U.fmtHuman(data.rest) + ' de descanso' }) : null));
+    box.appendChild(tile(U.fmtHuman(data.study), 'Estudio efectivo',
+      U.el('span', {
+        text: (data.raw > data.study ? U.fmtHuman(data.raw) + ' de reloj' : 'sin descuentos') +
+          (data.rest ? ' · ' + U.fmtHuman(data.rest) + ' de descanso' : '')
+      })));
     box.appendChild(tile(active ? U.fmtHuman(data.study / active) : '—', 'Media por día activo'));
     box.appendChild(tile(String(Math.round(data.count)), U.plural(data.count, 'distracción', 'distracciones').replace(/^\d+ /, '').replace(/^./, function (c) { return c.toUpperCase(); }), U.el('span', { text: U.fmtHuman(data.lost) + ' perdidos' })));
     box.appendChild(tile(data.study >= 600000 ? perHour.toFixed(1) : '—', 'Distracciones por hora'));
@@ -333,6 +340,71 @@
     barRows(document.getElementById('topicBreakdown'), rows, max, function (r) {
       return U.fmtHuman(r.value);
     });
+  }
+
+  /** Lo que se pierde ANTES de encender el temporizador, por causa. */
+  function renderLost() {
+    const box = document.getElementById('lostBreakdown');
+    const head = document.getElementById('lostSummary');
+    if (!box || !head) return;
+    const range = settings().historyRange || 0;
+    const sum = Lost.rangeSummary(range || 0);
+
+    U.clear(head);
+    if (!sum.perDay.length) {
+      head.appendChild(U.el('p', {
+        class: 'empty-note',
+        text: Lost.enabled()
+          ? 'Nada registrado en este periodo: o no has perdido tiempo, o aún no lo has justificado.'
+          : 'Define tu horario habitual en Ajustes para medir el tiempo que se va antes de encender el temporizador.'
+      }));
+      U.clear(box);
+      return;
+    }
+
+    head.appendChild(U.el('div', { class: 'stats' }, [
+      U.el('div', { class: 'stat' }, [
+        U.el('strong', { text: U.fmtHuman(sum.totalGap) }),
+        U.el('span', { text: 'Fuera del temporizador' })
+      ]),
+      U.el('div', { class: 'stat' }, [
+        U.el('strong', { text: U.fmtHuman(sum.totalLogged) }),
+        U.el('span', { text: 'Con causa apuntada' })
+      ]),
+      U.el('div', { class: 'stat' }, [
+        U.el('strong', { text: U.fmtHuman(Math.max(0, sum.totalGap - sum.totalLogged)) }),
+        U.el('span', { text: 'Sin justificar' })
+      ]),
+      U.el('div', { class: 'stat' }, [
+        U.el('strong', { text: sum.perDay.length ? U.fmtHuman(sum.totalGap / sum.perDay.length) : '—' }),
+        U.el('span', { text: 'Media por día' })
+      ])
+    ]));
+
+    const rows = sum.byCause.map(function (c) { return { label: c.label, value: c.ms }; });
+    const max = rows.length ? rows[0].value : 1;
+    barRows(box, rows, max, function (r) { return U.fmtHuman(r.value); });
+
+    // Los días, con lo que se perdió y en qué.
+    const list = U.el('div', { class: 'lostdays' });
+    sum.perDay.slice(0, 14).forEach(function (d) {
+      list.appendChild(U.el('div', { class: 'lostday' }, [
+        U.el('span', { class: 'lostday__date', text: U.dayLabel(new Date(d.dayKey + 'T00:00:00').getTime()) }),
+        U.el('span', { class: 'lostday__num', text: U.fmtHuman(d.gapMs) }),
+        U.el('span', {
+          class: 'lostday__causes',
+          text: d.byCause.length
+            ? d.byCause.map(function (c) { return c.label + ' ' + U.fmtHuman(c.ms); }).join(' · ')
+            : (d.gapMs ? 'sin justificar' : '')
+        }),
+        U.el('button', {
+          class: 'mini', text: 'Apuntar',
+          title: 'Registrar a qué se fue ese tiempo',
+          onclick: function () { Lost.logDialog(d.dayKey); }
+        })
+      ]));
+    });
+    box.appendChild(list);
   }
 
   function renderHours(data) {
@@ -646,7 +718,7 @@
   }
 
   History.exportBlocks = function () {
-    const rows = [['fecha', 'hora', 'bloque', 'tema', 'es_descanso', 'planificado_min', 'real_min', 'estado', 'distracciones', 'tiempo_perdido_min', 'razones']];
+    const rows = [['fecha', 'hora', 'bloque', 'tema', 'es_descanso', 'planificado_min', 'reloj_min', 'efectivo_min', 'estado', 'distracciones', 'tiempo_perdido_min', 'razones']];
     Store.data.sessions.slice().sort(function (a, b) { return a.startedAt - b.startedAt; }).forEach(function (s) {
       s.blocks.forEach(function (b) {
         const labels = {};
@@ -656,7 +728,8 @@
         rows.push([
           U.dayKey(s.startedAt), U.fmtClock(new Date(s.startedAt)), b.name,
           topicName(topicOf(b)), isBreak(b) ? 'si' : 'no',
-          Math.round(b.plannedMs / 60000), Math.round((b.actualMs || 0) / 60000), b.status,
+          Math.round(b.plannedMs / 60000), Math.round((b.actualMs || 0) / 60000),
+          Math.round(Store.effectiveMs(b) / 60000), b.status,
           Math.round(distN(b)), Math.round(distMs(b) / 60000), Object.keys(labels).join(', ')
         ]);
       });
@@ -691,6 +764,7 @@
     renderReasons(data);
     renderBlocks(data);
     renderTopics(data);
+    renderLost();
     renderHours(data);
     renderGroups(data);
     document.getElementById('historyCount').textContent =

@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="assets/styles.css?v=9">
+<link rel="stylesheet" href="assets/styles.css?v=10">
 </head>
 <body>
 
@@ -36,6 +36,7 @@
 
     <!-- ══════════════ PLAN ══════════════ -->
     <section class="view is-active" id="view-plan">
+      <div class="lost" id="lostToday" hidden></div>
       <div class="roomstrip" id="roomStrip" hidden></div>
       <div class="grid">
         <div class="col">
@@ -141,6 +142,13 @@
       </div>
 
       <div class="card">
+        <h2>Tiempo perdido fuera del temporizador</h2>
+        <p class="hint">Lo que se va antes de encender el temporizador dentro de tus franjas, y en qué se va.</p>
+        <div id="lostSummary"></div>
+        <div id="lostBreakdown"></div>
+      </div>
+
+      <div class="card">
         <h2>Cuándo te distraes</h2>
         <p class="hint">Distracciones por hora del día. Sirve para colocar los bloques difíciles en tus mejores horas.</p>
         <div id="hourBreakdown"></div>
@@ -175,12 +183,33 @@
         <div class="reason-list" id="topicList"></div>
       </div>
       <div class="card">
+        <h2>Horario habitual</h2>
+        <p class="hint">Las franjas en las que deberías estar estudiando. Lo que pase dentro de ellas con el temporizador apagado cuenta como tiempo perdido, y podrás apuntar a qué se fue.</p>
+        <div id="schedulePanel"></div>
+      </div>
+      <div class="card">
+        <div class="card__head">
+          <h2>Causas del tiempo perdido</h2>
+          <button class="btn btn--primary btn--sm" id="newLostCause">+ Nueva causa</button>
+        </div>
+        <p class="hint">Lo que te impide empezar a la hora: pacientes, papeleo, visitas… Se eligen al registrar el tiempo perdido.</p>
+        <div class="reason-list" id="lostCauseList"></div>
+      </div>
+      <div class="card">
         <div class="card__head">
           <h2>Pausas guiadas</h2>
           <button class="btn btn--primary btn--sm" id="newPause">+ Nueva pausa</button>
         </div>
         <p class="hint">Descansos cortos entre bloques, con su motivo, su duración y su forma de presentarse: respiración guiada con un círculo, pasos que van pasando, o solo el reloj con un texto tuyo. Al terminar cada bloque se te ofrecen aquí mismo.</p>
         <div class="pause-list" id="pauseList"></div>
+      </div>
+      <div class="card">
+        <div class="card__head">
+          <h2>Ejercicios de las pausas activas</h2>
+          <button class="btn btn--primary btn--sm" id="newExercise">+ Nuevo ejercicio</button>
+        </div>
+        <p class="hint">De aquí se sortean los ejercicios cuando una pausa está puesta como «distintos cada vez», sin repetir los de la vez anterior.</p>
+        <div class="ex-list" id="exerciseList"></div>
       </div>
       <div class="card">
         <div class="card__head">
@@ -236,10 +265,11 @@
 
     <div class="stage__layer stage__layer--over">
       <div class="stage__inner">
-        <div class="stage__breath" hidden></div>
+        <div class="stage__breath" hidden><span class="stage__dot" hidden></span></div>
         <div class="stage__name js-name">—</div>
         <div class="stage__time js-time">00:00</div>
         <div class="stage__phase js-phase" hidden></div>
+        <div class="stage__phasecount js-phasecount" hidden></div>
         <div class="stage__sub js-sub"></div>
         <div class="stage__pause js-pause" hidden>
           <span class="stage__pauseTag">PAUSA · distracción en curso</span>
@@ -250,10 +280,11 @@
 
     <div class="stage__layer stage__layer--void">
       <div class="stage__inner">
-        <div class="stage__breath" hidden></div>
+        <div class="stage__breath" hidden><span class="stage__dot" hidden></span></div>
         <div class="stage__name js-name">—</div>
         <div class="stage__time js-time">00:00</div>
         <div class="stage__phase js-phase" hidden></div>
+        <div class="stage__phasecount js-phasecount" hidden></div>
         <div class="stage__sub js-sub"></div>
         <div class="stage__pause js-pause" hidden>
           <span class="stage__pauseTag">PAUSA · distracción en curso</span>
@@ -296,22 +327,23 @@
 <video id="pipVideo" playsinline muted hidden></video>
 <canvas id="pipCanvas" width="640" height="360" hidden></canvas>
 
-<script src="src/utils.js?v=9"></script>
-<script src="src/store.js?v=9"></script>
-<script src="src/audio.js?v=9"></script>
-<script src="src/ui.js?v=9"></script>
-<script src="src/reasons.js?v=9"></script>
-<script src="src/topics.js?v=9"></script>
-<script src="src/pauses.js?v=9"></script>
-<script src="src/notify.js?v=9"></script>
-<script src="src/sync.js?v=9"></script>
-<script src="src/room.js?v=9"></script>
-<script src="src/library.js?v=9"></script>
-<script src="src/planner.js?v=9"></script>
-<script src="src/pip.js?v=9"></script>
-<script src="src/runner.js?v=9"></script>
-<script src="src/history.js?v=9"></script>
-<script src="src/settings.js?v=9"></script>
-<script src="src/app.js?v=9"></script>
+<script src="src/utils.js?v=10"></script>
+<script src="src/store.js?v=10"></script>
+<script src="src/audio.js?v=10"></script>
+<script src="src/ui.js?v=10"></script>
+<script src="src/reasons.js?v=10"></script>
+<script src="src/topics.js?v=10"></script>
+<script src="src/pauses.js?v=10"></script>
+<script src="src/lost.js?v=10"></script>
+<script src="src/notify.js?v=10"></script>
+<script src="src/sync.js?v=10"></script>
+<script src="src/room.js?v=10"></script>
+<script src="src/library.js?v=10"></script>
+<script src="src/planner.js?v=10"></script>
+<script src="src/pip.js?v=10"></script>
+<script src="src/runner.js?v=10"></script>
+<script src="src/history.js?v=10"></script>
+<script src="src/settings.js?v=10"></script>
+<script src="src/app.js?v=10"></script>
 </body>
 </html>

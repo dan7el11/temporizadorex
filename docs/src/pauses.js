@@ -18,8 +18,73 @@
   Pauses.total = function (pause) { return Store.pauseSeconds(pause); };
 
   Pauses.label = function (pause) {
+    return pause.name + ' · ' + Pauses.amountLabel(pause);
+  };
+
+  /** «8 ciclos (5 min)», «2 rondas (4 min)» o «1 min», según cómo se mida. */
+  Pauses.amountLabel = function (pause) {
     const secs = Pauses.total(pause);
-    return pause.name + ' · ' + (secs >= 60 ? U.fmtHuman(secs * 1000) : secs + ' s');
+    const time = secs >= 60 ? U.fmtHuman(secs * 1000) : secs + ' s';
+    if (pause.mode === 'breath' && pause.unit !== 'minutes') {
+      return U.plural(pause.cycles || 1, 'ciclo', 'ciclos') + ' (' + time + ')';
+    }
+    if (pause.mode === 'steps') {
+      const rounds = pause.rounds || 1;
+      const n = (pause.steps || []).length || pause.count || 0;
+      // Con ejercicios al azar la lista aún no existe: se estima con el catálogo.
+      const shown = secs ? time : '≈ ' + U.fmtHuman(Pauses.estimate(pause) * 1000);
+      return (rounds > 1 ? U.plural(rounds, 'ronda', 'rondas') + ' · ' : '') +
+        U.plural(n, 'ejercicio', 'ejercicios') + ' (' + shown + ')';
+    }
+    return time;
+  };
+
+  /** Duración aproximada de una pausa que todavía no ha sorteado ejercicios. */
+  Pauses.estimate = function (pause) {
+    const kinds = pause.kinds && pause.kinds.length ? pause.kinds : null;
+    const pool = Store.data.exercises.filter(function (e) { return !kinds || kinds.indexOf(e.kind) >= 0; });
+    if (!pool.length) return 0;
+    const avg = pool.reduce(function (a, e) { return a + (e.seconds || 30); }, 0) / pool.length;
+    return Math.round(avg * (pause.count || 4) * Math.max(1, pause.rounds || 1));
+  };
+
+  /** Unidad en la que se ajusta la cantidad al elegir la pausa. */
+  Pauses.unitOf = function (pause) {
+    if (pause.mode === 'breath' && pause.unit !== 'minutes') return { key: 'cycles', one: 'ciclo', many: 'ciclos' };
+    if (pause.mode === 'steps') return { key: 'rounds', one: 'ronda', many: 'rondas' };
+    return { key: 'minutes', one: 'minuto', many: 'minutos' };
+  };
+
+  /**
+   * Sortea ejercicios del catálogo para una pausa activa, evitando repetir
+   * los de la vez anterior mientras haya de sobra.
+   */
+  const RECENT_KEY = 'mir2027.exercises.recent.v1';
+  function recent() {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function remember(ids) {
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(ids.slice(-12))); } catch (e) { /* noop */ }
+  }
+
+  Pauses.drawExercises = function (pause) {
+    const kinds = pause.kinds && pause.kinds.length ? pause.kinds : null;
+    const pool = Store.data.exercises.filter(function (e) {
+      return !kinds || kinds.indexOf(e.kind) >= 0;
+    });
+    if (!pool.length) return [];
+
+    const count = U.clamp(pause.count || 4, 1, pool.length);
+    const used = recent();
+    const fresh = pool.filter(function (e) { return used.indexOf(e.id) < 0; });
+    const bag = (fresh.length >= count ? fresh : pool).slice();
+
+    const picked = [];
+    while (picked.length < count && bag.length) {
+      picked.push(bag.splice(Math.floor(Math.random() * bag.length), 1)[0]);
+    }
+    remember(used.concat(picked.map(function (e) { return e.id; })));
+    return picked.map(function (e) { return { text: e.text, seconds: e.seconds, kind: e.kind }; });
   };
 
   /**
@@ -34,11 +99,14 @@
 
     if (pause.mode === 'breath') {
       const b = pause.breath || { inhale: 4, hold1: 4, exhale: 4, hold2: 4 };
+      // El cuadrado se encoge menos que el círculo: si no, queda diminuto y el
+      // punto del recorrido deja de leerse.
+      const min = pause.shape === 'box' ? 0.62 : 0.34;
       const parts = [
-        { key: 'inhale', label: 'Inhala', secs: b.inhale || 0, from: 0.34, to: 1 },
+        { key: 'inhale', label: 'Inhala', secs: b.inhale || 0, from: min, to: 1 },
         { key: 'hold1', label: 'Sostén', secs: b.hold1 || 0, from: 1, to: 1 },
-        { key: 'exhale', label: 'Exhala', secs: b.exhale || 0, from: 1, to: 0.34 },
-        { key: 'hold2', label: 'Vacío', secs: b.hold2 || 0, from: 0.34, to: 0.34 }
+        { key: 'exhale', label: 'Exhala', secs: b.exhale || 0, from: 1, to: min },
+        { key: 'hold2', label: 'Vacío', secs: b.hold2 || 0, from: min, to: min }
       ].filter(function (p) { return p.secs > 0; });
       const cycle = parts.reduce(function (a, p) { return a + p.secs; }, 0);
       if (!cycle) return null;
@@ -52,10 +120,16 @@
       }
       const part = parts[Math.min(index, parts.length - 1)];
       const k = part.secs ? U.clamp(pos / part.secs, 0, 1) : 0;
+      // El punto recorre el perímetro: sube al inhalar, cruza en horizontal
+      // mientras sostienes, baja al exhalar y vuelve por abajo en el vacío.
+      const dot = { inhale: { x: 0, y: 1 - k }, hold1: { x: k, y: 0 },
+        exhale: { x: 1, y: k }, hold2: { x: 1 - k, y: 1 } }[part.key];
       return {
         label: part.label,
         hint: Math.ceil(part.secs - pos) + ' s',
         scale: part.from + (part.to - part.from) * k,
+        dot: dot,
+        cycleIndex: Math.floor(t / cycle) + 1,
         index: Math.floor(t / cycle) * parts.length + index,
         remain: part.secs - pos
       };
@@ -76,6 +150,8 @@
         label: step.text,
         hint: Math.ceil((step.seconds || 0) - pos) + ' s',
         scale: 0.6,
+        stepIndex: Math.min(i, steps.length - 1) + 1,
+        stepTotal: steps.length,
         index: Math.floor(t / cycle) * steps.length + i,
         remain: (step.seconds || 0) - pos
       };
@@ -85,13 +161,25 @@
   };
 
   /** Bloque de sesión a partir de una pausa del catálogo. */
-  Pauses.toBlock = function (pause, minutesOverride) {
-    const secs = minutesOverride ? Math.round(minutesOverride * 60) : Pauses.total(pause);
+  Pauses.toBlock = function (pause, amount) {
+    const copy = JSON.parse(JSON.stringify(pause));
+    const unit = Pauses.unitOf(copy);
+    if (amount) {
+      if (unit.key === 'cycles') copy.cycles = Math.max(1, Math.round(amount));
+      else if (unit.key === 'rounds') copy.rounds = Math.max(1, Math.round(amount));
+      else copy.seconds = Math.max(5, Math.round(amount * 60));
+    }
+    // Una pausa activa con ejercicios al azar se resuelve aquí: el bloque se
+    // queda con la lista concreta, así no cambia a mitad ni al recargar.
+    if (copy.mode === 'steps' && copy.source === 'random') {
+      copy.steps = Pauses.drawExercises(copy);
+    }
+    const secs = Store.pauseSeconds(copy);
     return {
       uid: U.uid('b'), presetId: null, name: pause.name, color: pause.color,
       topicId: '', isBreak: true,
       // Se copia la configuración: si luego editas el catálogo, esta pausa no cambia.
-      pause: JSON.parse(JSON.stringify(pause)),
+      pause: copy,
       plannedMs: Math.max(5, secs) * 1000,
       elapsedBefore: 0, startedAt: null, endedAt: null,
       status: 'pending', distractions: []
@@ -111,12 +199,13 @@
     const extra = U.el('div', { class: 'pause-picker__extra', hidden: true });
     const minInput = U.el('input', {
       type: 'number', min: '1', max: '60', step: '1', value: '2',
-      'aria-label': 'Minutos de la pausa',
+      'aria-label': 'Cantidad de la pausa',
       oninput: function () { minutes = U.clamp(parseInt(minInput.value, 10) || 1, 1, 60); }
     });
     const note = U.el('span', { class: 'pause-picker__note' });
+    const unitText = U.el('span', { class: 'qitem__unit', text: 'min' });
     extra.appendChild(minInput);
-    extra.appendChild(U.el('span', { class: 'qitem__unit', text: 'min' }));
+    extra.appendChild(unitText);
     extra.appendChild(note);
 
     function paint() {
@@ -130,13 +219,14 @@
           onclick: function () {
             chosen = active ? null : p;
             if (chosen) {
-              minutes = Math.max(1, Math.round(Pauses.total(chosen) / 60));
+              const unit = Pauses.unitOf(chosen);
+              minutes = unit.key === 'cycles' ? (chosen.cycles || 6)
+                : unit.key === 'rounds' ? (chosen.rounds || 1)
+                  : Math.max(1, Math.round(Pauses.total(chosen) / 60));
               minInput.value = String(minutes);
-              // En el modo por pasos manda la suma de los pasos.
-              minInput.disabled = chosen.mode === 'steps';
-              note.textContent = chosen.mode === 'steps'
-                ? 'la marcan los pasos'
-                : (chosen.note || '');
+              minInput.disabled = false;
+              unitText.textContent = minutes === 1 ? unit.one : unit.many;
+              note.textContent = Pauses.amountLabel(chosen) + (chosen.note ? ' · ' + chosen.note : '');
             }
             extra.hidden = !chosen;
             paint();
@@ -153,7 +243,7 @@
       node: wrap,
       get value() {
         if (!chosen) return null;
-        return { pause: chosen, minutes: chosen.mode === 'steps' ? 0 : minutes };
+        return { pause: chosen, amount: minutes };
       }
     };
   };
@@ -221,10 +311,13 @@
   function form(existing) {
     const model = existing
       ? JSON.parse(JSON.stringify(existing))
-      : { name: '', color: '#0ea5b7', mode: 'breath', seconds: 120,
-          breath: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 }, steps: [], note: '', sound: true };
+      : { name: '', color: '#0ea5b7', mode: 'breath', unit: 'cycles', cycles: 6, shape: 'circle',
+          seconds: 120, breath: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 },
+          steps: [], source: 'fixed', kinds: ['estiramiento', 'movimiento'], count: 4, rounds: 1,
+          note: '', sound: true };
     if (!model.breath) model.breath = { inhale: 4, hold1: 4, exhale: 4, hold2: 4 };
     if (!model.steps) model.steps = [];
+    if (!model.kinds) model.kinds = ['estiramiento', 'movimiento'];
 
     let nameInput, noteInput, picker, soundInput, minsInput;
     const modeBox = U.el('div', { class: 'chips' });
@@ -260,7 +353,50 @@
       U.clear(detail);
 
       if (model.mode === 'breath') {
-        detail.appendChild(durationField());
+        // Por ciclos: así la pausa nunca se corta en mitad de una inspiración.
+        const fu = U.el('div', { class: 'field' });
+        fu.appendChild(U.el('label', { text: 'Cómo se mide la duración' }));
+        const unitChips = U.el('div', { class: 'chips' });
+        [['cycles', 'Por ciclos de respiración'], ['minutes', 'Por minutos']].forEach(function (o) {
+          unitChips.appendChild(U.el('button', {
+            class: 'chip' + ((model.unit || 'cycles') === o[0] ? ' is-active' : ''), type: 'button', text: o[1],
+            onclick: function () { model.unit = o[0]; paintDetail(); }
+          }));
+        });
+        fu.appendChild(unitChips);
+        detail.appendChild(fu);
+
+        if ((model.unit || 'cycles') === 'cycles') {
+          const fc = U.el('div', { class: 'field' });
+          fc.appendChild(U.el('label', { text: 'Ciclos completos' }));
+          const cyc = U.el('input', {
+            type: 'number', min: '1', max: '60', step: '1', value: String(model.cycles || 6),
+            onchange: function () {
+              model.cycles = U.clamp(parseInt(cyc.value, 10) || 1, 1, 60);
+              cyc.value = String(model.cycles);
+              totalHint.textContent = 'Duración: ' + U.fmtHuman(Store.pauseSeconds(model) * 1000);
+            }
+          });
+          fc.appendChild(cyc);
+          const totalHint = U.el('p', { class: 'hint', text: 'Duración: ' + U.fmtHuman(Store.pauseSeconds(model) * 1000) });
+          fc.appendChild(totalHint);
+          detail.appendChild(fc);
+        } else {
+          detail.appendChild(durationField());
+        }
+
+        const fs = U.el('div', { class: 'field' });
+        fs.appendChild(U.el('label', { text: 'Figura' }));
+        const shapeChips = U.el('div', { class: 'chips' });
+        [['circle', 'Círculo que se abre y cierra'], ['box', 'Cuadrado con punto recorriéndolo']].forEach(function (o) {
+          shapeChips.appendChild(U.el('button', {
+            class: 'chip' + ((model.shape || 'circle') === o[0] ? ' is-active' : ''), type: 'button', text: o[1],
+            onclick: function () { model.shape = o[0]; paintDetail(); }
+          }));
+        });
+        fs.appendChild(shapeChips);
+        detail.appendChild(fs);
+
         const f = U.el('div', { class: 'field' });
         f.appendChild(U.el('label', { text: 'Fases del ciclo, en segundos (0 para saltarse una)' }));
         const grid = U.el('div', { class: 'breath-grid' });
@@ -278,6 +414,66 @@
       }
 
       if (model.mode === 'steps') {
+        // De dónde salen los ejercicios: una lista fija o un sorteo cada vez.
+        const fo = U.el('div', { class: 'field' });
+        fo.appendChild(U.el('label', { text: 'Ejercicios' }));
+        const srcChips = U.el('div', { class: 'chips' });
+        [['fixed', 'Siempre los mismos'], ['random', 'Distintos cada vez']].forEach(function (o) {
+          srcChips.appendChild(U.el('button', {
+            class: 'chip' + ((model.source || 'fixed') === o[0] ? ' is-active' : ''), type: 'button', text: o[1],
+            onclick: function () { model.source = o[0]; paintDetail(); }
+          }));
+        });
+        fo.appendChild(srcChips);
+        detail.appendChild(fo);
+
+        const fr = U.el('div', { class: 'field' });
+        fr.appendChild(U.el('label', { text: 'Rondas (se repite la tanda entera)' }));
+        const rounds = U.el('input', {
+          type: 'number', min: '1', max: '10', step: '1', value: String(model.rounds || 1),
+          onchange: function () {
+            model.rounds = U.clamp(parseInt(rounds.value, 10) || 1, 1, 10);
+            rounds.value = String(model.rounds);
+          }
+        });
+        fr.appendChild(rounds);
+        detail.appendChild(fr);
+
+        if (model.source === 'random') {
+          const fk = U.el('div', { class: 'field' });
+          fk.appendChild(U.el('label', { text: 'De qué tipo (marca varios para mezclar)' }));
+          const kindChips = U.el('div', { class: 'chips' });
+          Store.EXERCISE_KINDS.forEach(function (k) {
+            const on = model.kinds.indexOf(k[0]) >= 0;
+            kindChips.appendChild(U.el('button', {
+              class: 'chip' + (on ? ' is-active' : ''), type: 'button', text: k[1],
+              onclick: function () {
+                const i = model.kinds.indexOf(k[0]);
+                if (i >= 0) model.kinds.splice(i, 1); else model.kinds.push(k[0]);
+                paintDetail();
+              }
+            }));
+          });
+          fk.appendChild(kindChips);
+
+          const fc2 = U.el('div', { class: 'field' });
+          fc2.appendChild(U.el('label', { text: 'Cuántos ejercicios por ronda' }));
+          const cnt = U.el('input', {
+            type: 'number', min: '1', max: '10', step: '1', value: String(model.count || 4),
+            onchange: function () {
+              model.count = U.clamp(parseInt(cnt.value, 10) || 1, 1, 10);
+              cnt.value = String(model.count);
+            }
+          });
+          fc2.appendChild(cnt);
+          const pool = Store.data.exercises.filter(function (e) { return model.kinds.indexOf(e.kind) >= 0; });
+          fc2.appendChild(U.el('p', { class: 'hint', text: 'Hay ' + U.plural(pool.length, 'ejercicio disponible', 'ejercicios disponibles') + ' con esos tipos. Se sortean sin repetir los últimos.' }));
+
+          detail.appendChild(fk);
+          detail.appendChild(fc2);
+          return;
+        }
+
         const f = U.el('div', { class: 'field' });
         f.appendChild(U.el('label', { text: 'Pasos (la duración total es la suma)' }));
         const list = U.el('div', { class: 'steps-list' });
@@ -384,8 +580,13 @@
             onclick: function () {
               const name = nameInput.value.trim();
               if (!name) { UI.toast('Ponle un nombre a la pausa'); nameInput.focus(); return; }
-              if (model.mode === 'steps' && !model.steps.filter(function (s) { return s.text.trim(); }).length) {
+              if (model.mode === 'steps' && model.source !== 'random' &&
+                  !model.steps.filter(function (s) { return s.text.trim(); }).length) {
                 UI.toast('Añade al menos un paso con texto');
+                return;
+              }
+              if (model.mode === 'steps' && model.source === 'random' && !model.kinds.length) {
+                UI.toast('Marca al menos un tipo de ejercicio');
                 return;
               }
               model.name = name;
@@ -405,6 +606,107 @@
       Pauses.render();
       Planner.renderPicker();
       UI.toast('Pausa guardada');
+    });
+  }
+
+  /* ── Catálogo de ejercicios (pestaña Ajustes) ──────────── */
+  Pauses.renderExercises = function () {
+    const box = document.getElementById('exerciseList');
+    if (!box) return;
+    U.clear(box);
+
+    Store.EXERCISE_KINDS.forEach(function (kind) {
+      const items = Store.data.exercises.filter(function (e) { return e.kind === kind[0]; });
+      if (!items.length) return;
+      box.appendChild(U.el('p', { class: 'label', style: { marginTop: '10px' }, text: kind[1] }));
+      items.forEach(function (e) {
+        box.appendChild(U.el('div', { class: 'ex-row' }, [
+          U.el('span', { class: 'ex-row__text', text: e.text }),
+          U.el('span', { class: 'ex-row__secs', text: e.seconds + ' s' }),
+          U.el('button', {
+            class: 'qbtn qbtn--xs', type: 'button', title: 'Editar', 'aria-label': 'Editar ejercicio',
+            onclick: function () { exerciseForm(e); }
+          }, [U.icon('pencil', 14)]),
+          U.el('button', {
+            class: 'qbtn qbtn--xs qbtn--danger', type: 'button', title: 'Borrar', 'aria-label': 'Borrar ejercicio',
+            onclick: function () {
+              Store.data.exercises = Store.data.exercises.filter(function (x) { return x.id !== e.id; });
+              Store.tomb('exercises', e.id);
+              Store.save();
+              Pauses.renderExercises();
+            }
+          }, [U.icon('trash', 14)])
+        ]));
+      });
+    });
+  };
+
+  Pauses.createExercise = function () { exerciseForm(null); };
+
+  function exerciseForm(existing) {
+    const model = existing ? Object.assign({}, existing) : { text: '', kind: 'estiramiento', seconds: 30 };
+    let text, secs;
+    const kindChips = U.el('div', { class: 'chips' });
+
+    function paintKinds() {
+      U.clear(kindChips);
+      Store.EXERCISE_KINDS.forEach(function (k) {
+        kindChips.appendChild(U.el('button', {
+          class: 'chip' + (model.kind === k[0] ? ' is-active' : ''), type: 'button', text: k[1],
+          onclick: function () { model.kind = k[0]; paintKinds(); }
+        }));
+      });
+    }
+
+    UI.modal({
+      title: existing ? 'Editar ejercicio' : 'Nuevo ejercicio',
+      sub: 'Se usa en las pausas activas que sortean ejercicios.',
+      build: function () {
+        const frag = document.createDocumentFragment();
+        const f1 = U.el('div', { class: 'field' });
+        f1.appendChild(U.el('label', { text: 'Qué hacer' }));
+        text = U.el('input', { type: 'text', value: model.text, placeholder: 'Ej. Estira el cuello a cada lado' });
+        f1.appendChild(text);
+        frag.appendChild(f1);
+
+        const f2 = U.el('div', { class: 'field' });
+        f2.appendChild(U.el('label', { text: 'Tipo' }));
+        paintKinds();
+        f2.appendChild(kindChips);
+        frag.appendChild(f2);
+
+        const f3 = U.el('div', { class: 'field' });
+        f3.appendChild(U.el('label', { text: 'Segundos' }));
+        secs = U.el('input', { type: 'number', min: '5', max: '600', step: '5', value: String(model.seconds) });
+        f3.appendChild(secs);
+        frag.appendChild(f3);
+        return frag;
+      },
+      actions: function (close) {
+        return [
+          U.el('button', { class: 'btn btn--ghost', text: 'Cancelar', onclick: function () { close(null); } }),
+          U.el('button', {
+            class: 'btn btn--primary', text: 'Guardar',
+            onclick: function () {
+              if (!text.value.trim()) { UI.toast('Escribe el ejercicio'); return; }
+              model.text = text.value.trim();
+              model.seconds = U.clamp(parseInt(secs.value, 10) || 30, 5, 600);
+              close(model);
+            }
+          })
+        ];
+      }
+    }).then(function (values) {
+      if (!values) return;
+      if (existing) {
+        Object.assign(existing, values);
+        Store.touch(existing);
+      } else {
+        values.id = U.uid('ex');
+        Store.data.exercises.push(values);
+      }
+      Store.save();
+      Pauses.renderExercises();
     });
   }
 

@@ -14,6 +14,32 @@
     { id: 'p_descanso', name: 'Descanso', color: '#0ea5b7', minutes: 15, note: 'Levantarse, agua, ventana.', isBreak: true }
   ];
 
+  // Ejercicios para las pausas activas, por tipo.
+  const EXERCISE_KINDS = [
+    ['estiramiento', 'Estiramientos'],
+    ['movimiento', 'Movimiento'],
+    ['postura', 'Postura'],
+    ['vista', 'Vista']
+  ];
+  const DEFAULT_EXERCISES = [
+    { id: 'ex_1', kind: 'estiramiento', seconds: 30, text: 'Estira los brazos hacia el techo y alarga la espalda' },
+    { id: 'ex_2', kind: 'estiramiento', seconds: 30, text: 'Lleva una oreja al hombro y aguanta; luego el otro lado' },
+    { id: 'ex_3', kind: 'estiramiento', seconds: 30, text: 'Entrelaza las manos por delante y redondea la espalda' },
+    { id: 'ex_4', kind: 'estiramiento', seconds: 30, text: 'Abre el pecho llevando los brazos atrás' },
+    { id: 'ex_5', kind: 'estiramiento', seconds: 30, text: 'De pie, baja despacio a tocar las puntas de los pies' },
+    { id: 'ex_6', kind: 'movimiento', seconds: 45, text: 'Camina por la habitación sin mirar el móvil' },
+    { id: 'ex_7', kind: 'movimiento', seconds: 30, text: '15 sentadillas tranquilas' },
+    { id: 'ex_8', kind: 'movimiento', seconds: 30, text: 'Sube y baja los talones de puntillas' },
+    { id: 'ex_9', kind: 'movimiento', seconds: 30, text: 'Círculos con los hombros, adelante y atrás' },
+    { id: 'ex_10', kind: 'movimiento', seconds: 45, text: 'Bebe agua y vuelve caminando' },
+    { id: 'ex_11', kind: 'postura', seconds: 30, text: 'Siéntate al fondo de la silla y coloca los pies en el suelo' },
+    { id: 'ex_12', kind: 'postura', seconds: 30, text: 'Baja los hombros y suelta la mandíbula' },
+    { id: 'ex_13', kind: 'postura', seconds: 30, text: 'Ajusta la pantalla a la altura de los ojos' },
+    { id: 'ex_14', kind: 'vista', seconds: 20, text: 'Mira algo a más de seis metros y parpadea despacio' },
+    { id: 'ex_15', kind: 'vista', seconds: 20, text: 'Tapa los ojos con las palmas y descansa a oscuras' },
+    { id: 'ex_16', kind: 'vista', seconds: 20, text: 'Sigue con la vista un recorrido lento por la pared' }
+  ];
+
   /*
    * Pausas guiadas: descansos cortos con su propia forma de presentarse.
    *   mode 'breath' -> círculo que guía la respiración por fases (segundos)
@@ -23,27 +49,25 @@
   const DEFAULT_PAUSES = [
     {
       id: 'pa_478', name: 'Respiración 4-7-8', color: '#0ea5b7', mode: 'breath',
-      seconds: 120, breath: { inhale: 4, hold1: 7, exhale: 8, hold2: 0 },
+      unit: 'cycles', cycles: 6, shape: 'circle',
+      breath: { inhale: 4, hold1: 7, exhale: 8, hold2: 0 },
       note: 'Inhala por la nariz, exhala despacio por la boca.', sound: true
     },
     {
       id: 'pa_caja', name: 'Respiración en caja', color: '#7c5cff', mode: 'breath',
-      seconds: 180, breath: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 },
+      unit: 'cycles', cycles: 8, shape: 'box',
+      breath: { inhale: 4, hold1: 4, exhale: 4, hold2: 4 },
       note: 'Cuatro tiempos iguales, sin forzar.', sound: true
     },
     {
       id: 'pa_activa', name: 'Pausa activa', color: '#19b562', mode: 'steps', sound: true,
       note: 'Levántate de la silla.',
-      steps: [
-        { text: 'Ponte de pie y estira los brazos hacia arriba', seconds: 30 },
-        { text: 'Gira el cuello despacio a un lado y al otro', seconds: 30 },
-        { text: 'Estira la espalda y abre los hombros', seconds: 30 },
-        { text: 'Camina un poco y bebe agua', seconds: 60 }
-      ]
+      // Se sortean ejercicios distintos cada vez, sin repetir los últimos.
+      source: 'random', kinds: ['estiramiento', 'movimiento'], count: 4, rounds: 1, steps: []
     },
     {
       id: 'pa_vista', name: 'Descanso visual 20-20-20', color: '#f0b429', mode: 'plain',
-      seconds: 60, note: 'Mira algo lejano y parpadea despacio.', sound: false
+      unit: 'minutes', seconds: 60, note: 'Mira algo lejano y parpadea despacio.', sound: false
     }
   ];
 
@@ -55,6 +79,30 @@
     'Urología', 'Oftalmología', 'Otorrinolaringología', 'Cirugía',
     'Farmacología', 'Estadística y Preventiva', 'Repaso general'
   ].map(function (label, i) { return { id: 't_' + (i + 1), label: label }; });
+
+  // A dónde se va el tiempo ANTES de encender el temporizador. Editables.
+  const DEFAULT_LOST_CAUSES = [
+    { id: 'lc_pacientes', label: 'Pacientes' },
+    { id: 'lc_trabajo', label: 'Trabajo administrativo' },
+    { id: 'lc_visitas', label: 'Visitas no planificadas' },
+    { id: 'lc_transporte', label: 'Transporte' },
+    { id: 'lc_personal', label: 'Personal o familia' },
+    { id: 'lc_imprevisto', label: 'Imprevisto' },
+    { id: 'lc_arranque', label: 'Me costó arrancar' }
+  ];
+
+  // Franjas en las que deberías estar estudiando. days: 0 domingo … 6 sábado.
+  const DEFAULT_SCHEDULE = {
+    // Desactivado hasta que pongas TUS horas: con una franja inventada, cada
+    // inicio preguntaría por un tiempo perdido que no es real.
+    enabled: false,
+    // Desde cuándo tiene sentido medir: no se inventa tiempo perdido de días
+    // anteriores a haber configurado el horario.
+    since: '',
+    windows: [
+      { id: 'w_manana', label: 'Antes de la jornada', days: [1, 2, 3, 4, 5], start: '06:00', end: '08:00' }
+    ]
+  };
 
   // Razones de distracción; el usuario puede editarlas, añadir y borrar.
   const DEFAULT_REASONS = [
@@ -99,12 +147,15 @@
     breakMinutes: 10,        // duración de cada descanso insertado
     breakPresetId: 'p_descanso',
     offerPause: true,        // ofrecer una pausa guiada al terminar cada bloque
+    quickMinutes: 2,         // minutos que se suponen por cada distracción sin pausa
+    askQuickCost: true,      // preguntar al final del bloque cuánto costaron
+    schedule: DEFAULT_SCHEDULE,
     askReasonQuick: true,    // preguntar la razón en la distracción rápida
     mini: DEFAULT_MINI
   };
 
   // Colecciones que se fusionan por id al sincronizar.
-  const MERGEABLE = ['sessions', 'presets', 'reasons', 'topics', 'plans', 'pauses'];
+  const MERGEABLE = ['sessions', 'presets', 'reasons', 'topics', 'plans', 'pauses', 'lostCauses', 'lostTime', 'exercises'];
 
   const DEFAULT_DATA = {
     version: 1,
@@ -116,6 +167,9 @@
     reasons: DEFAULT_REASONS,
     topics: DEFAULT_TOPICS,
     pauses: DEFAULT_PAUSES,
+    exercises: DEFAULT_EXERCISES,
+    lostCauses: DEFAULT_LOST_CAUSES,
+    lostTime: [],
     plans: [],      // plantillas de día
     queue: [],      // sesión de hoy en construcción
     sessions: [],   // historial
@@ -160,6 +214,11 @@
       if (!Array.isArray(this.data.reasons) || !this.data.reasons.length) this.data.reasons = deepClone(DEFAULT_REASONS);
       if (!Array.isArray(this.data.topics)) this.data.topics = deepClone(DEFAULT_TOPICS);
       if (!Array.isArray(this.data.pauses)) this.data.pauses = deepClone(DEFAULT_PAUSES);
+      if (!Array.isArray(this.data.exercises)) this.data.exercises = deepClone(DEFAULT_EXERCISES);
+      if (!Array.isArray(this.data.lostCauses)) this.data.lostCauses = deepClone(DEFAULT_LOST_CAUSES);
+      if (!Array.isArray(this.data.lostTime)) this.data.lostTime = [];
+      this.data.settings.schedule = Object.assign(deepClone(DEFAULT_SCHEDULE), this.data.settings.schedule || {});
+      if (!this.data.settings.schedule.since) this.data.settings.schedule.since = U.dayKey();
       // Los «Descanso» guardados antes de existir la marca no contaban aparte.
       this.data.presets.forEach(function (p) {
         if (p.isBreak === undefined && p.id === 'p_descanso') p.isBreak = true;
@@ -265,15 +324,100 @@
       return out;
     },
 
+    /* ── Tiempo efectivo ─────────────────────────────────── */
+    /**
+     * Lo que de verdad cundió en un bloque. Las pausas no descuentan porque
+     * durante ellas el reloj estaba parado; las distracciones registradas sin
+     * parar el reloj, y las declaradas al final, sí: ese tiempo está dentro
+     * del contador pero no fue estudio.
+     */
+    runningLostMs: function (block) {
+      return (block.distractions || []).reduce(function (a, d) {
+        return a + (d.type === 'pause' ? 0 : (d.ms || 0));
+      }, 0);
+    },
+    effectiveMs: function (block) {
+      if (!block || block.isBreak) return 0;
+      return Math.max(0, (block.actualMs !== undefined ? block.actualMs : block.elapsedBefore || 0) - this.runningLostMs(block));
+    },
+
+    /* ── Causas de tiempo perdido ────────────────────────── */
+    addLostCause: function (label) {
+      const c = { id: U.uid('lc'), label: label };
+      this.data.lostCauses.push(c);
+      this.save();
+      return c;
+    },
+    updateLostCause: function (id, label) {
+      const c = this.data.lostCauses.find(function (x) { return x.id === id; });
+      if (c) { c.label = label; this.touch(c); this.save(); }
+      return c;
+    },
+    removeLostCause: function (id) {
+      this.data.lostCauses = this.data.lostCauses.filter(function (x) { return x.id !== id; });
+      this.tomb('lostCauses', id);
+      this.save();
+    },
+    moveLostCause: function (id, delta) {
+      const arr = this.data.lostCauses;
+      const i = arr.findIndex(function (x) { return x.id === id; });
+      const to = i + delta;
+      if (i < 0 || to < 0 || to >= arr.length) return;
+      const tmp = arr[i]; arr[i] = arr[to]; arr[to] = tmp;
+      this.save();
+    },
+    lostCauseLabel: function (id) {
+      const c = this.data.lostCauses.find(function (x) { return x.id === id; });
+      return c ? c.label : (id ? '(causa borrada)' : 'Sin causa');
+    },
+
+    /* ── Registro de tiempo perdido ──────────────────────── */
+    addLostTime: function (entry) {
+      entry.id = entry.id || U.uid('lt');
+      entry.day = entry.day || U.dayKey(entry.at || Date.now());
+      entry.touchedAt = Date.now();
+      this.data.lostTime.unshift(entry);
+      this.save();
+      return entry;
+    },
+    updateLostTime: function (id, patch) {
+      const e = this.data.lostTime.find(function (x) { return x.id === id; });
+      if (e) { Object.assign(e, patch); this.touch(e); this.save(); }
+      return e;
+    },
+    removeLostTime: function (id) {
+      this.data.lostTime = this.data.lostTime.filter(function (x) { return x.id !== id; });
+      this.tomb('lostTime', id);
+      this.save();
+    },
+    lostTimeOf: function (dayKey) {
+      return this.data.lostTime.filter(function (e) { return e.day === dayKey; });
+    },
+
     /* ── Pausas guiadas ──────────────────────────────────── */
     /** Duración total: en el modo por pasos la marcan los propios pasos. */
+    /** Segundos de un ciclo de respiración. */
+    breathCycle: function (pause) {
+      const b = (pause && pause.breath) || {};
+      return (b.inhale || 0) + (b.hold1 || 0) + (b.exhale || 0) + (b.hold2 || 0);
+    },
+    /**
+     * Duración total. Por defecto se mide en ciclos de respiración o rondas de
+     * ejercicios, no en minutos: así una pausa nunca se corta en mitad de una
+     * inspiración ni de un ejercicio.
+     */
     pauseSeconds: function (pause) {
       if (!pause) return 0;
       if (pause.mode === 'steps') {
-        return (pause.steps || []).reduce(function (a, s) { return a + (s.seconds || 0); }, 0);
+        const one = (pause.steps || []).reduce(function (a, s) { return a + (s.seconds || 0); }, 0);
+        return one * Math.max(1, pause.rounds || 1);
+      }
+      if (pause.mode === 'breath' && pause.unit !== 'minutes') {
+        return this.breathCycle(pause) * Math.max(1, pause.cycles || 1);
       }
       return pause.seconds || 60;
     },
+    EXERCISE_KINDS: EXERCISE_KINDS,
     getPause: function (id) {
       return this.data.pauses.find(function (x) { return x.id === id; }) || null;
     },
@@ -480,7 +624,9 @@
     DEFAULT_PRESETS: DEFAULT_PRESETS,
     DEFAULT_REASONS: DEFAULT_REASONS,
     DEFAULT_TOPICS: DEFAULT_TOPICS,
-    DEFAULT_PAUSES: DEFAULT_PAUSES
+    DEFAULT_PAUSES: DEFAULT_PAUSES,
+    DEFAULT_LOST_CAUSES: DEFAULT_LOST_CAUSES,
+    DEFAULT_EXERCISES: DEFAULT_EXERCISES
   };
 
   global.Store = Store;

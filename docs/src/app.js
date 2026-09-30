@@ -11,6 +11,7 @@
     if (name === 'settings') {
       Settings.render(); Reasons.render(); Topics.render();
       Settings.renderSync(); Settings.renderRoom(); Pauses.render();
+      Lost.renderSettings(); Lost.renderCauses(); Pauses.renderExercises();
     }
     if (name === 'library') Library.render();
   };
@@ -24,6 +25,10 @@
     Reasons.render();
     Topics.render();
     Pauses.render();
+    Pauses.renderExercises();
+    Lost.renderSettings();
+    Lost.renderCauses();
+    Lost.renderToday();
     Settings.renderSync();
     Settings.renderRoom();
     App.renderRoomStrip();
@@ -141,6 +146,14 @@
       Sound.unlock();
       const items = Store.data.queue;
       if (!items.length) return;
+
+      // Si hoy tenías que haber empezado antes, se pregunta a qué se fue ese
+      // rato justo ahora, que es cuando se tiene fresco.
+      const pending = Lost.enabled() && !Lost.snoozedToday() ? Lost.daySummary(U.dayKey()).pendingMs : 0;
+      if (pending >= 300000) {
+        Lost.logDialog(U.dayKey()).then(function () { Runner.start(items); });
+        return;
+      }
       Runner.start(items);
     });
 
@@ -172,6 +185,8 @@
     document.getElementById('newReason').addEventListener('click', Reasons.create);
     document.getElementById('newTopic').addEventListener('click', Topics.create);
     document.getElementById('newPause').addEventListener('click', Pauses.create);
+    document.getElementById('newLostCause').addEventListener('click', Lost.createCause);
+    document.getElementById('newExercise').addEventListener('click', Pauses.createExercise);
     document.getElementById('autoBreaks').addEventListener('click', Planner.breaksDialog);
     document.getElementById('exportBlocks').addEventListener('click', History.exportBlocks);
     document.getElementById('exportDistractions').addEventListener('click', History.exportDistractions);

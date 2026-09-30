@@ -377,6 +377,43 @@
       build: function () {
         const frag = document.createDocumentFragment();
 
+        // Las distracciones anotadas sin parar el reloj: cuánto costaron.
+        const quick = (b.distractions || []).filter(function (d) {
+          return d.type === 'quick' && !d.ms;
+        });
+        if (quick.length && Store.data.settings.askQuickCost !== false) {
+          const fq = U.el('div', { class: 'field' });
+          fq.appendChild(U.el('label', {
+            text: U.plural(quick.length, 'distracción anotada', 'distracciones anotadas') + ' sin parar el reloj: ¿cuánto te costaron?'
+          }));
+          const perDefault = Store.data.settings.quickMinutes || 2;
+          quick.forEach(function (d) {
+            const labels = Store.reasonLabels(d);
+            const input = U.el('input', {
+              type: 'number', min: '0', max: '120', step: '1', value: String(perDefault),
+              'aria-label': 'Minutos de la distracción de las ' + U.fmtClock(new Date(d.at)),
+              onchange: function () {
+                d.ms = U.clamp(parseInt(input.value, 10) || 0, 0, 120) * 60000;
+                input.value = String(Math.round(d.ms / 60000));
+                persist();
+              }
+            });
+            d.ms = perDefault * 60000;   // por defecto ya descuentan
+            fq.appendChild(U.el('div', { class: 'quick-row' }, [
+              U.el('span', { class: 'quick-row__when', text: U.fmtClock(new Date(d.at)) }),
+              U.el('span', { class: 'quick-row__what', text: labels.length ? labels.join(' · ') : 'sin razón' }),
+              input,
+              U.el('span', { class: 'qitem__unit', text: 'min' })
+            ]));
+          });
+          fq.appendChild(U.el('p', {
+            class: 'hint',
+            text: 'Ese tiempo se resta del tiempo efectivo del bloque, porque el reloj siguió corriendo.'
+          }));
+          frag.appendChild(fq);
+          persist();
+        }
+
         if (offerPause) {
           const fp = U.el('div', { class: 'field' });
           fp.appendChild(U.el('label', { text: '¿Quieres una pausa antes de seguir?' }));
@@ -457,7 +494,7 @@
     if (!pausePicker || !state || state.finished) return;
     const choice = pausePicker.value;
     if (!choice) return;
-    const pauseBlock = Pauses.toBlock(choice.pause, choice.minutes);
+    const pauseBlock = Pauses.toBlock(choice.pause, choice.amount);
     state.blocks.splice(state.index + 1, 0, pauseBlock);
     timelineSig = '';   // la tira tiene que redibujarse con el bloque nuevo
     persist();
@@ -785,7 +822,9 @@
     UI.closeTransient();
     Sound.finish();
     Notify.show('Sesión ' + state.reason,
-      U.fmtHuman(state.blocks.reduce(function (a, x) { return a + (x.isBreak ? 0 : x.elapsedBefore); }, 0)) + ' de estudio.');
+      U.fmtHuman(state.blocks.reduce(function (a, x) {
+        return a + (x.isBreak ? 0 : Math.max(0, x.elapsedBefore - Store.runningLostMs(x)));
+      }, 0)) + ' de estudio efectivo.');
     PiP.close();
     releaseWakeLock();
     exitFullscreen();
@@ -800,7 +839,8 @@
   };
 
   function showSummary(session) {
-    const studied = session.blocks.reduce(function (a, b) { return a + b.actualMs; }, 0);
+    const studied = session.blocks.reduce(function (a, b) { return a + (b.isBreak ? 0 : b.actualMs); }, 0);
+    const effective = session.blocks.reduce(function (a, b) { return a + Store.effectiveMs(b); }, 0);
     const distMs = session.blocks.reduce(function (a, b) { return a + distractionMsFor(b); }, 0);
     const distN = session.blocks.reduce(function (a, b) { return a + blockDistractionCountFor(b); }, 0);
     const done = session.blocks.filter(function (b) { return b.status === 'done'; }).length;
@@ -811,9 +851,15 @@
       build: function () {
         const list = U.el('ul', { class: 'summary-list' });
         list.appendChild(U.el('li', { class: 'hblock' }, [
-          U.el('span', { class: 'hblock__name', text: 'Tiempo real trabajado' }),
-          U.el('strong', { text: U.fmtHuman(studied) })
+          U.el('span', { class: 'hblock__name', text: 'Tiempo efectivo' }),
+          U.el('strong', { text: U.fmtHuman(effective) })
         ]));
+        if (studied > effective) {
+          list.appendChild(U.el('li', { class: 'hblock' }, [
+            U.el('span', { class: 'hblock__name', text: 'Reloj en marcha' }),
+            U.el('strong', { text: U.fmtHuman(studied) })
+          ]));
+        }
         list.appendChild(U.el('li', { class: 'hblock' }, [
           U.el('span', { class: 'hblock__name', text: 'Distracciones' }),
           U.el('strong', { text: U.plural(distN, 'distracción', 'distracciones') + ' · ' + U.fmtHuman(distMs) })
@@ -863,16 +909,31 @@
     stage.classList.toggle('is-guided', !!phase);
     if (!phase) {
       setLayers('.js-phase', '');
-      U.$$('#stage .js-phase').forEach(function (n) { n.hidden = true; });
-      U.$$('#stage .stage__breath').forEach(function (n) { n.hidden = true; });
+      setLayers('.js-phasecount', '');
+      U.$$('#stage .js-phase, #stage .js-phasecount').forEach(function (n) { n.hidden = true; });
+      U.$$('#stage .stage__breath, #stage .stage__dot').forEach(function (n) { n.hidden = true; });
       lastPhaseIndex = -1;
       return phase;
     }
 
+    const box = b.pause.mode === 'breath' && b.pause.shape === 'box';
     stage.style.setProperty('--breath', phase.scale.toFixed(3));
+    if (phase.dot) {
+      stage.style.setProperty('--dotx', (phase.dot.x * 100).toFixed(2) + '%');
+      stage.style.setProperty('--doty', (phase.dot.y * 100).toFixed(2) + '%');
+    }
+    const count = phase.cycleIndex
+      ? 'ciclo ' + phase.cycleIndex + (b.pause.cycles ? ' de ' + b.pause.cycles : '')
+      : (phase.stepIndex ? 'ejercicio ' + phase.stepIndex + ' de ' + phase.stepTotal : '');
     setLayers('.js-phase', phase.label + (phase.hint ? '  ·  ' + phase.hint : ''));
+    setLayers('.js-phasecount', count);
     U.$$('#stage .js-phase').forEach(function (n) { n.hidden = false; });
-    U.$$('#stage .stage__breath').forEach(function (n) { n.hidden = b.pause.mode !== 'breath'; });
+    U.$$('#stage .js-phasecount').forEach(function (n) { n.hidden = !count; });
+    U.$$('#stage .stage__breath').forEach(function (n) {
+      n.hidden = b.pause.mode !== 'breath';
+      n.classList.toggle('is-box', box);
+    });
+    U.$$('#stage .stage__dot').forEach(function (n) { n.hidden = !box; });
 
     // Un toque al cambiar de fase, para poder cerrar los ojos.
     if (phase.index !== lastPhaseIndex) {

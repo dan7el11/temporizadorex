@@ -75,6 +75,35 @@ historial también puedes «repetir» un día ya hecho.
 - Opcionalmente, **aviso del sistema** al terminar un bloque cuando la pestaña está en segundo
   plano. Se activa en *Ajustes* (el navegador pedirá permiso).
 
+### Tiempo perdido antes de encender el temporizador
+En *Ajustes → Horario habitual* declaras las franjas en las que deberías estar estudiando (por
+ejemplo, de lunes a viernes de 6:00 a 8:00). A partir de ahí la app compara esa franja con lo que el
+temporizador estuvo realmente encendido, y la diferencia es **tiempo perdido**: si tenías que
+empezar a las 6:00 y arrancaste a las 6:30, son 30 minutos.
+
+Viene **desactivado** hasta que pongas tus horas, para no inventarse un horario que no es el tuyo.
+
+- En la **pantalla principal**, antes de empezar, una tira dice tu franja de hoy, a qué hora
+  arrancaste, cuánto llevas fuera del temporizador y cuánto está sin justificar.
+- Al pulsar **Iniciar sesión** con tiempo perdido pendiente, pregunta a qué se fue: eliges la causa
+  (pacientes, trabajo administrativo, visitas no planificadas, transporte…), los minutos y un
+  detalle. Las causas se editan en *Ajustes*. Si respondes «ahora no», no vuelve a preguntar en todo
+  el día.
+- En *Historial* hay un apartado propio: total fuera del temporizador, cuánto tiene causa apuntada,
+  cuánto sigue sin justificar, la media por día, **el desglose por causa** y los últimos días uno a
+  uno, con un botón para apuntar lo que falte.
+
+Solo se cuenta desde el día en que configuraste el horario: no se inventa tiempo perdido de antes.
+
+### Tiempo efectivo
+Las distracciones que anotas **sin parar el reloj** ahora cuestan. Al terminar el bloque la app te
+las lista y te pregunta cuántos minutos te llevó cada una (por defecto dos, configurable), y ese
+tiempo **se resta del tiempo efectivo**, porque el reloj siguió corriendo mientras estabas a otra
+cosa. Las pausas no descuentan: durante ellas el reloj ya estaba parado.
+
+El resumen de la sesión y el historial muestran ahora el **tiempo efectivo** como cifra principal,
+con el tiempo de reloj al lado, y el CSV lleva ambas columnas.
+
 ### Pausas guiadas
 Descansos cortos entre bloques con su propio motivo, su duración y **su forma de presentarse**. Se
 editan en *Ajustes → Pausas guiadas* y vienen cuatro de serie: respiración 4-7-8, respiración en
@@ -82,13 +111,23 @@ caja, pausa activa por pasos y descanso visual 20-20-20.
 
 Hay tres formas de presentación:
 
-- **Respiración guiada.** Un círculo se abre y se cierra marcando las fases, con la instrucción y los
-  segundos que le quedan bajo el reloj («Inhala · 3 s»). Los tiempos de inhalar, sostener, exhalar y
-  vacío se ponen uno a uno; con 0 se salta una fase. El círculo se dibuja dentro de las mismas capas
-  que el reloj, así que se lee igual sobre el color y sobre la parte vaciada.
-- **Pasos.** Instrucciones que van pasando, cada una con sus segundos («Ponte de pie y estira los
-  brazos · 30 s»). La duración de la pausa es la suma de los pasos.
+- **Respiración guiada**, con dos figuras. El **círculo** se abre y se cierra marcando las fases. El
+  **cuadrado** —pensado para la respiración en caja— se expande y se contrae, y un punto recorre su
+  perímetro: sube por la izquierda al inhalar, **cruza en horizontal por arriba mientras sostienes**,
+  baja por la derecha al exhalar y vuelve por abajo en el vacío. Bajo el reloj van la instrucción y
+  sus segundos («Inhala · 3 s») y el ciclo en el que vas («ciclo 3 de 8»). Los tiempos de cada fase
+  se ponen uno a uno; con 0 se salta una.
+- **Pasos.** Instrucciones que van pasando, cada una con sus segundos, y el número de ejercicio.
 - **Solo el reloj.** La pantalla de siempre con el texto que tú escribas.
+
+**La duración se mide en ciclos o rondas, no en minutos**, para que la pausa no se corte en mitad de
+una inspiración ni de un ejercicio: «8 ciclos» de respiración en caja duran exactamente 8 ciclos, y
+al elegirla ajustas ciclos o rondas, no minutos. Si prefieres minutos, también se puede.
+
+Las **pausas activas** pueden sortear ejercicios distintos cada vez: eliges de qué tipos
+(estiramientos, movimiento, postura, vista, o mezclados) y cuántos por ronda, y la app los saca del
+catálogo de *Ajustes → Ejercicios de las pausas activas* sin repetir los de la vez anterior. Vienen
+dieciséis y puedes añadir los tuyos.
 
 Cada pausa tiene además color propio y un toque suave al cambiar de fase, que se puede quitar.
 
@@ -258,7 +297,8 @@ docs/                         Lo que se publica en GitHub Pages
   src/ui.js                   Modales, avisos y selector de color
   src/reasons.js              Catálogo de razones de distracción y su selector
   src/topics.js               Catálogo de temas o asignaturas y su selector
-  src/pauses.js               Pausas guiadas: catálogo, editor y motor de fases
+  src/pauses.js               Pausas guiadas: catálogo, editor, ejercicios y motor de fases
+  src/lost.js                 Horario habitual y tiempo perdido fuera del temporizador
   src/notify.js               Avisos del sistema cuando la pestaña no está a la vista
   src/sync.js                 Sincronización con Supabase por API REST, sin dependencias
   src/room.js                 Sala compartida: estado del compañero y descansos acordados

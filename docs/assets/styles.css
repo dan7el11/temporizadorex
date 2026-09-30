@@ -390,6 +390,48 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 }
 .hud__pill.is-over{border-color:rgba(255,120,130,.6);color:#ffb9c0}
 
+/* Tiempo perdido fuera del temporizador */
+.lost{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin:0 0 14px;padding:11px 14px;border-radius:13px;
+  background:var(--card);border:1px solid var(--line);font-size:.86rem;color:var(--text-dim);
+}
+.lost.is-pending{background:rgba(255,184,77,.07);border-color:#544224}
+.lost__info{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0}
+.lost__title{font-weight:640;color:var(--text)}
+.lost__warn{color:var(--warn)}
+.lost__causes{color:var(--text-faint)}
+.lost__actions{display:flex;gap:7px;flex-wrap:wrap}
+.win-list{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.win-row{background:var(--card-2);border:1px solid var(--line);border-radius:11px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.win-row__top{display:flex;gap:8px;align-items:center}
+.win-label{
+  flex:1 1 auto;min-width:0;background:var(--bg-soft);border:1px solid var(--line);
+  border-radius:8px;color:var(--text);padding:7px 9px;font-weight:550;
+}
+.win-row__time{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.daypick{display:flex;gap:5px;flex-wrap:wrap}
+.daypick__btn{
+  width:32px;height:32px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card);color:var(--text-faint);cursor:pointer;font-weight:600;font-size:.8rem;
+}
+.daypick__btn.is-active{background:var(--accent);border-color:transparent;color:#fff}
+.lostdays{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.lostday{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.84rem;
+  padding:7px 9px;background:var(--card-2);border-radius:9px;
+}
+.lostday__date{font-weight:560;min-width:110px}
+.lostday__num{font-variant-numeric:tabular-nums;color:var(--warn);min-width:70px}
+.lostday__causes{flex:1 1 160px;color:var(--text-faint);min-width:0}
+.quick-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.quick-row__when{font-variant-numeric:tabular-nums;color:var(--text-faint);min-width:40px}
+.quick-row__what{flex:1 1 120px;min-width:0;font-size:.86rem}
+.quick-row input[type=number]{
+  width:66px;background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;
+  color:var(--text);padding:6px 9px;font-variant-numeric:tabular-nums;
+}
+
 /* Sala: compañero de estudio */
 .roomstrip{
   display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
@@ -466,6 +508,15 @@ input,select,textarea{font-family:inherit;font-size:inherit}
   width:66px;background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;
   color:var(--text);padding:7px 9px;font-variant-numeric:tabular-nums;
 }
+
+/* Ejercicios */
+.ex-list{display:flex;flex-direction:column;gap:6px}
+.ex-row{
+  display:flex;align-items:center;gap:9px;padding:7px 10px;font-size:.86rem;
+  background:var(--card-2);border:1px solid var(--line);border-radius:10px;
+}
+.ex-row__text{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.ex-row__secs{color:var(--text-faint);font-variant-numeric:tabular-nums}
 
 /* Catálogo de razones */
 .reason-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
@@ -555,6 +606,21 @@ input[type=range]{accent-color:var(--accent);width:150px}
   border:3px solid currentColor;opacity:.4;
   transform:translate(-50%,-50%) scale(var(--breath,.6));
   transition:transform .25s linear;pointer-events:none;
+}
+/* La respiración en caja se dibuja como un cuadrado, y un punto recorre su
+   perímetro: sube al inhalar, cruza en horizontal mientras sostienes. */
+.stage__breath.is-box{border-radius:12px;opacity:.55;border-width:4px}
+.stage__dot{
+  position:absolute;width:18px;height:18px;border-radius:50%;
+  background:currentColor;opacity:.95;
+  left:var(--dotx,0%);top:var(--doty,100%);
+  /* El cuadrado se escala; el punto se contraescala para no deformarse. */
+  transform:translate(-50%,-50%) scale(calc(1 / var(--breath, 1)));
+  transition:left .25s linear, top .25s linear;
+}
+.stage__phasecount{
+  font-size:clamp(.72rem,1.7vw,.95rem);letter-spacing:.14em;text-transform:uppercase;
+  opacity:.7;margin-top:.5em;
 }
 .stage.is-guided .stage__time{font-size:clamp(2.8rem,12vw,9rem)}
 .stage__pause{margin-top:1.1em;display:flex;flex-direction:column;align-items:center;gap:.15em;animation:pulse 1.6s ease-in-out infinite}
