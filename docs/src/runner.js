@@ -112,6 +112,7 @@
     startLoop();
     persist();
     tick();
+    if (global.Lost) Lost.renderToday();
   }
 
   /* ── Bucle ─────────────────────────────────────────────── */
@@ -322,6 +323,7 @@
     state.pausedAt = null;
     state.gate = true;
     stopLoop();
+    if (global.Lost) Lost.renderToday();
     // Si quedaba abierto un diálogo opcional (la razón de una distracción
     // rápida, el panel de bloques…), se cierra para no apilarlo con este.
     UI.closeTransient();
@@ -811,6 +813,9 @@
           name: x.name, color: x.color, presetId: x.presetId,
           topicId: x.topicId || '', isBreak: !!x.isBreak,
           pause: x.pause || null,
+          // Las horas reales de cada bloque: son las que usa el contador de
+          // tiempo perdido para saber cuándo estuvo el temporizador encendido.
+          startedAt: x.startedAt || null, endedAt: x.endedAt || null,
           plannedMs: x.plannedMs, actualMs: x.elapsedBefore,
           status: x.status, distractions: x.distractions
         };
@@ -835,6 +840,7 @@
     document.getElementById('runner').hidden = true;
     document.body.style.overflow = '';
     History.render();
+    if (global.Lost) Lost.renderToday();
     if (window.Sync) Sync.maybeRun();
   };
 

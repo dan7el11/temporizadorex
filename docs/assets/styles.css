@@ -401,6 +401,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .lost__title{font-weight:640;color:var(--text)}
 .lost__warn{color:var(--warn)}
 .lost__causes{color:var(--text-faint)}
+.lost__done{color:var(--ok)}
 .lost__actions{display:flex;gap:7px;flex-wrap:wrap}
 .win-list{display:flex;flex-direction:column;gap:9px;margin-top:12px}
 .win-row{background:var(--card-2);border:1px solid var(--line);border-radius:11px;padding:10px;display:flex;flex-direction:column;gap:8px}

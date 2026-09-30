@@ -100,7 +100,10 @@
     // anteriores a haber configurado el horario.
     since: '',
     windows: [
-      { id: 'w_manana', label: 'Antes de la jornada', days: [1, 2, 3, 4, 5], start: '06:00', end: '08:00' }
+      // targetMin: minutos que pretendes estudiar dentro de la franja. 0 = toda
+      // la franja. Con una franja larga (tu jornada entera) el objetivo evita
+      // que se cuenten como perdidas las horas en que estás trabajando.
+      { id: 'w_manana', label: 'Antes de la jornada', days: [1, 2, 3, 4, 5], start: '06:00', end: '08:00', targetMin: 0 }
     ]
   };
 
@@ -150,6 +153,8 @@
     quickMinutes: 2,         // minutos que se suponen por cada distracción sin pausa
     askQuickCost: true,      // preguntar al final del bloque cuánto costaron
     schedule: DEFAULT_SCHEDULE,
+    lostTolerance: 5,        // minutos de hueco que no se cuentan como perdidos
+
     askReasonQuick: true,    // preguntar la razón en la distracción rápida
     mini: DEFAULT_MINI
   };
@@ -219,6 +224,9 @@
       if (!Array.isArray(this.data.lostTime)) this.data.lostTime = [];
       this.data.settings.schedule = Object.assign(deepClone(DEFAULT_SCHEDULE), this.data.settings.schedule || {});
       if (!this.data.settings.schedule.since) this.data.settings.schedule.since = U.dayKey();
+      (this.data.settings.schedule.windows || []).forEach(function (w) {
+        if (w.targetMin === undefined) w.targetMin = 0;
+      });
       // Los «Descanso» guardados antes de existir la marca no contaban aparte.
       this.data.presets.forEach(function (p) {
         if (p.isBreak === undefined && p.id === 'p_descanso') p.isBreak = true;

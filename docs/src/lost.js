@@ -42,20 +42,38 @@
         const from = base + toMinutes(w.start) * 60000;
         let to = base + toMinutes(w.end) * 60000;
         if (to <= from) to = from;         // una franja al revés no cuenta
-        return { id: w.id, label: w.label || 'Estudio', from: from, to: to };
+        return {
+          id: w.id, label: w.label || 'Estudio', from: from, to: to,
+          targetMs: Math.max(0, parseInt(w.targetMin, 10) || 0) * 60000
+        };
       })
       .sort(function (a, b) { return a.from - b.from; });
   };
+
+  /** Huecos por debajo de este umbral no se cuentan (cambiar de bloque, ir al baño). */
+  function toleranceMs() {
+    const m = Store.data.settings.lostTolerance;
+    return Math.max(0, m === undefined ? 5 : parseInt(m, 10) || 0) * 60000;
+  }
+  Lost.toleranceMs = toleranceMs;
 
   /** Ratos en que el temporizador estuvo encendido ese día, incluida la sesión en curso. */
   Lost.coverage = function (dayKey) {
     const spans = [];
     Store.data.sessions.forEach(function (s) {
-      if (U.dayKey(s.startedAt) !== dayKey) return;
-      s.blocks.forEach(function (b) {
+      let any = false;
+      (s.blocks || []).forEach(function (b) {
         if (!b.startedAt) return;
+        any = true;
+        if (U.dayKey(b.startedAt) !== dayKey) return;
         spans.push([b.startedAt, b.endedAt || b.startedAt + (b.actualMs || 0)]);
       });
+      // Sesiones guardadas antes de que se apuntara la hora de cada bloque: se
+      // toma la sesión entera, que es justo cuando el temporizador corría. Sin
+      // esto, el tiempo ya estudiado aparecía como perdido.
+      if (!any && s.startedAt && s.endedAt > s.startedAt && U.dayKey(s.startedAt) === dayKey) {
+        spans.push([s.startedAt, s.endedAt]);
+      }
     });
 
     const run = global.Runner && Runner.getState();
@@ -63,7 +81,8 @@
       run.blocks.forEach(function (b) {
         if (!b.startedAt) return;
         if (U.dayKey(b.startedAt) !== dayKey) return;
-        spans.push([b.startedAt, b.endedAt || Date.now()]);
+        // El bloque en marcha llega hasta ahora mismo: la tarjeta va contigo.
+        spans.push([b.startedAt, b.endedAt || (b.status === 'running' ? Date.now() : b.startedAt + (b.elapsedBefore || 0))]);
       });
     }
 
@@ -78,34 +97,74 @@
     return merged;
   };
 
-  /** Huecos de las franjas que ya han pasado y en los que no hubo temporizador. */
-  Lost.gaps = function (dayKey, nowTs) {
+  /** Recorta una lista de huecos a un total, empezando por los más tempranos. */
+  function trimGaps(gaps, limit) {
+    const out = [];
+    let left = limit;
+    for (let i = 0; i < gaps.length && left > 0; i++) {
+      const len = gaps[i].to - gaps[i].from;
+      if (len <= left) { out.push(gaps[i]); left -= len; }
+      else { out.push({ window: gaps[i].window, from: gaps[i].from, to: gaps[i].from + left, partial: true }); left = 0; }
+    }
+    return out;
+  }
+
+  /**
+   * Cuentas de una franja: lo transcurrido, lo que cubrió el temporizador y los
+   * huecos que quedan. Con objetivo solo se reclama lo que falte para cumplirlo:
+   * en una franja larga (tu jornada entera) las horas de trabajo no son «perdidas».
+   */
+  function windowSlice(w, covered, now) {
+    const end = Math.min(w.to, now);
+    const elapsed = Math.max(0, end - w.from);
+    const raw = [];
+    let coveredMs = 0;
+    let cursor = w.from;
+
+    covered.forEach(function (c) {
+      if (c[1] <= w.from || c[0] >= end) return;
+      const from = Math.max(c[0], w.from);
+      const to = Math.min(c[1], end);
+      coveredMs += Math.max(0, to - from);
+      if (from > cursor) raw.push({ window: w, from: cursor, to: from });
+      cursor = Math.max(cursor, to);
+    });
+    if (cursor < end) raw.push({ window: w, from: cursor, to: end });
+
+    const tol = toleranceMs();
+    let gaps = raw.filter(function (g) { return g.to - g.from >= tol; });
+    const expected = w.targetMs ? Math.min(w.targetMs, elapsed) : elapsed;
+    if (w.targetMs) gaps = trimGaps(gaps, Math.max(0, expected - coveredMs));
+
+    return {
+      window: w, elapsedMs: elapsed, coveredMs: coveredMs, expectedMs: expected, gaps: gaps,
+      gapMs: gaps.reduce(function (a, g) { return a + (g.to - g.from); }, 0)
+    };
+  }
+
+  Lost.slices = function (dayKey, nowTs) {
     const now = nowTs || Date.now();
     const covered = Lost.coverage(dayKey);
-    const out = [];
+    return Lost.windowsFor(dayKey).map(function (w) { return windowSlice(w, covered, now); });
+  };
 
-    Lost.windowsFor(dayKey).forEach(function (w) {
-      const end = Math.min(w.to, now);
-      if (end <= w.from) return;
-      let cursor = w.from;
-      covered.forEach(function (c) {
-        if (c[1] <= cursor || c[0] >= end) return;
-        if (c[0] > cursor) out.push({ window: w, from: cursor, to: Math.min(c[0], end) });
-        cursor = Math.max(cursor, c[1]);
-      });
-      if (cursor < end) out.push({ window: w, from: cursor, to: end });
-    });
-
-    return out.filter(function (g) { return g.to - g.from >= 60000; });   // menos de un minuto no cuenta
+  /** Huecos de las franjas que ya han pasado y en los que no hubo temporizador. */
+  Lost.gaps = function (dayKey, nowTs) {
+    let out = [];
+    Lost.slices(dayKey, nowTs).forEach(function (sl) { out = out.concat(sl.gaps); });
+    return out;
   };
 
   /** Resumen de un día: lo previsto, lo cubierto, el hueco y lo ya justificado. */
   Lost.daySummary = function (dayKey, nowTs) {
     const now = nowTs || Date.now();
-    const wins = Lost.windowsFor(dayKey);
-    const expected = wins.reduce(function (a, w) { return a + Math.max(0, Math.min(w.to, now) - w.from); }, 0);
-    const gaps = Lost.gaps(dayKey, now);
-    const gapMs = gaps.reduce(function (a, g) { return a + (g.to - g.from); }, 0);
+    const slices = Lost.slices(dayKey, now);
+    const wins = slices.map(function (sl) { return sl.window; });
+    const expected = slices.reduce(function (a, sl) { return a + sl.expectedMs; }, 0);
+    const studied = slices.reduce(function (a, sl) { return a + sl.coveredMs; }, 0);
+    let gaps = [];
+    slices.forEach(function (sl) { gaps = gaps.concat(sl.gaps); });
+    const gapMs = slices.reduce(function (a, sl) { return a + sl.gapMs; }, 0);
     const logged = Store.lostTimeOf(dayKey);
     const loggedMs = logged.reduce(function (a, e) { return a + (e.ms || 0); }, 0);
 
@@ -123,9 +182,9 @@
     const plannedStart = wins.length ? wins[0].from : null;
 
     return {
-      dayKey: dayKey, windows: wins, gaps: gaps,
+      dayKey: dayKey, windows: wins, slices: slices, gaps: gaps,
       expectedMs: expected,
-      coveredMs: Math.max(0, expected - gapMs),
+      coveredMs: studied,
       gapMs: gapMs,
       loggedMs: loggedMs,
       pendingMs: Math.max(0, gapMs - loggedMs),
@@ -192,8 +251,13 @@
     const summary = Lost.daySummary(key);
     const pending = suggestedMs !== undefined ? suggestedMs : summary.pendingMs;
     let causeId = (Store.data.lostCauses[0] || {}).id || '';
-    let minutes = Math.max(1, Math.round(pending / 60000));
-    let minInput, noteInput, chips, left;
+    const cap = Math.max(600, Math.ceil(pending / 60000));
+    let minutes = U.clamp(Math.max(1, Math.round(pending / 60000)), 1, cap);
+    let minInput, noteInput, chips, left, gapChips;
+
+    function hintText() {
+      return 'Sin justificar quedarían ' + U.fmtHuman(Math.max(0, pending - minutes * 60000)) + '.';
+    }
 
     function paintChips() {
       U.clear(chips);
@@ -232,17 +296,42 @@
         f1.appendChild(chips);
         frag.appendChild(f1);
 
+        // Los ratos concretos en que el temporizador estuvo apagado: se justifican
+        // uno a uno, que es más fiel que repartir un total a ojo.
+        const pieces = (summary.gaps || []).filter(function (g) { return g.to - g.from >= 60000; });
+        if (pieces.length > 1) {
+          const fg = U.el('div', { class: 'field' });
+          fg.appendChild(U.el('label', { text: 'Ratos sin temporizador' }));
+          gapChips = U.el('div', { class: 'chips' });
+          pieces.slice(0, 8).forEach(function (g) {
+            const ms = g.to - g.from;
+            gapChips.appendChild(U.el('button', {
+              class: 'chip', type: 'button',
+              text: U.fmtClock(new Date(g.from)) + '–' + U.fmtClock(new Date(g.to)) + ' · ' + U.fmtHuman(ms),
+              onclick: function () {
+                minutes = U.clamp(Math.round(ms / 60000), 1, cap);
+                minInput.value = String(minutes);
+                U.$$('.chip', gapChips).forEach(function (c) { c.classList.remove('is-active'); });
+                this.classList.add('is-active');
+                left.textContent = hintText();
+              }
+            }));
+          });
+          fg.appendChild(gapChips);
+          frag.appendChild(fg);
+        }
+
         const f2 = U.el('div', { class: 'field' });
         f2.appendChild(U.el('label', { text: 'Minutos' }));
         minInput = U.el('input', {
-          type: 'number', min: '1', max: '600', step: '5', value: String(minutes),
+          type: 'number', min: '1', max: String(cap), step: '5', value: String(minutes),
           oninput: function () {
-            minutes = U.clamp(parseInt(minInput.value, 10) || 1, 1, 600);
-            left.textContent = 'Sin justificar quedarían ' + U.fmtHuman(Math.max(0, pending - minutes * 60000)) + '.';
+            minutes = U.clamp(parseInt(minInput.value, 10) || 1, 1, cap);
+            left.textContent = hintText();
           }
         });
         f2.appendChild(minInput);
-        left = U.el('p', { class: 'hint', text: 'Sin justificar quedarían ' + U.fmtHuman(Math.max(0, pending - minutes * 60000)) + '.' });
+        left = U.el('p', { class: 'hint', text: hintText() });
         f2.appendChild(left);
         frag.appendChild(f2);
 
@@ -303,7 +392,10 @@
 
     const info = U.el('div', { class: 'lost__info' });
     const win = d.windows.length
-      ? d.windows.map(function (w) { return U.fmtClock(new Date(w.from)) + '–' + U.fmtClock(new Date(w.to)); }).join(', ')
+      ? d.windows.map(function (w) {
+          return U.fmtClock(new Date(w.from)) + '–' + U.fmtClock(new Date(w.to)) +
+            (w.targetMs ? ' (' + U.fmtHuman(w.targetMs) + ')' : '');
+        }).join(', ')
       : 'hoy no tienes franja';
     info.appendChild(U.el('span', { class: 'lost__title', text: 'Hoy: ' + win }));
 
@@ -316,6 +408,16 @@
       }));
     } else {
       info.appendChild(U.el('span', { class: 'lost__warn', text: 'todavía sin arrancar' }));
+    }
+
+    // Lo que llevas hecho dentro de la franja: la tarjeta se actualiza mientras
+    // corre el temporizador, así que va marcando el avance.
+    if (d.expectedMs) {
+      info.appendChild(U.el('span', {
+        class: 'lost__done',
+        text: U.fmtHuman(d.coveredMs) + ' con el temporizador de ' + U.fmtHuman(d.expectedMs) +
+          (d.coveredMs >= d.expectedMs ? ' · objetivo cumplido' : '')
+      }));
     }
 
     info.appendChild(U.el('span', {
@@ -369,6 +471,23 @@
         U.el('small', { text: 'Compara tus franjas con lo que el temporizador estuvo encendido.' })
       ]),
       U.el('label', { class: 'switch' }, [onoff, U.el('i')])
+    ]));
+
+    const tol = U.el('input', {
+      type: 'number', class: 'num-setting', min: '0', max: '60', step: '1',
+      value: String(Store.data.settings.lostTolerance === undefined ? 5 : Store.data.settings.lostTolerance),
+      onchange: function () {
+        Store.setSetting('lostTolerance', U.clamp(parseInt(tol.value, 10) || 0, 0, 60));
+        Lost.renderToday();
+        if (global.History) History.render();
+      }
+    });
+    box.appendChild(U.el('div', { class: 'setting' }, [
+      U.el('div', { class: 'setting__txt' }, [
+        U.el('span', { text: 'Huecos que no cuentan' }),
+        U.el('small', { text: 'Minutos sueltos entre bloques que no se cuentan como tiempo perdido.' })
+      ]),
+      tol
     ]));
 
     const list = U.el('div', { class: 'win-list' });
@@ -427,6 +546,14 @@
       }));
     });
 
+    // Objetivo: cuánto pretendes estudiar dentro de la franja. Sin objetivo se
+    // reclama la franja entera, que en una jornada larga no tiene sentido.
+    const target = U.el('input', {
+      type: 'number', class: 'num-setting', min: '0', max: '960', step: '15',
+      value: String(w.targetMin || 0), 'aria-label': 'Objetivo en minutos',
+      onchange: function () { w.targetMin = U.clamp(parseInt(target.value, 10) || 0, 0, 960); save(); }
+    });
+
     return U.el('div', { class: 'win-row' }, [
       U.el('div', { class: 'win-row__top' }, [
         label,
@@ -442,9 +569,14 @@
         }, [U.icon('trash', 15)])
       ]),
       U.el('div', { class: 'win-row__time' }, [
-        start, U.el('span', { class: 'qitem__unit', text: 'a' }), end
+        start, U.el('span', { class: 'qitem__unit', text: 'a' }), end,
+        U.el('span', { class: 'qitem__unit', text: '· objetivo' }), target,
+        U.el('span', { class: 'qitem__unit', text: 'min' })
       ]),
-      days
+      days,
+      U.el('p', { class: 'hint', text: w.targetMin
+        ? 'Solo se cuenta como perdido lo que falte para esos ' + w.targetMin + ' min.'
+        : 'Sin objetivo: se cuenta como perdida toda la franja sin temporizador.' })
     ]);
   }
 

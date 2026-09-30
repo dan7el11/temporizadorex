@@ -95,6 +95,19 @@ Viene **desactivado** hasta que pongas tus horas, para no inventarse un horario 
 
 Solo se cuenta desde el día en que configuraste el horario: no se inventa tiempo perdido de antes.
 
+**Objetivo por franja.** Cada franja puede llevar un objetivo en minutos. Sin objetivo se reclama la
+franja entera, que para una franja corta (6:00–8:00) es lo natural, pero para tu jornada completa
+(7:00–19:00) diría que pierdes diez horas todos los días. Con un objetivo de, pongamos, 120 minutos,
+solo cuenta como perdido **lo que falte para cumplirlo**, y en cuanto lo cumples la tarjeta lo dice.
+
+**Huecos que no cuentan.** Los ratos sueltos por debajo del umbral de *Ajustes* (5 minutos por
+defecto) no se cuentan: cambiar de bloque o ir al baño no es tiempo perdido.
+
+**Va contigo.** La tarjeta se actualiza al empezar cada bloque, al cerrarlo, al terminar la sesión y
+una vez por minuto, así que lo que llevas hecho se descuenta según lo haces. Al justificar, el
+diálogo lista los ratos concretos en que el temporizador estuvo apagado (07:00–07:30, 08:30–10:00…)
+y basta con tocar uno para apuntarlo con su causa.
+
 ### Tiempo efectivo
 Las distracciones que anotas **sin parar el reloj** ahora cuestan. Al terminar el bloque la app te
 las lista y te pregunta cuántos minutos te llevó cada una (por defecto dos, configurable), y ese

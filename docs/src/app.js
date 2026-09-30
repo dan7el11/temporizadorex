@@ -286,7 +286,12 @@
       if (document.getElementById('view-settings').classList.contains('is-active')) Settings.renderRoom();
     };
     Room.restart();
-    setInterval(App.renderCountdown, 60000);
+    // Cada minuto: la cuenta atrás del examen y la tarjeta de tiempo perdido,
+    // que así sigue lo que vas haciendo sin tener que recargar.
+    setInterval(function () {
+      App.renderCountdown();
+      Lost.renderToday();
+    }, 60000);
   };
 
   global.App = App;
