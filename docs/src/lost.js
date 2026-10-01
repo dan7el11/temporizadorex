@@ -524,82 +524,90 @@
   /* ── Tarjeta de la pantalla principal ──────────────────── */
   Lost.renderToday = function () {
     const box = document.getElementById('lostToday');
+    if (global.App && App.renderTodayStudy) App.renderTodayStudy();
     if (!box) return;
     U.clear(box);
+    box.hidden = false;
+
+    const head = U.el('div', { class: 'tile__head' }, [
+      U.el('span', { class: 'tile__icon', 'data-icon': 'hourglass' }),
+      U.el('span', { class: 'tile__title', text: 'Tiempo perdido' })
+    ]);
+    box.appendChild(head);
 
     if (!Lost.enabled()) {
-      box.hidden = false;
-      box.appendChild(U.el('div', { class: 'lost__info' }, [
-        U.el('span', { class: 'lost__title', text: 'Horario habitual' }),
-        U.el('span', { text: 'Di a qué hora deberías estar estudiando y la app contará el tiempo que se pierde antes de encender el temporizador.' })
+      box.classList.remove('is-pending');
+      box.appendChild(U.el('div', { class: 'tile__line', text: 'Di a qué hora deberías estar estudiando y la app contará el tiempo que se pierde con el temporizador apagado.' }));
+      box.appendChild(U.el('div', { class: 'tile__actions' }, [
+        U.el('button', { class: 'btn btn--ghost btn--sm', text: 'Configurar horario', onclick: function () { App.showView('settings', 'schedule'); } })
       ]));
-      box.appendChild(U.el('div', { class: 'lost__actions' }, [
-        U.el('button', { class: 'btn btn--primary btn--sm', text: 'Configurar horario', onclick: function () { App.showView('settings'); } })
-      ]));
+      App.hydrateIcons(box);
       return;
     }
 
     const d = Lost.daySummary(U.dayKey());
-    box.hidden = false;
     box.classList.toggle('is-pending', d.pendingMs >= 300000);
+    head.appendChild(U.el('span', {
+      class: 'tile__meta',
+      text: d.windows.length
+        ? d.windows.map(function (w) {
+            return U.fmtClock(new Date(w.from)) + '–' + U.fmtClock(new Date(w.to)) +
+              (w.targetMs ? ' (' + U.fmtHuman(w.targetMs) + ')' : '');
+          }).join(', ')
+        : 'hoy no tienes franja'
+    }));
 
-    const info = U.el('div', { class: 'lost__info' });
-    const win = d.windows.length
-      ? d.windows.map(function (w) {
-          return U.fmtClock(new Date(w.from)) + '–' + U.fmtClock(new Date(w.to)) +
-            (w.targetMs ? ' (' + U.fmtHuman(w.targetMs) + ')' : '');
-        }).join(', ')
-      : 'hoy no tienes franja';
-    info.appendChild(U.el('span', { class: 'lost__title', text: 'Hoy: ' + win }));
+    // La cifra que importa: lo que queda sin justificar.
+    box.appendChild(U.el('div', { class: 'tile__big' }, d.pendingMs
+      ? [U.el('strong', { text: U.fmtHuman(d.pendingMs) }), U.el('span', { text: 'sin justificar' })]
+      : [U.el('strong', { text: U.fmtHuman(d.gapMs) }), U.el('span', { text: d.gapMs ? 'perdidos, todo justificado' : 'perdidos hoy' })]));
 
+    const lines = U.el('div', { class: 'tile__lines' });
     if (!d.windows.length) {
-      info.appendChild(U.el('span', { text: 'día libre según tu horario' }));
+      lines.appendChild(U.el('span', { text: 'Día libre según tu horario.' }));
     } else if (d.firstStart) {
-      info.appendChild(U.el('span', {
-        text: 'arrancaste a las ' + U.fmtClock(new Date(d.firstStart)) +
+      lines.appendChild(U.el('span', {
+        text: 'Arrancaste a las ' + U.fmtClock(new Date(d.firstStart)) +
           (d.lateMs ? ' · ' + U.fmtHuman(d.lateMs) + ' tarde' : ' · puntual')
       }));
     } else {
-      info.appendChild(U.el('span', { class: 'lost__warn', text: 'todavía sin arrancar' }));
+      lines.appendChild(U.el('span', { class: 'lost__warn', text: 'Todavía sin arrancar' }));
     }
-
     // Lo que llevas hecho dentro de la franja: la tarjeta se actualiza mientras
     // corre el temporizador, así que va marcando el avance.
     if (d.expectedMs) {
-      info.appendChild(U.el('span', {
+      lines.appendChild(U.el('span', {
         class: 'lost__done',
         text: U.fmtHuman(d.coveredMs) + ' con el temporizador de ' + U.fmtHuman(d.expectedMs) +
           (d.coveredMs >= d.expectedMs ? ' · objetivo cumplido' : '')
       }));
     }
-
-    info.appendChild(U.el('span', {
-      class: d.pendingMs ? 'lost__warn' : '',
-      text: d.gapMs
-        ? U.fmtHuman(d.gapMs) + ' fuera del temporizador' + (d.pendingMs ? ' · ' + U.fmtHuman(d.pendingMs) + ' sin justificar' : ' · todo justificado')
-        : 'sin tiempo perdido'
-    }));
-
+    if (d.gapMs) {
+      lines.appendChild(U.el('span', {
+        text: U.fmtHuman(d.gapMs) + ' fuera del temporizador' + (d.pendingMs ? '' : ' · todo justificado')
+      }));
+    }
     if (d.byCause.length) {
-      info.appendChild(U.el('span', {
+      lines.appendChild(U.el('span', {
         class: 'lost__causes',
         text: d.byCause.map(function (c) { return c.label + ' ' + U.fmtHuman(c.ms); }).join(' · ')
       }));
     }
+    box.appendChild(lines);
 
-    box.appendChild(info);
-    box.appendChild(U.el('div', { class: 'lost__actions' }, [
+    box.appendChild(U.el('div', { class: 'tile__actions' }, [
       U.el('button', {
         class: 'btn ' + (d.pendingMs ? 'btn--primary' : 'btn--ghost') + ' btn--sm',
-        text: d.pendingMs ? 'Registrar ' + U.fmtHuman(d.pendingMs) : 'Registrar tiempo perdido',
+        text: d.pendingMs ? 'Registrar ' + U.fmtHuman(d.pendingMs) : 'Ver registro',
         onclick: function () { Lost.logDialog(U.dayKey()); }
       }),
       U.el('button', {
         class: 'btn btn--ghost btn--sm', text: 'Horario',
         title: 'Editar tus franjas de estudio',
-        onclick: function () { App.showView('settings'); }
+        onclick: function () { App.showView('settings', 'schedule'); }
       })
     ]));
+    App.hydrateIcons(box);
   };
 
   /* ── Ajustes: franjas y causas ─────────────────────────── */
@@ -723,8 +731,10 @@
       ]),
       U.el('div', { class: 'win-row__time' }, [
         start, U.el('span', { class: 'qitem__unit', text: 'a' }), end,
-        U.el('span', { class: 'qitem__unit', text: '· objetivo' }), target,
-        U.el('span', { class: 'qitem__unit', text: 'min' })
+        U.el('span', { class: 'win-row__target' }, [
+          U.el('span', { class: 'qitem__unit', text: 'Objetivo' }), target,
+          U.el('span', { class: 'qitem__unit', text: 'min' })
+        ])
       ]),
       days,
       U.el('p', { class: 'hint', text: w.targetMin

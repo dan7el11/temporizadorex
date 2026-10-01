@@ -19,13 +19,20 @@
           U.el('span', { class: 'preset-chip__dot', style: { background: p.color, color: p.color } }),
           U.el('span', { text: p.name })
         ]),
-        U.el('div', { class: 'libcard__meta', text: 'Duración habitual: ' + U.fmtHuman(p.minutes * 60000) + (p.isBreak ? ' · descanso' : '') }),
+        U.el('div', { class: 'libcard__meta' }, [
+          U.el('span', { class: 'libcard__time', text: U.fmtHuman(p.minutes * 60000) }),
+          p.isBreak ? U.el('span', { class: 'badge', text: 'descanso' }) : null
+        ]),
         p.note ? U.el('div', { class: 'libcard__meta', text: p.note }) : null,
         U.el('div', { class: 'libcard__actions' }, [
-          U.el('button', { class: 'mini', text: 'Editar', onclick: function () { Library.edit(p.id); } }),
-          U.el('button', { class: 'mini', text: 'Duplicar', onclick: function () { Library.duplicate(p.id); } }),
-          U.el('button', { class: 'mini', text: 'Añadir al día', onclick: function () { Planner.addFromPreset(p.id); UI.toast('Añadido a la sesión de hoy'); } }),
-          U.el('button', { class: 'mini', text: 'Borrar', onclick: function () { Library.remove(p.id); } })
+          U.el('button', {
+            class: 'btn btn--ghost btn--sm libcard__add', type: 'button', title: 'Añadir a la sesión de hoy',
+            onclick: function () { Planner.addFromPreset(p.id); UI.toast('Añadido a la sesión de hoy'); }
+          }, [U.icon('plus', 15), U.el('span', { text: 'Añadir' })]),
+          U.el('span', { class: 'libcard__spacer' }),
+          U.el('button', { class: 'qbtn qbtn--xs', type: 'button', title: 'Editar', 'aria-label': 'Editar ' + p.name, onclick: function () { Library.edit(p.id); } }, [U.icon('pencil', 14)]),
+          U.el('button', { class: 'qbtn qbtn--xs', type: 'button', title: 'Duplicar', 'aria-label': 'Duplicar ' + p.name, onclick: function () { Library.duplicate(p.id); } }, [U.icon('copy', 14)]),
+          U.el('button', { class: 'qbtn qbtn--xs qbtn--danger', type: 'button', title: 'Borrar', 'aria-label': 'Borrar ' + p.name, onclick: function () { Library.remove(p.id); } }, [U.icon('trash', 14)])
         ])
       ]);
       box.appendChild(card);

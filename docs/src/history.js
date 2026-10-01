@@ -383,7 +383,8 @@
 
     const rows = sum.byCause.map(function (c) { return { label: c.label, value: c.ms }; });
     const max = rows.length ? rows[0].value : 1;
-    barRows(box, rows, max, function (r) { return U.fmtHuman(r.value); });
+    if (rows.length) barRows(box, rows, max, function (r) { return U.fmtHuman(r.value); });
+    else U.clear(box).appendChild(U.el('p', { class: 'empty-note', text: 'Aún no hay causas apuntadas: usa «Apuntar» en cada día para saber en qué se va el tiempo.' }));
 
     // Los días, con lo que se perdió y en qué.
     const list = U.el('div', { class: 'lostdays' });

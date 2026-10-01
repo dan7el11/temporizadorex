@@ -11,24 +11,24 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="assets/styles.css?v=12">
+<link rel="stylesheet" href="assets/styles.css?v=13">
 </head>
 <body>
 
 <div id="app">
   <header class="topbar">
     <div class="topbar__brand">
-      <span class="topbar__dot" aria-hidden="true"></span>
+      <span class="brandmark" aria-hidden="true"></span>
       <div>
         <strong>MIR 2027</strong>
         <span class="topbar__sub" id="countdownMir">—</span>
       </div>
     </div>
-    <nav class="tabs" id="tabs" role="tablist">
-      <button class="tab is-active" data-view="plan" role="tab">Plan de hoy</button>
-      <button class="tab" data-view="library" role="tab">Biblioteca</button>
-      <button class="tab" data-view="history" role="tab">Historial</button>
-      <button class="tab" data-view="settings" role="tab">Ajustes</button>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Secciones">
+      <button class="tab is-active" data-view="plan" role="tab"><span class="tab__icon" data-icon="calendar"></span><span class="tab__label">Plan de hoy</span></button>
+      <button class="tab" data-view="library" role="tab"><span class="tab__icon" data-icon="books"></span><span class="tab__label">Biblioteca</span></button>
+      <button class="tab" data-view="history" role="tab"><span class="tab__icon" data-icon="chart"></span><span class="tab__label">Historial</span></button>
+      <button class="tab" data-view="settings" role="tab"><span class="tab__icon" data-icon="sliders"></span><span class="tab__label">Ajustes</span></button>
     </nav>
   </header>
 
@@ -36,58 +36,57 @@
 
     <!-- ══════════════ PLAN ══════════════ -->
     <section class="view is-active" id="view-plan">
-      <div class="lost" id="lostToday" hidden></div>
-      <div class="roomstrip" id="roomStrip" hidden></div>
-      <div class="grid">
-        <div class="col">
-          <div class="card">
-            <div class="card__head">
-              <h2>Bloques disponibles</h2>
-              <button class="btn btn--ghost btn--sm" id="goLibrary">Editar biblioteca</button>
-            </div>
-            <p class="hint">Pulsa para añadir el bloque a la sesión de hoy. Después ajustas el tiempo de cada uno.</p>
-            <div class="preset-picker" id="presetPicker"></div>
-            <button class="btn btn--ghost btn--block" id="quickBlock">+ Bloque puntual (sin guardar)</button>
-            <p class="hint" style="margin:14px 0 8px">Pausas guiadas</p>
-            <div class="preset-picker" id="pausePicker"></div>
-          </div>
+      <!-- Cómo va el día: estudio, tiempo perdido y sala -->
+      <div class="today">
+        <div class="tile tile--study" id="todayStudy"></div>
+        <div class="tile lost" id="lostToday" hidden></div>
+        <div class="tile roomstrip" id="roomStrip" hidden></div>
+      </div>
 
-          <div class="card">
-            <div class="card__head">
-              <h2>Plantillas de día</h2>
-              <button class="btn btn--ghost btn--sm" id="savePlan">Guardar día actual</button>
+      <div class="plan">
+        <div class="card plan__picker">
+          <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="books"></span><h2>Bloques</h2></div>
+              <button class="btn btn--ghost btn--sm" id="goLibrary">Editar</button>
             </div>
-            <div class="plan-templates" id="planTemplates"></div>
-          </div>
+          <p class="hint">Toca un bloque para añadirlo a la sesión; el tiempo se ajusta después.</p>
+          <div class="preset-picker" id="presetPicker"></div>
+          <button class="btn btn--dashed btn--block" id="quickBlock">+ Bloque puntual (sin guardar)</button>
+          <h3 class="subhead"><span data-icon="wind"></span>Pausas guiadas</h3>
+          <div class="preset-picker" id="pausePicker"></div>
         </div>
 
-        <div class="col">
-          <div class="card card--queue">
-            <div class="card__head">
-              <h2>Sesión de hoy</h2>
-              <div class="row">
-                <button class="btn btn--ghost btn--sm" id="autoBreaks">Descansos</button>
-                <button class="btn btn--ghost btn--sm" id="clearQueue">Vaciar</button>
-              </div>
+        <div class="card card--queue plan__queue">
+          <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="timer"></span><h2>Sesión de hoy</h2></div>
+              <div class="row"><button class="btn btn--ghost btn--sm" id="autoBreaks">Descansos</button><button class="btn btn--ghost btn--sm" id="clearQueue">Vaciar</button></div>
             </div>
-            <ol class="queue" id="queue"></ol>
-            <div class="queue__empty" id="queueEmpty">
-              Todavía no has añadido bloques. Elige uno de la izquierda para empezar a montar el día.
-            </div>
-            <div class="queue__summary">
-              <div>
-                <span class="label">Tiempo de estudio</span>
-                <strong id="queueTotal">0 min</strong>
-                <span class="hint" id="queueBreaks"></span>
-              </div>
-              <div>
-                <span class="label">Terminarías a las</span>
-                <strong id="queueEta">—</strong>
-              </div>
-            </div>
-            <button class="btn btn--primary btn--block btn--lg" id="startSession" disabled>Iniciar sesión</button>
-            <p class="hint hint--center">Una vez iniciado un bloque no se puede reiniciar: solo pausar. Cada pausa se registra como distracción.</p>
+          <ol class="queue" id="queue"></ol>
+          <div class="queue__empty" id="queueEmpty">
+            <span class="queue__emptyIcon" data-icon="calendar"></span>
+            Todavía no hay bloques. Elige uno de la lista o carga una plantilla.
           </div>
+          <div class="queue__summary">
+            <div>
+              <span class="label">Tiempo de estudio</span>
+              <strong id="queueTotal">0 min</strong>
+              <span class="hint" id="queueBreaks"></span>
+            </div>
+            <div class="queue__eta">
+              <span class="label">Terminarías a las</span>
+              <strong id="queueEta">—</strong>
+            </div>
+          </div>
+          <button class="btn btn--primary btn--block btn--lg" id="startSession" disabled><span data-icon="play"></span>Iniciar sesión</button>
+          <p class="hint hint--center">Un bloque iniciado no se reinicia: solo se pausa, y cada pausa cuenta como distracción.</p>
+        </div>
+
+        <div class="card plan__templates">
+          <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="copy"></span><h2>Plantillas de día</h2></div>
+              <button class="btn btn--ghost btn--sm" id="savePlan">Guardar día actual</button>
+            </div>
+          <div class="plan-templates" id="planTemplates"></div>
         </div>
       </div>
     </section>
@@ -96,10 +95,10 @@
     <section class="view" id="view-library">
       <div class="card">
         <div class="card__head">
-          <h2>Biblioteca de temporizadores</h2>
-          <button class="btn btn--primary btn--sm" id="newPreset">+ Nuevo tipo</button>
-        </div>
-        <p class="hint">Cada tipo guarda su nombre, color y duración habitual. Se reutiliza cada día y el tiempo se puede recalcular al montar la sesión.</p>
+              <div class="card__title"><span class="card__icon" data-icon="books"></span><h2>Biblioteca de temporizadores</h2></div>
+              <button class="btn btn--primary btn--sm" id="newPreset">+ Nuevo tipo</button>
+            </div>
+        <p class="hint">Cada tipo guarda su nombre, color y duración habitual. Se reutiliza cada día y el tiempo se ajusta al montar la sesión.</p>
         <div class="library" id="library"></div>
       </div>
     </section>
@@ -108,9 +107,9 @@
     <section class="view" id="view-history">
       <div class="card">
         <div class="card__head">
-          <h2>Resumen</h2>
-          <div class="controls" id="historyControls"></div>
-        </div>
+              <div class="card__title"><span class="card__icon" data-icon="chart"></span><h2>Resumen</h2></div>
+              <div class="controls" id="historyControls"></div>
+            </div>
         <div class="stats" id="stats"></div>
         <div class="chart-wrap" id="chartWrap">
           <div class="chart" id="chart"></div>
@@ -119,138 +118,205 @@
       </div>
 
       <div class="grid grid--even">
-        <div class="col">
-          <div class="card">
-            <h2>Causas de las distracciones</h2>
-            <p class="hint">Cuántas veces aparece cada razón en el periodo elegido.</p>
-            <div id="reasonBreakdown"></div>
-          </div>
+        <div class="card">
+          <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="bell"></span><h2>Causas de las distracciones</h2></div>
+              
+            </div>
+          <p class="hint">Cuántas veces aparece cada razón en el periodo elegido.</p>
+          <div id="reasonBreakdown"></div>
         </div>
-        <div class="col">
-          <div class="card">
-            <h2>Reparto por tipo de bloque</h2>
-            <p class="hint">Dónde se va realmente tu tiempo de estudio.</p>
-            <div id="blockBreakdown"></div>
-          </div>
+        <div class="card">
+          <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="books"></span><h2>Reparto por tipo de bloque</h2></div>
+              
+            </div>
+          <p class="hint">Dónde se va realmente tu tiempo de estudio.</p>
+          <div id="blockBreakdown"></div>
         </div>
       </div>
 
       <div class="card">
-        <h2>Horas por tema</h2>
+        <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="tag"></span><h2>Horas por tema</h2></div>
+              
+            </div>
         <p class="hint">Cuánto llevas de cada asignatura. Los descansos no cuentan.</p>
         <div id="topicBreakdown"></div>
       </div>
 
       <div class="card">
-        <h2>Tiempo perdido fuera del temporizador</h2>
-        <p class="hint">Lo que se va antes de encender el temporizador dentro de tus franjas, y en qué se va.</p>
+        <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="hourglass"></span><h2>Tiempo perdido fuera del temporizador</h2></div>
+              
+            </div>
+        <p class="hint">Lo que se va dentro de tus franjas con el temporizador apagado, y en qué.</p>
         <div id="lostSummary"></div>
         <div id="lostBreakdown"></div>
       </div>
 
       <div class="card">
-        <h2>Cuándo te distraes</h2>
-        <p class="hint">Distracciones por hora del día. Sirve para colocar los bloques difíciles en tus mejores horas.</p>
+        <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="clock"></span><h2>Cuándo te distraes</h2></div>
+              
+            </div>
+        <p class="hint">Distracciones por hora del día: coloca los bloques difíciles en tus mejores horas.</p>
         <div id="hourBreakdown"></div>
       </div>
 
       <div class="card">
         <div class="card__head">
-          <h2>Sesiones</h2>
-          <div class="row row--wrap">
-            <span class="hint" id="historyCount"></span>
-            <button class="btn btn--ghost btn--sm" id="exportBlocks">Bloques (.csv)</button>
-            <button class="btn btn--ghost btn--sm" id="exportDistractions">Distracciones (.csv)</button>
-          </div>
-        </div>
-        <p class="hint">Despliega una sesión para ver sus bloques y sus distracciones: desde ahí puedes cambiar la razón, corregir el tiempo o añadir la que se te olvidó.</p>
+              <div class="card__title"><span class="card__icon" data-icon="calendar"></span><h2>Sesiones</h2></div>
+              <div class="row row--wrap"><span class="hint hint--inline" id="historyCount"></span><button class="btn btn--ghost btn--sm" id="exportBlocks">Bloques (.csv)</button><button class="btn btn--ghost btn--sm" id="exportDistractions">Distracciones (.csv)</button></div>
+            </div>
+        <p class="hint">Despliega una sesión para ver sus bloques y distracciones: puedes cambiar la razón, corregir el tiempo o añadir la que se te olvidó.</p>
         <div class="history" id="history"></div>
       </div>
     </section>
 
     <!-- ══════════════ AJUSTES ══════════════ -->
     <section class="view" id="view-settings">
-      <div class="card">
-        <h2>Ajustes</h2>
-        <div class="settings" id="settings"></div>
-      </div>
-      <div class="card">
-        <div class="card__head">
-          <h2>Temas y asignaturas</h2>
-          <button class="btn btn--primary btn--sm" id="newTopic">+ Nuevo tema</button>
+      <div class="settings-layout">
+        <nav class="snav" id="settingsNav" aria-label="Secciones de ajustes">
+          <button class="snav__btn is-active" data-section="timer"><span data-icon="timer"></span><span>Temporizador</span></button>
+          <button class="snav__btn" data-section="focus"><span data-icon="bell"></span><span>Distracciones</span></button>
+          <button class="snav__btn" data-section="goals"><span data-icon="target"></span><span>Objetivos</span></button>
+          <button class="snav__btn" data-section="schedule"><span data-icon="clock"></span><span>Horario</span></button>
+          <button class="snav__btn" data-section="topics"><span data-icon="tag"></span><span>Temas</span></button>
+          <button class="snav__btn" data-section="pauses"><span data-icon="wind"></span><span>Pausas guiadas</span></button>
+          <button class="snav__btn" data-section="mini"><span data-icon="pip"></span><span>Miniatura</span></button>
+          <button class="snav__btn" data-section="sync"><span data-icon="cloud"></span><span>Sincronizar</span></button>
+          <button class="snav__btn" data-section="data"><span data-icon="database"></span><span>Datos</span></button>
+        </nav>
+
+        <div class="spanes">
+          <div class="spane is-active" data-section="timer">
+            <header class="spane__head"><h2>Temporizador</h2><p>Sonido, encadenado de bloques y pantalla durante la sesión.</p></header>
+            <div class="card"><div class="settings" id="settingsTimer"></div></div>
+          </div>
+
+          <div class="spane" data-section="focus">
+            <header class="spane__head"><h2>Distracciones</h2><p>Qué se pregunta al pausar y al terminar cada bloque, y con qué razones.</p></header>
+            <div class="card"><div class="settings" id="settingsFocus"></div></div>
+            <div class="card">
+              <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="bell"></span><h2>Razones de distracción</h2></div>
+              <button class="btn btn--primary btn--sm" id="newReason">+ Nueva razón</button>
+            </div>
+              <p class="hint">Se ofrecen al pausar, al registrar una distracción y al editarla después. Las primeras quedan más a mano.</p>
+              <div class="reason-list" id="reasonList"></div>
+            </div>
+          </div>
+
+          <div class="spane" data-section="goals">
+            <header class="spane__head"><h2>Objetivos</h2><p>Tus metas de estudio y la fecha del examen.</p></header>
+            <div class="card"><div class="settings" id="settingsGoals"></div></div>
+          </div>
+
+          <div class="spane" data-section="schedule">
+            <header class="spane__head"><h2>Horario y tiempo perdido</h2><p>Las franjas en que deberías estudiar: lo que pase en ellas con el temporizador apagado cuenta como tiempo perdido.</p></header>
+            <div class="card">
+              <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="clock"></span><h2>Horario habitual</h2></div>
+              
+            </div>
+              <div id="schedulePanel"></div>
+            </div>
+            <div class="card">
+              <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="hourglass"></span><h2>Causas del tiempo perdido</h2></div>
+              <button class="btn btn--primary btn--sm" id="newLostCause">+ Nueva causa</button>
+            </div>
+              <p class="hint">Lo que te impide empezar a la hora: pacientes, papeleo, visitas…</p>
+              <div class="reason-list" id="lostCauseList"></div>
+            </div>
+          </div>
+
+          <div class="spane" data-section="topics">
+            <header class="spane__head"><h2>Temas y asignaturas</h2><p>Se asignan a cada bloque al montar el día; el historial suma las horas de cada uno.</p></header>
+            <div class="card">
+              <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="tag"></span><h2>Temas</h2></div>
+              <button class="btn btn--primary btn--sm" id="newTopic">+ Nuevo tema</button>
+            </div>
+              <div class="reason-list reason-list--grid" id="topicList"></div>
+            </div>
+          </div>
+
+          <div class="spane" data-section="pauses">
+            <header class="spane__head"><h2>Pausas guiadas</h2><p>Descansos cortos entre bloques: respiración, pasos o solo el reloj con tu texto.</p></header>
+            <div class="card"><div class="settings" id="settingsPauses"></div></div>
+            <div class="card">
+              <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="wind"></span><h2>Pausas</h2></div>
+              <button class="btn btn--primary btn--sm" id="newPause">+ Nueva pausa</button>
+            </div>
+              <div class="pause-list" id="pauseList"></div>
+            </div>
+            <div class="card">
+              <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="flame"></span><h2>Ejercicios de las pausas activas</h2></div>
+              <button class="btn btn--primary btn--sm" id="newExercise">+ Nuevo ejercicio</button>
+            </div>
+              <p class="hint">De aquí se sortean los ejercicios de las pausas «distintos cada vez», sin repetir los de la vez anterior.</p>
+              <div class="ex-list" id="exerciseList"></div>
+            </div>
+          </div>
+
+          <div class="spane" data-section="mini">
+            <header class="spane__head"><h2>Ventana miniatura</h2><p>Qué se ve en la ventana flotante (Picture in Picture) mientras haces otra cosa.</p></header>
+            <div class="card"><div id="miniSettings"></div></div>
+          </div>
+
+          <div class="spane" data-section="sync">
+            <header class="spane__head"><h2>Sincronizar y estudiar acompañado</h2><p>Tus datos en todos tus dispositivos y la sala para coordinar descansos.</p></header>
+            <div class="card">
+              <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="cloud"></span><h2>Sincronizar entre dispositivos</h2></div>
+              
+            </div>
+              <div id="syncPanel"></div>
+            </div>
+            <div class="card">
+              <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="users"></span><h2>Estudiar acompañado</h2></div>
+              
+            </div>
+              <div id="roomPanel"></div>
+            </div>
+          </div>
+
+          <div class="spane" data-section="data">
+            <header class="spane__head"><h2>Datos</h2><p>Copias de seguridad y atajos de teclado.</p></header>
+            <div class="card">
+              <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="database"></span><h2>Copia de seguridad</h2></div>
+              
+            </div>
+              <p class="hint">Todo se guarda en este navegador. Exporta de vez en cuando para no perder el historial.</p>
+              <div class="row row--wrap">
+                <button class="btn btn--ghost" id="exportData">Exportar copia (.json)</button>
+                <button class="btn btn--ghost" id="importData">Importar copia</button>
+                <button class="btn btn--danger-ghost" id="resetData">Borrar todo</button>
+              </div>
+              <input type="file" id="importFile" accept="application/json" hidden>
+            </div>
+            <div class="card">
+              <div class="card__head">
+              <div class="card__title"><span class="card__icon" data-icon="keyboard"></span><h2>Atajos de teclado (durante la sesión)</h2></div>
+              
+            </div>
+              <ul class="keys">
+                <li><kbd>Espacio</kbd> Pausar / reanudar (la pausa cuenta como distracción)</li>
+                <li><kbd>D</kbd> Registrar distracción rápida sin pausar</li>
+                <li><kbd>B</kbd> Bloques de la sesión: tiempos, orden y saltar</li>
+                <li><kbd>P</kbd> Ventana miniatura (Picture in Picture)</li>
+                <li><kbd>F</kbd> Pantalla completa</li>
+                <li><kbd>Esc</kbd> Salir de pantalla completa</li>
+              </ul>
+            </div>
+          </div>
         </div>
-        <p class="hint">Se asignan a cada bloque al montar el día (y se pueden corregir al terminarlo o después). El historial te dice cuántas horas llevas de cada uno.</p>
-        <div class="reason-list" id="topicList"></div>
-      </div>
-      <div class="card">
-        <h2>Horario habitual</h2>
-        <p class="hint">Las franjas en las que deberías estar estudiando. Lo que pase dentro de ellas con el temporizador apagado cuenta como tiempo perdido, y podrás apuntar a qué se fue.</p>
-        <div id="schedulePanel"></div>
-      </div>
-      <div class="card">
-        <div class="card__head">
-          <h2>Causas del tiempo perdido</h2>
-          <button class="btn btn--primary btn--sm" id="newLostCause">+ Nueva causa</button>
-        </div>
-        <p class="hint">Lo que te impide empezar a la hora: pacientes, papeleo, visitas… Se eligen al registrar el tiempo perdido.</p>
-        <div class="reason-list" id="lostCauseList"></div>
-      </div>
-      <div class="card">
-        <div class="card__head">
-          <h2>Pausas guiadas</h2>
-          <button class="btn btn--primary btn--sm" id="newPause">+ Nueva pausa</button>
-        </div>
-        <p class="hint">Descansos cortos entre bloques, con su motivo, su duración y su forma de presentarse: respiración guiada con un círculo, pasos que van pasando, o solo el reloj con un texto tuyo. Al terminar cada bloque se te ofrecen aquí mismo.</p>
-        <div class="pause-list" id="pauseList"></div>
-      </div>
-      <div class="card">
-        <div class="card__head">
-          <h2>Ejercicios de las pausas activas</h2>
-          <button class="btn btn--primary btn--sm" id="newExercise">+ Nuevo ejercicio</button>
-        </div>
-        <p class="hint">De aquí se sortean los ejercicios cuando una pausa está puesta como «distintos cada vez», sin repetir los de la vez anterior.</p>
-        <div class="ex-list" id="exerciseList"></div>
-      </div>
-      <div class="card">
-        <div class="card__head">
-          <h2>Razones de distracción</h2>
-          <button class="btn btn--primary btn--sm" id="newReason">+ Nueva razón</button>
-        </div>
-        <p class="hint">Estas son las razones que se ofrecen al pausar, al registrar una distracción y al editarla después. Ordénalas como más te convenga: las primeras son las que más a mano quedan.</p>
-        <div class="reason-list" id="reasonList"></div>
-      </div>
-      <div class="card">
-        <h2>Ventana miniatura</h2>
-        <div id="miniSettings"></div>
-      </div>
-      <div class="card">
-        <h2>Sincronizar entre dispositivos</h2>
-        <div id="syncPanel"></div>
-      </div>
-      <div class="card">
-        <h2>Estudiar acompañado</h2>
-        <div id="roomPanel"></div>
-      </div>
-      <div class="card">
-        <h2>Datos</h2>
-        <p class="hint">Todo se guarda en este navegador. Exporta de vez en cuando para no perder el historial.</p>
-        <div class="row row--wrap">
-          <button class="btn btn--ghost" id="exportData">Exportar copia (.json)</button>
-          <button class="btn btn--ghost" id="importData">Importar copia</button>
-          <button class="btn btn--danger-ghost" id="resetData">Borrar todo</button>
-        </div>
-        <input type="file" id="importFile" accept="application/json" hidden>
-      </div>
-      <div class="card">
-        <h2>Atajos de teclado (durante la sesión)</h2>
-        <ul class="keys">
-          <li><kbd>Espacio</kbd> Pausar / reanudar (la pausa cuenta como distracción)</li>
-          <li><kbd>D</kbd> Registrar distracción rápida sin pausar</li>
-          <li><kbd>B</kbd> Bloques de la sesión: tiempos, orden y saltar</li>
-          <li><kbd>P</kbd> Ventana miniatura (Picture in Picture)</li>
-          <li><kbd>F</kbd> Pantalla completa</li>
-          <li><kbd>Esc</kbd> Salir de pantalla completa</li>
-        </ul>
       </div>
     </section>
 
@@ -304,8 +370,8 @@
       </div>
       <div class="hud__right">
         <span class="hud__pill" id="hudSession"></span>
-        <button class="iconbtn" id="btnMiniCfg" title="Qué se ve en la miniatura" aria-label="Configurar la ventana miniatura">☰</button>
-        <button class="iconbtn" id="btnFull" title="Pantalla completa (F)" aria-label="Pantalla completa">⛶</button>
+        <button class="iconbtn" id="btnMiniCfg" title="Qué se ve en la miniatura" aria-label="Configurar la ventana miniatura"><span data-icon="menu"></span></button>
+        <button class="iconbtn" id="btnFull" title="Pantalla completa (F)" aria-label="Pantalla completa"><span data-icon="expand"></span></button>
       </div>
     </div>
 
@@ -327,23 +393,23 @@
 <video id="pipVideo" playsinline muted hidden></video>
 <canvas id="pipCanvas" width="640" height="360" hidden></canvas>
 
-<script src="src/utils.js?v=12"></script>
-<script src="src/store.js?v=12"></script>
-<script src="src/audio.js?v=12"></script>
-<script src="src/ui.js?v=12"></script>
-<script src="src/reasons.js?v=12"></script>
-<script src="src/topics.js?v=12"></script>
-<script src="src/pauses.js?v=12"></script>
-<script src="src/lost.js?v=12"></script>
-<script src="src/notify.js?v=12"></script>
-<script src="src/sync.js?v=12"></script>
-<script src="src/room.js?v=12"></script>
-<script src="src/library.js?v=12"></script>
-<script src="src/planner.js?v=12"></script>
-<script src="src/pip.js?v=12"></script>
-<script src="src/runner.js?v=12"></script>
-<script src="src/history.js?v=12"></script>
-<script src="src/settings.js?v=12"></script>
-<script src="src/app.js?v=12"></script>
+<script src="src/utils.js?v=13"></script>
+<script src="src/store.js?v=13"></script>
+<script src="src/audio.js?v=13"></script>
+<script src="src/ui.js?v=13"></script>
+<script src="src/reasons.js?v=13"></script>
+<script src="src/topics.js?v=13"></script>
+<script src="src/pauses.js?v=13"></script>
+<script src="src/lost.js?v=13"></script>
+<script src="src/notify.js?v=13"></script>
+<script src="src/sync.js?v=13"></script>
+<script src="src/room.js?v=13"></script>
+<script src="src/library.js?v=13"></script>
+<script src="src/planner.js?v=13"></script>
+<script src="src/pip.js?v=13"></script>
+<script src="src/runner.js?v=13"></script>
+<script src="src/history.js?v=13"></script>
+<script src="src/settings.js?v=13"></script>
+<script src="src/app.js?v=13"></script>
 </body>
 </html>

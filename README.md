@@ -31,6 +31,18 @@ y abre `http://localhost:8000`.
 > local en archivos `file://`: la app irá bien durante la sesión y **no guardará** la biblioteca ni
 > el historial. Para uso diario, usa la opción A o B.
 
+## Cómo está organizada
+
+- **Plan de hoy.** Arriba, tres tarjetas con cómo va el día: *Estudio de hoy* (tiempo efectivo frente
+  a tu objetivo diario, con barra de progreso), *Tiempo perdido* (lo que queda sin justificar y un
+  botón para registrarlo) y *Estudiar acompañado*. Debajo, los bloques para añadir, la sesión de hoy
+  con el botón de iniciar y las plantillas. En el móvil, la sesión va justo después de los bloques.
+- **Ajustes por secciones.** Temporizador, Distracciones, Objetivos, Horario, Temas, Pausas guiadas,
+  Miniatura, Sincronizar y Datos. Se ve una sección cada vez, con un menú lateral en el ordenador y una
+  fila deslizable en el móvil; la app recuerda la última que abriste. Los botones que llevan a
+  Ajustes (por ejemplo «Horario» en la tarjeta de tiempo perdido) abren directamente su sección.
+- **En el móvil**, las cuatro pantallas se cambian desde una barra fija abajo, al alcance del pulgar.
+
 ## Qué hace
 
 ### Biblioteca de bloques

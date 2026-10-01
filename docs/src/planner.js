@@ -35,7 +35,8 @@
         U.el('span', { class: 'preset-chip__dot', style: { background: p.color, color: p.color } }),
         U.el('span', { class: 'preset-chip__body' }, [
           U.el('span', { class: 'preset-chip__name', text: p.name }),
-          U.el('span', { class: 'preset-chip__time', text: U.fmtHuman(Pauses.total(p) * 1000) })
+          // Las pausas con ejercicios al azar no tienen duración fija: se estima.
+          U.el('span', { class: 'preset-chip__time', text: Pauses.amountLabel(p) })
         ])
       ]));
     });
@@ -47,7 +48,7 @@
     if (!p) return;
     queue().push({
       uid: U.uid('q'), presetId: null, name: p.name, color: p.color,
-      minutes: Math.max(1, Math.round(Pauses.total(p) / 60)),
+      minutes: Math.max(1, Math.round((Pauses.total(p) || Pauses.estimate(p)) / 60)),
       isBreak: true, topicId: '', pauseId: p.id, pause: JSON.parse(JSON.stringify(p))
     });
     persist();

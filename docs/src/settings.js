@@ -4,20 +4,53 @@
 
   const Settings = {};
 
+  // [clave, título, explicación, sección de Ajustes donde aparece]
   const TOGGLES = [
-    ['sound', 'Sonidos', 'Aviso al empezar y al terminar cada bloque.'],
-    ['finalBeeps', 'Cuenta atrás final', 'Pitido en los últimos 5 segundos de cada bloque.'],
-    ['askDistractions', 'Preguntar por distracciones', 'Al terminar un bloque, ofrecer registrar las que no se detectaron; y etiquetar cada pausa.'],
-    ['askReasonQuick', 'Preguntar la razón al pulsar «+ Distracción»', 'Si lo desactivas, la distracción rápida se registra sin razón y sin abrir nada.'],
-    ['offerPause', 'Ofrecer una pausa guiada al terminar un bloque', 'Aparece junto a la pregunta de las distracciones, si queda algún bloque por delante.'],
-    ['autoNext', 'Encadenar bloques automáticamente', 'Si lo desactivas, cada bloque espera a que pulses «Empezar».'],
-    ['wakeLock', 'Mantener la pantalla encendida', 'Evita que el dispositivo se apague durante la sesión.'],
-    ['fullscreenOnStart', 'Pantalla completa al iniciar', 'Abre el temporizador a pantalla completa.']
+    ['sound', 'Sonidos', 'Aviso al empezar y al terminar cada bloque.', 'timer'],
+    ['finalBeeps', 'Cuenta atrás final', 'Pitido en los últimos 5 segundos de cada bloque.', 'timer'],
+    ['autoNext', 'Encadenar bloques automáticamente', 'Si lo desactivas, cada bloque espera a que pulses «Empezar».', 'timer'],
+    ['fullscreenOnStart', 'Pantalla completa al iniciar', 'Abre el temporizador a pantalla completa.', 'timer'],
+    ['wakeLock', 'Mantener la pantalla encendida', 'Evita que el dispositivo se apague durante la sesión.', 'timer'],
+    ['askDistractions', 'Preguntar por distracciones', 'Al terminar un bloque, ofrecer registrar las que no se detectaron; y etiquetar cada pausa.', 'focus'],
+    ['askReasonQuick', 'Preguntar la razón al pulsar «+ Distracción»', 'Si lo desactivas, la distracción rápida se registra sin razón y sin abrir nada.', 'focus'],
+    ['askQuickCost', 'Preguntar cuánto costó cada distracción sin pausa', 'Al cerrar el bloque; ese tiempo se resta del tiempo efectivo.', 'focus'],
+    ['offerPause', 'Ofrecer una pausa guiada al terminar un bloque', 'Aparece junto a la pregunta de las distracciones, si queda algún bloque por delante.', 'pauses']
   ];
 
-  Settings.render = function () {
-    const box = U.clear(document.getElementById('settings'));
+  function settingRow(title, hint, control) {
+    return U.el('div', { class: 'setting' }, [
+      U.el('div', { class: 'setting__txt' }, [
+        U.el('span', { text: title }),
+        typeof hint === 'string' ? U.el('small', { text: hint }) : hint
+      ]),
+      control
+    ]);
+  }
+
+  function numberInput(key, min, max, step, after) {
     const s = Store.data.settings;
+    const input = U.el('input', {
+      type: 'number', min: String(min), max: String(max), step: String(step), value: String(s[key] || 0),
+      class: 'num-setting',
+      onchange: function () {
+        Store.setSetting(key, U.clamp(parseInt(input.value, 10) || 0, min, max));
+        input.value = String(Store.data.settings[key]);
+        if (after) after(Store.data.settings[key]);
+      }
+    });
+    return input;
+  }
+
+  Settings.render = function () {
+    const s = Store.data.settings;
+    const boxes = {
+      timer: document.getElementById('settingsTimer'),
+      focus: document.getElementById('settingsFocus'),
+      goals: document.getElementById('settingsGoals'),
+      pauses: document.getElementById('settingsPauses')
+    };
+    Object.keys(boxes).forEach(function (k) { if (boxes[k]) U.clear(boxes[k]); });
+    const box = boxes.timer;
 
     TOGGLES.forEach(function (t) {
       const key = t[0];
@@ -26,13 +59,7 @@
         type: 'checkbox', checked: checked ? true : null,
         onchange: function () { Store.setSetting(key, input.checked); }
       });
-      box.appendChild(U.el('div', { class: 'setting' }, [
-        U.el('div', { class: 'setting__txt' }, [
-          U.el('span', { text: t[1] }),
-          U.el('small', { text: t[2] })
-        ]),
-        U.el('label', { class: 'switch' }, [input, U.el('i')])
-      ]));
+      boxes[t[3]].appendChild(settingRow(t[1], t[2], U.el('label', { class: 'switch' }, [input, U.el('i')])));
     });
 
     // Volumen
@@ -80,46 +107,26 @@
       U.el('label', { class: 'switch' }, [notifyInput, U.el('i')])
     ]));
 
-    // Fricción al pausar y tope de pausas
+    // Fricción al pausar, tope de pausas y coste de cada distracción sin pausa
     [['pauseFriction', 'Segundos antes de poder pausar', 'El botón de pausar tarda en habilitarse mientras el reloj sigue. 0 lo desactiva.', 0, 30, 1],
-     ['pauseLimit', 'Pausas recomendadas por bloque', 'Al llegar a este número, el aviso es más insistente. No impide pausar. 0 lo desactiva.', 0, 20, 1]]
+     ['pauseLimit', 'Pausas recomendadas por bloque', 'Al llegar a este número, el aviso es más insistente. No impide pausar. 0 lo desactiva.', 0, 20, 1],
+     ['quickMinutes', 'Minutos por distracción sin pausa', 'Lo que se propone restar por cada una al cerrar el bloque.', 0, 30, 1]]
       .forEach(function (g) {
-        const input = U.el('input', {
-          type: 'number', min: String(g[3]), max: String(g[4]), step: String(g[5]), value: String(s[g[0]] || 0),
-          class: 'num-setting',
-          onchange: function () {
-            Store.setSetting(g[0], U.clamp(parseInt(input.value, 10) || 0, g[3], g[4]));
-            input.value = String(Store.data.settings[g[0]]);
-          }
-        });
-        box.appendChild(U.el('div', { class: 'setting' }, [
-          U.el('div', { class: 'setting__txt' }, [U.el('span', { text: g[1] }), U.el('small', { text: g[2] })]),
-          input
-        ]));
+        boxes.focus.appendChild(settingRow(g[1], g[2], numberInput(g[0], g[3], g[4], g[5])));
       });
 
     // Objetivos de estudio
-    [['goalDaily', 'Objetivo diario', 'Minutos de estudio al día; se usa en el resumen y en el gráfico.'],
+    [['goalDaily', 'Objetivo diario', 'Minutos de estudio efectivo al día; se usa en «Estudio de hoy», el resumen y el gráfico.'],
      ['goalWeekly', 'Objetivo semanal', 'Minutos a la semana; marca el progreso de cada semana en el historial.']]
       .forEach(function (g) {
-        const input = U.el('input', {
-          type: 'number', min: '0', max: '10080', step: '15', value: String(s[g[0]] || 0),
-          class: 'num-setting',
-          onchange: function () {
-            Store.setSetting(g[0], U.clamp(parseInt(input.value, 10) || 0, 0, 10080));
-            input.value = String(Store.data.settings[g[0]]);
-            hint.textContent = U.fmtHuman(Store.data.settings[g[0]] * 60000);
-            if (window.History) History.render();
-          }
+        const hint = U.el('span', { class: 'num-hint', text: U.fmtHuman((s[g[0]] || 0) * 60000) });
+        const input = numberInput(g[0], 0, 10080, 15, function (v) {
+          hint.textContent = U.fmtHuman(v * 60000);
+          if (window.History) History.render();
+          if (window.App) App.renderTodayStudy();
         });
-        const hint = U.el('small', { text: U.fmtHuman((s[g[0]] || 0) * 60000) });
-        box.appendChild(U.el('div', { class: 'setting' }, [
-          U.el('div', { class: 'setting__txt' }, [
-            U.el('span', { text: g[1] }),
-            U.el('small', { text: g[2] })
-          ]),
-          U.el('div', { class: 'row' }, [input, U.el('span', { class: 'qitem__unit', text: 'min' }), hint])
-        ]));
+        boxes.goals.appendChild(settingRow(g[1], g[2],
+          U.el('div', { class: 'num-group' }, [input, U.el('span', { class: 'qitem__unit', text: 'min' }), hint])));
       });
 
     // Fecha del examen
@@ -127,13 +134,7 @@
       type: 'date', value: s.examDate || '', class: 'num-setting num-setting--date',
       onchange: function () { Store.setSetting('examDate', date.value); App.renderCountdown(); }
     });
-    box.appendChild(U.el('div', { class: 'setting' }, [
-      U.el('div', { class: 'setting__txt' }, [
-        U.el('span', { text: 'Fecha del examen MIR' }),
-        U.el('small', { text: 'Se muestra la cuenta atrás en la cabecera.' })
-      ]),
-      date
-    ]));
+    boxes.goals.appendChild(settingRow('Fecha del examen MIR', 'Se muestra la cuenta atrás en la cabecera.', date));
 
     const miniBox = document.getElementById('miniSettings');
     if (miniBox) U.clear(miniBox).appendChild(Settings.miniOptions());
@@ -426,7 +427,7 @@
             U.el('button', { class: 'btn btn--ghost', text: 'Ahora no', onclick: function () { close(null); } }),
             U.el('button', {
               class: 'btn btn--primary', text: 'Ir a Ajustes',
-              onclick: function () { close(true); App.showView('settings'); }
+              onclick: function () { close(true); App.showView('settings', 'sync'); }
             })
           ];
         }

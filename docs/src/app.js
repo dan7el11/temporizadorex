@@ -4,16 +4,98 @@
 
   const App = {};
 
-  App.showView = function (name) {
+  const SECTION_KEY = 'mir2027.settings.section.v1';
+
+  /** Cambia de pantalla; en Ajustes se puede pedir una sección concreta. */
+  App.showView = function (name, section) {
     U.$$('.view').forEach(function (v) { v.classList.toggle('is-active', v.id === 'view-' + name); });
-    U.$$('.tab').forEach(function (t) { t.classList.toggle('is-active', t.dataset.view === name); });
+    U.$$('.tab').forEach(function (t) {
+      const on = t.dataset.view === name;
+      t.classList.toggle('is-active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
     if (name === 'history') History.render();
     if (name === 'settings') {
       Settings.render(); Reasons.render(); Topics.render();
       Settings.renderSync(); Settings.renderRoom(); Pauses.render();
       Lost.renderSettings(); Lost.renderCauses(); Pauses.renderExercises();
+      App.showSettings(section || App.lastSection());
     }
     if (name === 'library') Library.render();
+    if (name === 'plan') Lost.renderToday();
+    window.scrollTo(0, 0);
+  };
+
+  App.lastSection = function () {
+    try { return localStorage.getItem(SECTION_KEY) || 'timer'; } catch (e) { return 'timer'; }
+  };
+
+  /** Ajustes va por secciones: se ve una cada vez, y se recuerda la última. */
+  App.showSettings = function (section) {
+    const panes = U.$$('.spane');
+    if (!panes.some(function (p) { return p.dataset.section === section; })) section = 'timer';
+    panes.forEach(function (p) { p.classList.toggle('is-active', p.dataset.section === section); });
+    U.$$('.snav__btn').forEach(function (b) {
+      const on = b.dataset.section === section;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-current', on ? 'page' : 'false');
+      // En móvil el menú se desplaza en horizontal: la sección elegida, a la vista.
+      if (on && b.scrollIntoView && window.matchMedia('(max-width: 860px)').matches) {
+        b.scrollIntoView({ block: 'nearest', inline: 'center' });
+      }
+    });
+    try { localStorage.setItem(SECTION_KEY, section); } catch (e) { /* noop */ }
+  };
+
+  /** Pone los iconos SVG en los huecos marcados con data-icon. */
+  App.hydrateIcons = function (root) {
+    U.$$('[data-icon]', root).forEach(function (el) {
+      if (el.firstChild) return;
+      el.classList.add('ico');
+      el.setAttribute('aria-hidden', 'true');
+      el.appendChild(U.icon(el.dataset.icon, 18));
+    });
+  };
+
+  /** Tarjeta «Hoy»: lo estudiado (efectivo) frente al objetivo diario. */
+  App.renderTodayStudy = function () {
+    const box = document.getElementById('todayStudy');
+    if (!box) return;
+    U.clear(box);
+    const key = U.dayKey();
+    let ms = 0;
+    let blocks = 0;
+    Store.data.sessions.forEach(function (s) {
+      if (U.dayKey(s.startedAt) !== key) return;
+      s.blocks.forEach(function (b) {
+        if (b.isBreak) return;
+        ms += Store.effectiveMs(b);
+        if (b.status === 'done') blocks += 1;
+      });
+    });
+    const goal = (Store.data.settings.goalDaily || 0) * 60000;
+    const pct = goal ? Math.min(100, Math.round(ms / goal * 100)) : 0;
+
+    box.classList.toggle('is-done', !!goal && ms >= goal);
+    box.appendChild(U.el('div', { class: 'tile__head' }, [
+      U.el('span', { class: 'tile__icon', 'data-icon': 'target' }),
+      U.el('span', { class: 'tile__title', text: 'Estudio de hoy' }),
+      U.el('span', { class: 'tile__meta', text: blocks ? U.plural(blocks, 'bloque', 'bloques') : 'sin bloques aún' })
+    ]));
+    box.appendChild(U.el('div', { class: 'tile__big' }, [
+      U.el('strong', { text: U.fmtHuman(ms) }),
+      goal ? U.el('span', { text: 'de ' + U.fmtHuman(goal) }) : null
+    ]));
+    if (goal) {
+      box.appendChild(U.el('div', { class: 'tile__bar', role: 'progressbar', 'aria-valuenow': String(pct), 'aria-valuemin': '0', 'aria-valuemax': '100' },
+        [U.el('i', { style: { width: pct + '%' } })]));
+      box.appendChild(U.el('div', { class: 'tile__line', text: ms >= goal
+        ? 'Objetivo cumplido. Lo que sumes ahora es extra.'
+        : 'Faltan ' + U.fmtHuman(goal - ms) + ' para el objetivo · ' + pct + ' %' }));
+    } else {
+      box.appendChild(U.el('div', { class: 'tile__line', text: 'Pon un objetivo diario en Ajustes → Objetivos.' }));
+    }
+    App.hydrateIcons(box);
   };
 
   App.renderAll = function () {
@@ -46,36 +128,42 @@
     strip.hidden = false;
     strip.classList.toggle('is-joined', Room.joined());
 
-    const left = U.el('div', { class: 'roomstrip__info' });
-    const actions = U.el('div', { class: 'roomstrip__actions' });
+    const head = U.el('div', { class: 'tile__head' }, [
+      U.el('span', { class: 'tile__icon', 'data-icon': 'users' }),
+      U.el('span', { class: 'tile__title', text: 'Estudiar acompañado' })
+    ]);
+    const body = U.el('div', { class: 'roomstrip__info' });
+    const actions = U.el('div', { class: 'tile__actions roomstrip__actions' });
+    strip.appendChild(head);
+    strip.appendChild(body);
+    strip.appendChild(actions);
 
     if (!Room.joined()) {
-      left.appendChild(U.el('span', { class: 'roomstrip__icon', text: '👥' }));
-      left.appendChild(U.el('span', {
+      body.appendChild(U.el('span', {
+        class: 'tile__line',
         text: Room.available()
-          ? 'Estudiar acompañado: coordina los descansos con otra persona'
-          : 'Estudiar acompañado: necesita la sincronización configurada'
+          ? 'Coordina los descansos con otra persona en tiempo real.'
+          : 'Necesita la sincronización configurada (Ajustes → Sincronizar).'
       }));
       actions.appendChild(U.el('button', {
-        class: 'btn btn--primary btn--sm',
+        class: 'btn btn--ghost btn--sm',
         text: Room.available() ? 'Entrar en una sala' : 'Configurar',
         onclick: function () { Settings.roomJoinDialog(); }
       }));
-      strip.appendChild(left);
-      strip.appendChild(actions);
+      App.hydrateIcons(strip);
       return;
     }
 
+    head.appendChild(U.el('span', { class: 'tile__meta roomstrip__code', text: 'Sala ' + Room.code() }));
     const peers = Room.peers();
-    left.appendChild(U.el('span', { class: 'roomstrip__code', text: 'Sala ' + Room.code() }));
     if (!peers.length) {
-      left.appendChild(U.el('span', { class: 'peerbar__item is-off' }, [
+      body.appendChild(U.el('span', { class: 'peerbar__item is-off' }, [
         U.el('span', { class: 'peer-dot' }),
         U.el('span', { text: 'esperando a tu compañero' })
       ]));
     } else {
       peers.forEach(function (p) {
-        left.appendChild(U.el('span', { class: 'peerbar__item' + (p.online ? '' : ' is-off') }, [
+        body.appendChild(U.el('span', { class: 'peerbar__item' + (p.online ? '' : ' is-off') }, [
           U.el('span', { class: 'peer-dot' }),
           U.el('span', { text: Room.peerLine(p) })
         ]));
@@ -84,7 +172,7 @@
 
     const pending = Room.pending();
     if (pending) {
-      left.appendChild(U.el('span', {
+      body.appendChild(U.el('span', {
         class: 'roomstrip__pending',
         text: 'descanso propuesto para las ' + U.fmtClock(new Date(pending.startsAt))
       }));
@@ -95,13 +183,12 @@
       onclick: function () { Runner.proposeBreak(); }
     }));
     // El nombre es también el botón para cambiarlo.
-    const rename = U.el('button', {
+    actions.appendChild(U.el('button', {
       class: 'btn btn--ghost btn--sm roomstrip__name',
       title: 'Cambiar el nombre con el que te ven',
       'aria-label': 'Cambiar tu nombre, ahora ' + (Room.myName() || 'sin definir'),
       onclick: function () { Settings.roomNameDialog(); }
-    }, [U.icon('pencil', 14), U.el('span', { text: Room.myName() || 'Tu nombre' })]);
-    actions.appendChild(rename);
+    }, [U.icon('pencil', 14), U.el('span', { text: Room.myName() || 'Tu nombre' })]));
     actions.appendChild(U.el('button', {
       class: 'btn btn--ghost btn--sm', text: 'Salir',
       onclick: function () {
@@ -112,9 +199,7 @@
         });
       }
     }));
-
-    strip.appendChild(left);
-    strip.appendChild(actions);
+    App.hydrateIcons(strip);
   };
 
   App.renderCountdown = function () {
@@ -136,6 +221,10 @@
       if (tab) App.showView(tab.dataset.view);
     });
 
+    document.getElementById('settingsNav').addEventListener('click', function (e) {
+      const b = e.target.closest('.snav__btn');
+      if (b) { App.showSettings(b.dataset.section); window.scrollTo(0, 0); }
+    });
     document.getElementById('goLibrary').addEventListener('click', function () { App.showView('library'); });
     document.getElementById('newPreset').addEventListener('click', Library.create);
     document.getElementById('quickBlock').addEventListener('click', Planner.addQuickBlock);
@@ -271,6 +360,7 @@
 
   App.init = function () {
     Store.init();
+    App.hydrateIcons(document);
     wire();
     App.renderAll();
     App.showView('plan');
