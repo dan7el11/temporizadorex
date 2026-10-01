@@ -910,3 +910,71 @@ dialog.modal::backdrop{background:rgba(4,6,12,.74);backdrop-filter:blur(6px)}
 }
 
 .tile .lost__done{color:var(--text-dim)}
+
+/* ── «Tu día»: en qué se fue el tiempo ──────────────────── */
+dialog.modal.modal--wide{width:min(760px,calc(100vw - 24px))}
+.dayv__nav{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.dayv__title{flex:1 1 auto;text-align:center;margin:0}
+.dayv__flip{display:inline-flex;transform:rotate(180deg)}
+.dayv__sec{margin-top:22px}
+.dayv__h{margin:0 0 4px;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-faint)}
+.dayv__sec .hint{margin:0 0 10px}
+.dayv__empty{text-align:center;padding:18px 0 4px}
+.stats--day{margin:0}
+.stats--day .stat strong{font-size:1.3rem}
+
+/* Barra apilada: tramos con 2 px de separación y extremos redondeados */
+.stackbar{display:flex;gap:2px;height:16px;border-radius:5px;overflow:hidden;background:var(--line-soft)}
+.stackbar__seg{flex:1 1 0;min-width:3px}
+.stackbar__seg:first-child{border-radius:4px 0 0 4px}
+.stackbar__seg:last-child{border-radius:0 4px 4px 0}
+.stackbar__seg--dist,.complist__row--dist .complist__key{background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.28) 0 3px,transparent 3px 7px) !important}
+.stackbar__seg--lost,.complist__row--lost .complist__key{background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.25) 0 3px,transparent 3px 7px) !important}
+/* La leyenda es también la tabla: nombre, tiempo y porcentaje de cada tramo */
+.complist{display:flex;flex-direction:column;margin-top:12px}
+.complist__row{display:grid;grid-template-columns:12px minmax(0,1fr) auto 46px;gap:10px;align-items:center;padding:7px 2px;border-bottom:1px solid var(--line-soft);font-size:.88rem}
+.complist__row:last-child{border-bottom:0}
+.complist__key{width:12px;height:12px;border-radius:3px}
+.complist__label{min-width:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.complist__label > span{overflow-wrap:anywhere}
+.complist__label small{color:var(--text-faint);font-size:.75rem}
+.complist__ms{font-variant-numeric:tabular-nums;font-weight:600}
+.complist__pct{font-variant-numeric:tabular-nums;color:var(--text-faint);text-align:right;font-size:.8rem}
+.complist__row--break,.complist__row--dist,.complist__row--lost{color:var(--text-dim)}
+.daybars .brow{grid-template-columns:minmax(90px,34%) 1fr 118px}
+.daybars .brow__value{text-align:right}
+@media (max-width:520px){ .daybars .brow{grid-template-columns:minmax(80px,32%) 1fr 104px} }
+.brow--muted .brow__label{color:var(--text-faint);font-style:italic}
+
+/* Línea horaria */
+.daytl{padding-bottom:22px;position:relative}
+.daytl__track{position:relative;height:28px;border-radius:8px;background:var(--bg-soft);border:1px solid var(--line-soft);overflow:hidden}
+.daytl__seg{position:absolute;top:4px;bottom:4px;border-radius:4px;box-shadow:0 0 0 2px var(--bg-soft)}
+.daytl__seg.is-break{top:9px;bottom:9px;opacity:.9}
+.daytl__seg.is-live{animation:pulse 1.6s ease-in-out infinite}
+.daytl__ticks{position:absolute;left:0;right:0;bottom:0;height:18px}
+.daytl__tick{position:absolute;transform:translateX(-50%);font-size:.68rem;color:var(--text-faint);font-variant-numeric:tabular-nums;white-space:nowrap}
+.daytl__tick:first-child{transform:none}
+.daytl__tick:last-child{transform:translateX(-100%)}
+
+/* Lista de bloques */
+.daylist{display:flex;flex-direction:column;gap:6px}
+.daylist__row{display:grid;grid-template-columns:auto 10px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--card-2);border:1px solid var(--line);font-size:.87rem}
+.daylist__row.is-break{background:transparent;border-style:dashed;color:var(--text-dim)}
+.daylist__when{font-variant-numeric:tabular-nums;color:var(--text-faint);font-size:.8rem}
+.daylist__dot{width:10px;height:10px;border-radius:50%}
+.daylist__what{min-width:0;display:flex;flex-direction:column}
+.daylist__name{font-weight:560;overflow-wrap:anywhere}
+.daylist__what small{color:var(--text-faint);font-size:.76rem}
+.daylist__ms{font-variant-numeric:tabular-nums;font-weight:600}
+@media (max-width:520px){
+  .daylist__row{grid-template-columns:10px minmax(0,1fr) auto}
+  .daylist__when{grid-column:1 / -1;order:-1}
+  .stats--day{grid-template-columns:1fr 1fr}
+}
+
+/* En la tarjeta «Estudio de hoy» */
+.tile__mix{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.8rem;color:var(--text-dim)}
+.tile__mixitem{display:inline-flex;align-items:center;gap:6px}
+.tile__mixdot{width:8px;height:8px;border-radius:50%}
+.group__right{display:flex;align-items:center;gap:10px}

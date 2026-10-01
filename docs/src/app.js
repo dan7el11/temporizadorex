@@ -63,16 +63,10 @@
     if (!box) return;
     U.clear(box);
     const key = U.dayKey();
-    let ms = 0;
-    let blocks = 0;
-    Store.data.sessions.forEach(function (s) {
-      if (U.dayKey(s.startedAt) !== key) return;
-      s.blocks.forEach(function (b) {
-        if (b.isBreak) return;
-        ms += Store.effectiveMs(b);
-        if (b.status === 'done') blocks += 1;
-      });
-    });
+    // Incluye la sesión en curso: la tarjeta va sumando mientras estudias.
+    const day = Day.summary(key);
+    const ms = day.totals.eff;
+    const blocks = day.totals.blocks;
     const goal = (Store.data.settings.goalDaily || 0) * 60000;
     const pct = goal ? Math.min(100, Math.round(ms / goal * 100)) : 0;
 
@@ -95,6 +89,23 @@
     } else {
       box.appendChild(U.el('div', { class: 'tile__line', text: 'Pon un objetivo diario en Ajustes → Objetivos.' }));
     }
+
+    // En qué se ha ido: los tipos de bloque con más tiempo, y la vista completa.
+    if (ms > 0) {
+      const top = day.types.slice(0, 3);
+      box.appendChild(U.el('div', { class: 'tile__mix' }, top.map(function (t) {
+        return U.el('span', { class: 'tile__mixitem' }, [
+          U.el('span', { class: 'tile__mixdot', style: { background: t.color } }),
+          U.el('span', { text: t.label + ' ' + U.fmtHuman(t.ms) })
+        ]);
+      })));
+    }
+    box.appendChild(U.el('div', { class: 'tile__actions' }, [
+      U.el('button', {
+        class: 'btn btn--ghost btn--sm', id: 'openDay',
+        onclick: function () { Day.open(U.dayKey()); }
+      }, [U.icon('chart', 15), U.el('span', { text: 'En qué se fue el día' })])
+    ]));
     App.hydrateIcons(box);
   };
 

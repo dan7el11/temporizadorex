@@ -42,7 +42,7 @@
     return new Promise(function (resolve) {
       // <dialog> + showModal() se dibuja en la "top layer": así el modal sigue
       // siendo visible y clicable aunque el temporizador esté a pantalla completa.
-      const box = U.el('dialog', { class: 'modal' });
+      const box = U.el('dialog', { class: 'modal' + (opts.wide ? ' modal--wide' : '') });
       let done = false;
 
       function close(value) {

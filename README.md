@@ -215,6 +215,22 @@ Abajo ves cuánto queda de sesión y a qué hora terminarías, recalculado a cad
 - Nada queda cerrado: en el historial puedes **cambiar la razón de una distracción, corregir su
   tiempo, borrarla o añadir la que se te olvidó** en su momento.
 
+### Tu día: en qué se fue el tiempo
+En la tarjeta *Estudio de hoy* de la pantalla principal aparecen los tipos de bloque con más tiempo y
+el botón **«En qué se fue el día»**, que abre la vista completa del día:
+
+- **Cifras**: estudio efectivo (y % del objetivo), descansos, distracciones y bloques, o el tiempo
+  fuera del temporizador si tienes horario.
+- **Reparto del día**: una barra con el estudio efectivo de cada tipo de bloque (Estudio profundo,
+  Repaso ANKI…) con sus colores, más descansos, distracciones y tiempo fuera del temporizador. Debajo,
+  cada tramo con su tiempo y su porcentaje.
+- **Por materia**: el estudio efectivo de cada tema, de más a menos; «Sin tema» va al final.
+- **Línea del día**: cada bloque en su hora, para ver los huecos de un vistazo.
+- **Bloques**: la lista en orden, con hora, tema, distracciones y tiempo efectivo.
+
+Incluye la sesión en curso y se actualiza sola mientras estudias. Con las flechas se pasa a días
+anteriores, y en *Historial* cada día tiene un botón «Ver el día» que abre la misma vista.
+
 ### Historial
 La pestaña *Historial* se agrupa **por día o por semana**, y eliges el periodo (7, 14, 30, 90 días o
 todo). Con eso tienes:
@@ -345,6 +361,7 @@ docs/                         Lo que se publica en GitHub Pages
   src/sync.js                 Sincronización con Supabase por API REST, sin dependencias
   src/room.js                 Sala compartida: estado del compañero y descansos acordados
   src/library.js              Biblioteca de tipos de temporizador
+  src/day.js                  «Tu día»: en qué se fue el tiempo de un día
   src/planner.js              Plan del día: orden, tiempos y plantillas
   src/runner.js               Motor del temporizador y pantalla completa
   src/pip.js                  Ventana miniatura (dos implementaciones)

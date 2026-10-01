@@ -497,9 +497,16 @@
           U.el('span', { class: 'group__title', text: U.dayLabel(day.date.getTime()) }),
           met ? U.el('span', { class: 'badge badge--ok', text: 'objetivo cumplido' }) : null
         ]),
-        U.el('div', { class: 'group__totals' }, [
-          U.el('strong', { text: U.fmtHuman(day.study) }),
-          U.el('span', { text: U.plural(day.count, 'distracción', 'distracciones') + ' · ' + U.fmtHuman(day.lost) })
+        U.el('div', { class: 'group__right' }, [
+          U.el('div', { class: 'group__totals' }, [
+            U.el('strong', { text: U.fmtHuman(day.study) }),
+            U.el('span', { text: U.plural(day.count, 'distracción', 'distracciones') + ' · ' + U.fmtHuman(day.lost) })
+          ]),
+          U.el('button', {
+            class: 'mini', type: 'button', text: 'Ver el día',
+            title: 'En qué se fue el tiempo ese día: por tipo de bloque, por materia y hora a hora',
+            onclick: function () { Day.open(U.dayKey(day.date.getTime())); }
+          })
         ])
       ])
     ]);
