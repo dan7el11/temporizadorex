@@ -181,6 +181,58 @@
     settings: DEFAULT_SETTINGS
   };
 
+  /**
+   * Quita registros de tiempo perdido repetidos. Pasaba con dos diálogos
+   * abiertos a la vez, con un doble toque o al justificar lo mismo en dos
+   * dispositivos antes de sincronizar. Lo quitado queda marcado como borrado
+   * para que la sincronización no lo resucite. Devuelve cuántos quitó.
+   */
+  function dedupeLostTime(data) {
+    const list = Array.isArray(data.lostTime) ? data.lostTime : [];
+    if (!list.length) return 0;
+    const ordered = list.slice().sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
+    const dead = {};
+    const rangesByDay = {};
+
+    ordered.forEach(function (e, i) {
+      if (dead[e.id]) return;
+      if (e.from && e.to > e.from) {
+        // Con hora: sobra si su tramo ya estaba justificado entero.
+        const prev = rangesByDay[e.day] || (rangesByDay[e.day] = []);
+        let left = [[e.from, e.to]];
+        prev.forEach(function (r) {
+          const next = [];
+          left.forEach(function (p) {
+            if (r[1] <= p[0] || r[0] >= p[1]) { next.push(p); return; }
+            if (r[0] > p[0]) next.push([p[0], r[0]]);
+            if (r[1] < p[1]) next.push([r[1], p[1]]);
+          });
+          left = next;
+        });
+        const rest = left.reduce(function (a, p) { return a + (p[1] - p[0]); }, 0);
+        if (rest < 60000) { dead[e.id] = true; return; }
+        prev.push([e.from, e.to]);
+        return;
+      }
+      // Sin hora: el mismo registro (causa, minutos y detalle) apuntado otra
+      // vez en la media hora siguiente es un duplicado.
+      for (let j = i + 1; j < ordered.length; j++) {
+        const o = ordered[j];
+        if ((o.at || 0) - (e.at || 0) > 30 * 60000) break;
+        if (!o.from && o.day === e.day && o.causeId === e.causeId && o.ms === e.ms &&
+            (o.note || '') === (e.note || '')) dead[o.id] = true;
+      }
+    });
+
+    const ids = Object.keys(dead);
+    if (!ids.length) return 0;
+    data.lostTime = list.filter(function (e) { return !dead[e.id]; });
+    if (!data.tombstones || typeof data.tombstones !== 'object') data.tombstones = {};
+    if (!data.tombstones.lostTime) data.tombstones.lostTime = {};
+    ids.forEach(function (id) { data.tombstones.lostTime[id] = Date.now(); });
+    return ids.length;
+  }
+
   function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
 
   function read(key, fallback) {
@@ -234,7 +286,15 @@
       ['plans', 'queue', 'sessions'].forEach(function (k) {
         if (!Array.isArray(Store.data[k])) Store.data[k] = [];
       });
+      // Sin tocar la marca de edición: limpiar no debe hacer ganar estos ajustes al sincronizar.
+      if (dedupeLostTime(this.data)) this.save(true);
       return this.data;
+    },
+
+    dedupeLostTime: function () {
+      const n = dedupeLostTime(this.data);
+      if (n) this.save();
+      return n;
     },
 
     save: function (keepStamp) {
@@ -591,6 +651,7 @@
       });
 
       out.sessions.sort(function (a, b) { return b.startedAt - a.startedAt; });
+      dedupeLostTime(out);
       out.meta = { updatedAt: Date.now(), deviceId: local.meta.deviceId };
       return out;
     },

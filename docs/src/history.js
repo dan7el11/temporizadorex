@@ -372,7 +372,7 @@
         U.el('span', { text: 'Con causa apuntada' })
       ]),
       U.el('div', { class: 'stat' }, [
-        U.el('strong', { text: U.fmtHuman(Math.max(0, sum.totalGap - sum.totalLogged)) }),
+        U.el('strong', { text: U.fmtHuman(sum.totalPending) }),
         U.el('span', { text: 'Sin justificar' })
       ]),
       U.el('div', { class: 'stat' }, [
@@ -398,8 +398,8 @@
             : (d.gapMs ? 'sin justificar' : '')
         }),
         U.el('button', {
-          class: 'mini', text: 'Apuntar',
-          title: 'Registrar a qué se fue ese tiempo',
+          class: 'mini', text: d.pendingMs ? 'Apuntar' : 'Ver',
+          title: 'Ver lo apuntado ese día, corregirlo o registrar lo que falte',
           onclick: function () { Lost.logDialog(d.dayKey); }
         })
       ]));

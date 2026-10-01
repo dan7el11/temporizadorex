@@ -402,6 +402,12 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .lost__warn{color:var(--warn)}
 .lost__causes{color:var(--text-faint)}
 .lost__done{color:var(--ok)}
+.lost__status{margin:0 0 10px;font-size:.92rem}
+.lostlog{display:flex;flex-direction:column;gap:6px}
+.lostlog__row{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;background:var(--card-2);border:1px solid var(--line);border-radius:9px;padding:6px 8px;font-size:.88rem}
+.lostlog__when{font-variant-numeric:tabular-nums;color:var(--text-faint)}
+.lostlog__what{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lostlog__ms{font-variant-numeric:tabular-nums;font-weight:600}
 .lost__actions{display:flex;gap:7px;flex-wrap:wrap}
 .win-list{display:flex;flex-direction:column;gap:9px;margin-top:12px}
 .win-row{background:var(--card-2);border:1px solid var(--line);border-radius:11px;padding:10px;display:flex;flex-direction:column;gap:8px}

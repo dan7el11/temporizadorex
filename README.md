@@ -104,9 +104,26 @@ solo cuenta como perdido **lo que falte para cumplirlo**, y en cuanto lo cumples
 defecto) no se cuentan: cambiar de bloque o ir al baño no es tiempo perdido.
 
 **Va contigo.** La tarjeta se actualiza al empezar cada bloque, al cerrarlo, al terminar la sesión y
-una vez por minuto, así que lo que llevas hecho se descuenta según lo haces. Al justificar, el
-diálogo lista los ratos concretos en que el temporizador estuvo apagado (07:00–07:30, 08:30–10:00…)
-y basta con tocar uno para apuntarlo con su causa.
+una vez por minuto, así que lo que llevas hecho se descuenta según lo haces.
+
+**Justificar sin duplicar.** Cada justificación queda atada a su rato concreto (07:00–07:30,
+08:30–10:00…). Un rato ya justificado deja de ofrecerse, así que no se puede apuntar dos veces:
+
+- Eliges causa y rato; si pones menos minutos que el rato, el resto queda pendiente para otra causa.
+  «Todos» apunta todos los ratos pendientes con la misma causa; «Otro rato, sin hora» sirve para
+  tiempo que no cae en tus franjas.
+- Tras registrar, el diálogo sigue abierto con lo que quede, para repartirlo entre causas, y se
+  cierra solo cuando todo está justificado.
+- Abajo aparece lo ya apuntado ese día, con papelera para borrar un error. Desde *Historial*, el botón
+  de cada día abre el mismo diálogo.
+- Solo puede haber un diálogo abierto a la vez (antes, la tarjeta y el aviso al iniciar podían abrir
+  dos y registrar lo mismo dos veces).
+- Al cargar la app y al sincronizar se quitan los duplicados que ya hubiera: dos registros del mismo
+  rato (por ejemplo, desde el móvil y el ordenador) o el mismo registro sin hora repetido en la
+  media hora siguiente. Lo quitado queda marcado como borrado para que no reaparezca en otro
+  dispositivo.
+- «Ahora no» sin haber apuntado nada silencia el aviso hasta el día siguiente; si ya apuntaste algo,
+  al próximo inicio vuelve a preguntar por lo que falte.
 
 ### Tiempo efectivo
 Las distracciones que anotas **sin parar el reloj** ahora cuestan. Al terminar el bloque la app te

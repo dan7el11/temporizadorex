@@ -155,6 +155,41 @@
     return out;
   };
 
+  /** Tramos horarios que ya tienen causa apuntada, unidos y ordenados. */
+  function justifiedRanges(entries) {
+    const r = entries
+      .filter(function (e) { return e.from && e.to > e.from; })
+      .map(function (e) { return [e.from, e.to]; })
+      .sort(function (a, b) { return a[0] - b[0]; });
+    const out = [];
+    r.forEach(function (x) {
+      const last = out[out.length - 1];
+      if (last && x[0] <= last[1]) last[1] = Math.max(last[1], x[1]);
+      else out.push([x[0], x[1]]);
+    });
+    return out;
+  }
+
+  /** Quita de los huecos los tramos ya justificados; lo que queda menor de un minuto no cuenta. */
+  function subtractRanges(gaps, ranges) {
+    const out = [];
+    gaps.forEach(function (g) {
+      let pieces = [{ window: g.window, from: g.from, to: g.to }];
+      ranges.forEach(function (r) {
+        const next = [];
+        pieces.forEach(function (p) {
+          if (r[1] <= p.from || r[0] >= p.to) { next.push(p); return; }
+          if (r[0] > p.from) next.push({ window: p.window, from: p.from, to: r[0] });
+          if (r[1] < p.to) next.push({ window: p.window, from: r[1], to: p.to });
+        });
+        pieces = next;
+      });
+      pieces.forEach(function (p) { if (p.to - p.from >= 60000) out.push(p); });
+    });
+    return out;
+  }
+  Lost.subtractRanges = subtractRanges;
+
   /** Resumen de un día: lo previsto, lo cubierto, el hueco y lo ya justificado. */
   Lost.daySummary = function (dayKey, nowTs) {
     const now = nowTs || Date.now();
@@ -167,6 +202,12 @@
     const gapMs = slices.reduce(function (a, sl) { return a + sl.gapMs; }, 0);
     const logged = Store.lostTimeOf(dayKey);
     const loggedMs = logged.reduce(function (a, e) { return a + (e.ms || 0); }, 0);
+
+    // Lo justificado con hora tapa su tramo; lo apuntado sin hora (registros
+    // antiguos o «otro rato») se descuenta del total que quede.
+    const open = subtractRanges(gaps, justifiedRanges(logged));
+    const openMs = open.reduce(function (a, g) { return a + (g.to - g.from); }, 0);
+    const manualMs = logged.reduce(function (a, e) { return a + (e.from ? 0 : (e.ms || 0)); }, 0);
 
     const byCause = {};
     logged.forEach(function (e) {
@@ -182,12 +223,12 @@
     const plannedStart = wins.length ? wins[0].from : null;
 
     return {
-      dayKey: dayKey, windows: wins, slices: slices, gaps: gaps,
+      dayKey: dayKey, windows: wins, slices: slices, gaps: gaps, openGaps: open, entries: logged,
       expectedMs: expected,
       coveredMs: studied,
       gapMs: gapMs,
       loggedMs: loggedMs,
-      pendingMs: Math.max(0, gapMs - loggedMs),
+      pendingMs: Math.max(0, openMs - manualMs),
       lateMs: firstStart && plannedStart ? Math.max(0, firstStart - plannedStart) : 0,
       firstStart: firstStart,
       plannedStart: plannedStart,
@@ -198,7 +239,7 @@
 
   /** Lo mismo para varios días: sirve para el historial. */
   Lost.rangeSummary = function (days) {
-    const out = { perDay: [], totalGap: 0, totalLogged: 0, byCause: [] };
+    const out = { perDay: [], totalGap: 0, totalLogged: 0, totalPending: 0, byCause: [] };
     const causes = {};
     let from = days ? U.startOfDay(Date.now() - (days - 1) * 86400000).getTime() : 0;
     // Nunca antes de haber puesto el horario: si no, aparecerían como perdidas
@@ -221,6 +262,7 @@
       out.perDay.push(d);
       out.totalGap += d.gapMs;
       out.totalLogged += d.loggedMs;
+      out.totalPending += d.pendingMs;
       d.byCause.forEach(function (c) {
         if (!causes[c.id]) causes[c.id] = { id: c.id, label: c.label, ms: 0, count: 0 };
         causes[c.id].ms += c.ms;
@@ -242,29 +284,65 @@
   };
 
   /* ── Registrar a qué se fue el tiempo ──────────────────── */
-  /**
-   * Diálogo para justificar el hueco. Se puede repartir en varias causas:
-   * cada vez que eliges una y le pones minutos, queda registrada.
-   */
-  Lost.logDialog = function (dayKey, suggestedMs) {
-    const key = dayKey || U.dayKey();
-    const summary = Lost.daySummary(key);
-    const pending = suggestedMs !== undefined ? suggestedMs : summary.pendingMs;
-    let causeId = (Store.data.lostCauses[0] || {}).id || '';
-    const cap = Math.max(600, Math.ceil(pending / 60000));
-    let minutes = U.clamp(Math.max(1, Math.round(pending / 60000)), 1, cap);
-    let minInput, noteInput, chips, left, gapChips;
+  function rangeText(from, to) {
+    return U.fmtClock(new Date(from)) + '–' + U.fmtClock(new Date(to));
+  }
 
-    function hintText() {
-      return 'Sin justificar quedarían ' + U.fmtHuman(Math.max(0, pending - minutes * 60000)) + '.';
+  // Un solo diálogo a la vez: con dos abiertos (la tarjeta y el aviso al
+  // iniciar, o un doble toque) cada uno registraba el mismo hueco otra vez.
+  let openDialog = null;
+
+  /**
+   * Diálogo para justificar el hueco. Cada justificación queda atada a su rato
+   * concreto (07:00–07:30), así que un rato ya justificado deja de ofrecerse y
+   * no se puede apuntar dos veces. Tras registrar, el diálogo sigue abierto con
+   * lo que quede, para repartir el resto entre otras causas.
+   */
+  Lost.logDialog = function (dayKey) {
+    if (openDialog) return openDialog;
+    const key = dayKey || U.dayKey();
+    const first = Lost.daySummary(key);
+    let causeId = (Store.data.lostCauses[0] || {}).id || '';
+    let pick = null;           // índice del rato elegido, 'all' o 'manual'
+    let minutes = 0;
+    let note = '';
+    let registered = [];
+    let body, mainBtn, closeBtn;
+
+    function summary() { return Lost.daySummary(key); }
+
+    function defaults(d) {
+      pick = d.openGaps.length ? 0 : 'manual';
+      minutes = pick === 'manual'
+        ? Math.max(1, Math.round(d.pendingMs / 60000)) || 15
+        : Math.max(1, Math.round((d.openGaps[0].to - d.openGaps[0].from) / 60000));
     }
 
-    function paintChips() {
-      U.clear(chips);
+    function maxFor(d) {
+      if (typeof pick === 'number' && d.openGaps[pick]) return Math.max(1, Math.round((d.openGaps[pick].to - d.openGaps[pick].from) / 60000));
+      return 600;
+    }
+
+    function paint() {
+      const d = summary();
+      if (pick === null || (typeof pick === 'number' && !d.openGaps[pick]) || (pick === 'all' && d.openGaps.length < 2)) defaults(d);
+      U.clear(body);
+
+      body.appendChild(U.el('p', {
+        class: 'lost__status' + (d.pendingMs ? ' lost__warn' : ''),
+        text: d.pendingMs
+          ? 'Quedan ' + U.fmtHuman(d.pendingMs) + ' sin justificar' + (d.openGaps.length > 1 ? ' en ' + d.openGaps.length + ' ratos.' : '.')
+          : 'Todo el tiempo perdido de este día tiene causa.'
+      }));
+
+      // Causa
+      const f1 = U.el('div', { class: 'field' });
+      f1.appendChild(U.el('label', { text: 'Causa' }));
+      const chips = U.el('div', { class: 'chips' });
       Store.data.lostCauses.forEach(function (c) {
         chips.appendChild(U.el('button', {
           class: 'chip' + (causeId === c.id ? ' is-active' : ''), type: 'button', text: c.label,
-          onclick: function () { causeId = c.id; paintChips(); }
+          onclick: function () { causeId = c.id; paint(); }
         }));
       });
       chips.appendChild(U.el('button', {
@@ -273,99 +351,174 @@
           UI.prompt('Nueva causa', 'Se añade al catálogo.', '', 'Ej. Reunión de servicio').then(function (label) {
             if (!label) return;
             causeId = Store.addLostCause(label).id;
-            paintChips();
+            paint();
           });
         }
       }));
+      f1.appendChild(chips);
+      body.appendChild(f1);
+
+      // Qué rato
+      const f2 = U.el('div', { class: 'field' });
+      f2.appendChild(U.el('label', { text: '¿Qué rato?' }));
+      const gaps = U.el('div', { class: 'chips js-gaps' });
+      d.openGaps.slice(0, 10).forEach(function (g, i) {
+        gaps.appendChild(U.el('button', {
+          class: 'chip' + (pick === i ? ' is-active' : ''), type: 'button',
+          text: rangeText(g.from, g.to) + ' · ' + U.fmtHuman(g.to - g.from),
+          onclick: function () { pick = i; minutes = maxFor(d); paint(); }
+        }));
+      });
+      if (d.openGaps.length > 1) {
+        const all = d.openGaps.reduce(function (a, g) { return a + (g.to - g.from); }, 0);
+        gaps.appendChild(U.el('button', {
+          class: 'chip' + (pick === 'all' ? ' is-active' : ''), type: 'button',
+          text: 'Todos · ' + U.fmtHuman(all),
+          onclick: function () { pick = 'all'; paint(); }
+        }));
+      }
+      gaps.appendChild(U.el('button', {
+        class: 'chip' + (pick === 'manual' ? ' is-active' : ''), type: 'button', text: 'Otro rato, sin hora',
+        onclick: function () { pick = 'manual'; minutes = minutes || 15; paint(); }
+      }));
+      f2.appendChild(gaps);
+      body.appendChild(f2);
+
+      // Minutos
+      const f3 = U.el('div', { class: 'field' });
+      f3.appendChild(U.el('label', { text: 'Minutos' }));
+      if (pick === 'all') {
+        f3.appendChild(U.el('p', { class: 'hint', text: 'Se apunta cada rato completo con la misma causa.' }));
+      } else {
+        const cap = maxFor(d);
+        minutes = U.clamp(minutes || cap, 1, cap);
+        const inp = U.el('input', {
+          type: 'number', min: '1', max: String(cap), step: '5', value: String(minutes),
+          oninput: function () { minutes = U.clamp(parseInt(inp.value, 10) || 1, 1, cap); }
+        });
+        f3.appendChild(inp);
+        f3.appendChild(U.el('p', {
+          class: 'hint',
+          text: typeof pick === 'number'
+            ? 'Si pones menos, el resto del rato sigue pendiente para otra causa.'
+            : 'Para tiempo que no sale en tus franjas o registros sin hora.'
+        }));
+      }
+      body.appendChild(f3);
+
+      // Detalle
+      const f4 = U.el('div', { class: 'field' });
+      f4.appendChild(U.el('label', { text: 'Detalle (opcional)' }));
+      const noteInput = U.el('input', {
+        type: 'text', placeholder: 'Ej. ingreso de última hora', value: note,
+        oninput: function () { note = noteInput.value; }
+      });
+      f4.appendChild(noteInput);
+      body.appendChild(f4);
+
+      // Lo ya apuntado ese día, con papelera para corregir un error.
+      if (d.entries.length) {
+        const f5 = U.el('div', { class: 'field' });
+        f5.appendChild(U.el('label', { text: 'Ya apuntado' }));
+        const list = U.el('div', { class: 'lostlog' });
+        d.entries.slice().sort(function (a, b) { return (a.from || a.at || 0) - (b.from || b.at || 0); })
+          .forEach(function (e) {
+            list.appendChild(U.el('div', { class: 'lostlog__row' }, [
+              U.el('span', { class: 'lostlog__when', text: e.from ? rangeText(e.from, e.to) : 'sin hora' }),
+              U.el('span', { class: 'lostlog__what', text: Store.lostCauseLabel(e.causeId) + (e.note ? ' · ' + e.note : '') }),
+              U.el('span', { class: 'lostlog__ms', text: U.fmtHuman(e.ms || 0) }),
+              U.el('button', {
+                class: 'qbtn qbtn--danger qbtn--xs', type: 'button', title: 'Borrar este registro',
+                'aria-label': 'Borrar ' + Store.lostCauseLabel(e.causeId) + ' ' + U.fmtHuman(e.ms || 0),
+                onclick: function () {
+                  Store.removeLostTime(e.id);
+                  refreshOutside();
+                  paint();
+                }
+              }, [U.icon('trash', 14)])
+            ]));
+          });
+        f5.appendChild(list);
+        body.appendChild(f5);
+      }
+
+      if (mainBtn) mainBtn.disabled = !d.openGaps.length && pick !== 'manual';
+      if (closeBtn) closeBtn.textContent = !d.pendingMs ? 'Listo' : (registered.length ? 'Cerrar' : 'Ahora no');
     }
 
-    return UI.modal({
-      title: '¿A qué se fue ese tiempo?',
-      sub: summary.plannedStart
-        ? 'Tenías previsto empezar a las ' + U.fmtClock(new Date(summary.plannedStart)) +
-          (summary.firstStart ? ' y arrancaste a las ' + U.fmtClock(new Date(summary.firstStart)) : ' y aún no has arrancado') +
-          '. Quedan ' + U.fmtHuman(pending) + ' sin justificar.'
-        : 'Apunta cuánto tiempo se fue y en qué.',
-      build: function () {
-        const frag = document.createDocumentFragment();
-
-        const f1 = U.el('div', { class: 'field' });
-        f1.appendChild(U.el('label', { text: 'Causa' }));
-        chips = U.el('div', { class: 'chips' });
-        paintChips();
-        f1.appendChild(chips);
-        frag.appendChild(f1);
-
-        // Los ratos concretos en que el temporizador estuvo apagado: se justifican
-        // uno a uno, que es más fiel que repartir un total a ojo.
-        const pieces = (summary.gaps || []).filter(function (g) { return g.to - g.from >= 60000; });
-        if (pieces.length > 1) {
-          const fg = U.el('div', { class: 'field' });
-          fg.appendChild(U.el('label', { text: 'Ratos sin temporizador' }));
-          gapChips = U.el('div', { class: 'chips' });
-          pieces.slice(0, 8).forEach(function (g) {
-            const ms = g.to - g.from;
-            gapChips.appendChild(U.el('button', {
-              class: 'chip', type: 'button',
-              text: U.fmtClock(new Date(g.from)) + '–' + U.fmtClock(new Date(g.to)) + ' · ' + U.fmtHuman(ms),
-              onclick: function () {
-                minutes = U.clamp(Math.round(ms / 60000), 1, cap);
-                minInput.value = String(minutes);
-                U.$$('.chip', gapChips).forEach(function (c) { c.classList.remove('is-active'); });
-                this.classList.add('is-active');
-                left.textContent = hintText();
-              }
-            }));
-          });
-          fg.appendChild(gapChips);
-          frag.appendChild(fg);
-        }
-
-        const f2 = U.el('div', { class: 'field' });
-        f2.appendChild(U.el('label', { text: 'Minutos' }));
-        minInput = U.el('input', {
-          type: 'number', min: '1', max: String(cap), step: '5', value: String(minutes),
-          oninput: function () {
-            minutes = U.clamp(parseInt(minInput.value, 10) || 1, 1, cap);
-            left.textContent = hintText();
-          }
-        });
-        f2.appendChild(minInput);
-        left = U.el('p', { class: 'hint', text: hintText() });
-        f2.appendChild(left);
-        frag.appendChild(f2);
-
-        const f3 = U.el('div', { class: 'field' });
-        f3.appendChild(U.el('label', { text: 'Detalle (opcional)' }));
-        noteInput = U.el('input', { type: 'text', placeholder: 'Ej. ingreso de última hora' });
-        f3.appendChild(noteInput);
-        frag.appendChild(f3);
-
-        return frag;
-      },
-      actions: function (close) {
-        return [
-          U.el('button', {
-            class: 'btn btn--ghost', text: 'Ahora no',
-            onclick: function () { Lost.snoozeToday(); close(null); }
-          }),
-          U.el('button', {
-            class: 'btn btn--primary', text: 'Registrar',
-            onclick: function () { close({ causeId: causeId, minutes: minutes, note: noteInput.value.trim() }); }
-          })
-        ];
-      }
-    }).then(function (values) {
-      if (!values) return null;
-      const entry = Store.addLostTime({
-        day: key, at: Date.now(), ms: values.minutes * 60000,
-        causeId: values.causeId, note: values.note || null
-      });
-      UI.toast('Registrados ' + U.fmtHuman(entry.ms) + ' en ' + Store.lostCauseLabel(values.causeId));
+    function refreshOutside() {
       Lost.renderToday();
       if (global.History) History.render();
-      return entry;
-    });
+    }
+
+    function register() {
+      const d = summary();       // siempre con los datos de este momento
+      const base = { day: key, at: Date.now(), causeId: causeId, note: note.trim() || null };
+      let made = [];
+
+      if (pick === 'all') {
+        made = d.openGaps.map(function (g) {
+          return Store.addLostTime(Object.assign({}, base, { from: g.from, to: g.to, ms: g.to - g.from }));
+        });
+      } else if (typeof pick === 'number' && d.openGaps[pick]) {
+        const g = d.openGaps[pick];
+        const to = Math.min(g.to, g.from + minutes * 60000);
+        made = [Store.addLostTime(Object.assign({}, base, { from: g.from, to: to, ms: to - g.from }))];
+      } else if (pick === 'manual') {
+        // Sin hora no hay tramo que lo impida: se frena el mismo registro repetido.
+        const twin = d.entries.find(function (e) {
+          return !e.from && e.causeId === causeId && e.ms === minutes * 60000 && Date.now() - (e.at || 0) < 10 * 60000;
+        });
+        if (twin) { UI.toast('Eso ya estaba apuntado'); return; }
+        made = [Store.addLostTime(Object.assign({}, base, { ms: minutes * 60000 }))];
+      }
+      if (!made.length) return;
+
+      registered = registered.concat(made);
+      const total = made.reduce(function (a, e) { return a + e.ms; }, 0);
+      UI.toast('Registrados ' + U.fmtHuman(total) + ' en ' + Store.lostCauseLabel(causeId));
+      note = '';
+      pick = null;
+      minutes = 0;
+      refreshOutside();
+      return summary().pendingMs;
+    }
+
+    openDialog = UI.modal({
+      title: '¿A qué se fue ese tiempo?',
+      sub: first.plannedStart
+        ? 'Tenías previsto empezar a las ' + U.fmtClock(new Date(first.plannedStart)) +
+          (first.firstStart ? ' y arrancaste a las ' + U.fmtClock(new Date(first.firstStart)) : ' y aún no has arrancado') + '.'
+        : 'Apunta cuánto tiempo se fue y en qué.',
+      build: function () {
+        body = U.el('div', { class: 'lostdlg' });
+        paint();
+        return body;
+      },
+      actions: function (close) {
+        closeBtn = U.el('button', {
+          class: 'btn btn--ghost', text: first.pendingMs ? 'Ahora no' : 'Listo',
+          onclick: function () {
+            // «Ahora no» sin haber apuntado nada silencia el aviso hasta mañana;
+            // si ya apuntaste algo, al siguiente inicio vuelve a preguntar por el resto.
+            if (summary().pendingMs && !registered.length) Lost.snoozeToday();
+            close(registered);
+          }
+        });
+        mainBtn = U.el('button', {
+          class: 'btn btn--primary', text: 'Registrar',
+          onclick: function () {
+            const left = register();
+            if (left === undefined) return;
+            // Con todo justificado no hay nada más que hacer aquí.
+            if (!left) close(registered); else paint();
+          }
+        });
+        paint();
+        return [closeBtn, mainBtn];
+      }
+    }).then(function (v) { openDialog = null; return v; }, function () { openDialog = null; return null; });
+    return openDialog;
   };
 
   /* ── Tarjeta de la pantalla principal ──────────────────── */
