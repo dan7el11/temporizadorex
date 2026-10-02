@@ -11,6 +11,7 @@
     ['autoNext', 'Encadenar bloques automáticamente', 'Si lo desactivas, cada bloque espera a que pulses «Empezar».', 'timer'],
     ['fullscreenOnStart', 'Pantalla completa al iniciar', 'Abre el temporizador a pantalla completa.', 'timer'],
     ['wakeLock', 'Mantener la pantalla encendida', 'Evita que el dispositivo se apague durante la sesión.', 'timer'],
+    ['screenAnim', 'Animaciones de la pantalla de color', 'Ola, aurora o pulso según el tipo de bloque (se elige en la biblioteca); en las respiraciones el color sube y baja contigo.', 'timer'],
     ['askDistractions', 'Preguntar por distracciones', 'Al terminar un bloque, ofrecer registrar las que no se detectaron; y etiquetar cada pausa.', 'focus'],
     ['askReasonQuick', 'Preguntar la razón al pulsar «+ Distracción»', 'Si lo desactivas, la distracción rápida se registra sin razón y sin abrir nada.', 'focus'],
     ['askQuickCost', 'Preguntar cuánto costó cada distracción sin pausa', 'Al cerrar el bloque; ese tiempo se resta del tiempo efectivo.', 'focus'],

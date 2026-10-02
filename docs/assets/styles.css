@@ -735,7 +735,7 @@ input[type=range]{accent-color:var(--accent);width:150px}
   display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
   background:rgba(0,0,0,.5);backdrop-filter:blur(12px);
   border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:8px;
-  pointer-events:auto;max-width:calc(100vw - 24px);
+  pointer-events:auto;width:max-content;max-width:calc(100vw - 24px);
 }
 .ctrl{
   display:inline-flex;align-items:center;gap:7px;
@@ -785,7 +785,8 @@ dialog.modal::backdrop{background:rgba(4,6,12,.74);backdrop-filter:blur(6px)}
 .toast[hidden]{display:none}
 
 @media (prefers-reduced-motion: reduce){
-  *{animation-duration:.001s !important;transition-duration:.001s !important}
+  /* Una sola vuelta: con «infinite» una duración mínima parpadearía sin parar. */
+  *{animation-duration:.001s !important;animation-iteration-count:1 !important;transition-duration:.001s !important}
 }
 
 
@@ -978,3 +979,67 @@ dialog.modal.modal--wide{width:min(760px,calc(100vw - 24px))}
 .tile__mixitem{display:inline-flex;align-items:center;gap:6px}
 .tile__mixdot{width:8px;height:8px;border-radius:50%}
 .group__right{display:flex;align-items:center;gap:10px}
+
+/* ── Animaciones de la pantalla de color ──────────────────
+   Se eligen por tipo de bloque (data-anim en #stage). Todo se mueve con
+   transform u opacity para no cargar el procesador en sesiones largas. */
+.stage__fill{overflow:hidden}
+.stage__fill::before,.stage__fill::after{content:"";position:absolute;pointer-events:none;opacity:0}
+
+/* Ola: el borde del color ondula; la línea recta del borde se atenúa */
+.stage__wave{
+  display:none;position:absolute;left:0;bottom:calc(var(--fill,100%) - 2px);
+  width:200%;height:22px;background:var(--c,#5b8cff);pointer-events:none;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 600 40%27 preserveAspectRatio=%27none%27%3E%3Cpath d=%27M0 20 Q50 4 100 20 T200 20 T300 20 T400 20 T500 20 T600 20 V40 H0 Z%27 fill=%27black%27/%3E%3C/svg%3E") repeat-x 0 0 / 50% 100%;
+          mask:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 600 40%27 preserveAspectRatio=%27none%27%3E%3Cpath d=%27M0 20 Q50 4 100 20 T200 20 T300 20 T400 20 T500 20 T600 20 V40 H0 Z%27 fill=%27black%27/%3E%3C/svg%3E") repeat-x 0 0 / 50% 100%;
+  animation:waveSlide 11s linear infinite;will-change:transform;
+  transition:background-color .4s ease;
+}
+.stage__wave--back{height:30px;opacity:.38;animation-duration:17s;animation-direction:reverse}
+@keyframes waveSlide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.stage[data-anim=ola] .stage__wave{display:block}
+.stage[data-anim=ola] .stage__edge{opacity:.25;box-shadow:none}
+.stage.is-paused .stage__wave{animation-play-state:paused}
+
+/* Aurora: dos luces grandes que giran despacio dentro del color */
+.stage[data-anim=aurora] .stage__fill::before{
+  opacity:1;inset:-60%;
+  background:
+    radial-gradient(closest-side at 32% 38%, rgba(255,255,255,.26), transparent),
+    radial-gradient(closest-side at 70% 64%, rgba(0,0,0,.24), transparent);
+  animation:auroraSpin 38s linear infinite;will-change:transform;
+}
+@keyframes auroraSpin{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.15)}to{transform:rotate(360deg) scale(1)}}
+
+/* Pulso: el color se ilumina y se apaga, como respirar lento */
+.stage[data-anim=pulso] .stage__fill::after{
+  inset:0;background:#fff;animation:fillPulse 7s ease-in-out infinite;
+}
+@keyframes fillPulse{0%,100%{opacity:0}50%{opacity:.13}}
+
+/* Calma: un brillo que sube y baja muy despacio desde abajo */
+.stage[data-anim=calma] .stage__fill::before{
+  opacity:1;left:0;right:0;bottom:0;height:200%;
+  background:linear-gradient(to top, rgba(255,255,255,.2), rgba(255,255,255,0) 55%);
+  animation:calmRise 12s ease-in-out infinite alternate;will-change:transform;
+}
+@keyframes calmRise{from{transform:translateY(35%)}to{transform:translateY(0)}}
+
+/* Respira: el nivel del color sigue la respiración (lo calcula el motor);
+   aquí solo se suaviza el paso entre un tic y el siguiente. */
+.stage[data-anim=respira] .stage__fill{transition:height .32s linear, background-color .4s ease}
+.stage[data-anim=respira] .stage__edge{transition:bottom .32s linear;opacity:.6}
+.stage[data-anim=respira] .stage__layer{transition:clip-path .32s linear}
+
+/* Pausa guiada a mitad de bloque */
+.ctrl--guided .ico svg{width:17px;height:17px}
+.ctrl:disabled{opacity:.4;cursor:not-allowed}
+.qitem__dur{font-variant-numeric:tabular-nums}
+
+/* Cabecera del temporizador en móvil: solo lo esencial, en una línea, para
+   que la tira de bloques no se monte encima. */
+@media (max-width:600px){
+  #hudNext,#hudSession{display:none}
+  .runner__hud{flex-wrap:nowrap}
+  .hud__left{flex-wrap:nowrap;min-width:0;overflow:hidden}
+}

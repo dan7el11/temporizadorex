@@ -147,38 +147,72 @@ El resumen de la sesión y el historial muestran ahora el **tiempo efectivo** co
 con el tiempo de reloj al lado, y el CSV lleva ambas columnas.
 
 ### Pausas guiadas
-Descansos cortos entre bloques con su propio motivo, su duración y **su forma de presentarse**. Se
-editan en *Ajustes → Pausas guiadas* y vienen cuatro de serie: respiración 4-7-8, respiración en
-caja, pausa activa por pasos y descanso visual 20-20-20.
+Pausas cortas con su propio motivo, su duración y **su forma de presentarse**. Se editan en
+*Ajustes → Pausas guiadas*. Vienen doce de serie:
+
+| Pausa | Para qué |
+|---|---|
+| Respiración 4-7-8 | Bajar revoluciones; 6 ciclos |
+| Respiración en caja | Cuatro tiempos iguales; 8 ciclos |
+| Pausa activa | Ejercicios distintos cada vez |
+| Descanso visual 20-20-20 | Descansar la vista |
+| **Suspiro fisiológico** | Dos inhalaciones (la segunda, corta) y una exhalación larga: la forma más rápida de bajar la tensión |
+| **Coherencia cardíaca 5-5** | Seis respiraciones por minuto, sin retener: calma sin dar sueño |
+| **Anclaje 5-4-3-2-1** | Cuando la cabeza no para: 5 cosas que ves, 4 que tocas, 3 que oyes… |
+| **Escaneo corporal** | Recorrer el cuerpo y soltar la tensión acumulada |
+| **Tensar y soltar** | Relajación muscular progresiva, versión corta |
+| **Descarga mental** | Escribir lo pendiente y su siguiente paso para que deje de dar vueltas |
+| **Pausa de autocompasión** | Para los días en que todo pesa |
+| **Tres logros de hoy** | Recuperar la sensación de avance que el agotamiento borra |
+
+Las ocho nuevas, pensadas para rachas de agotamiento, se añaden solas a quien ya usaba la app; si
+borras alguna, no vuelve.
 
 Hay tres formas de presentación:
 
 - **Respiración guiada**, con dos figuras. El **círculo** se abre y se cierra marcando las fases. El
   **cuadrado** —pensado para la respiración en caja— se expande y se contrae, y un punto recorre su
   perímetro: sube por la izquierda al inhalar, **cruza en horizontal por arriba mientras sostienes**,
-  baja por la derecha al exhalar y vuelve por abajo en el vacío. Bajo el reloj van la instrucción y
-  sus segundos («Inhala · 3 s») y el ciclo en el que vas («ciclo 3 de 8»). Los tiempos de cada fase
-  se ponen uno a uno; con 0 se salta una.
+  baja por la derecha al exhalar y vuelve por abajo en el vacío. El movimiento sigue una curva suave,
+  despacio al empezar y al acabar cada fase, como una respiración real. Bajo el reloj van la
+  instrucción y sus segundos («Inhala · 3 s») y el ciclo en el que vas («ciclo 3 de 8»). Las fases son
+  inhala, segunda inhalación, sostén, exhala y vacío; con 0 se salta una.
 - **Pasos.** Instrucciones que van pasando, cada una con sus segundos, y el número de ejercicio.
 - **Solo el reloj.** La pantalla de siempre con el texto que tú escribas.
 
-**La duración se mide en ciclos o rondas, no en minutos**, para que la pausa no se corte en mitad de
-una inspiración ni de un ejercicio: «8 ciclos» de respiración en caja duran exactamente 8 ciclos, y
-al elegirla ajustas ciclos o rondas, no minutos. Si prefieres minutos, también se puede.
+**La duración se mide en ciclos o rondas, no en minutos**, para que ningún ejercicio se corte a
+medias: «8 ciclos» de respiración en caja duran exactamente 8 ciclos (128 s), tanto en el plan del día
+como al meterla durante la sesión. Si una respiración se configura por minutos, se redondea al número
+de ciclos completos más cercano, así que tampoco acaba a mitad de una fase.
 
 Las **pausas activas** pueden sortear ejercicios distintos cada vez: eliges de qué tipos
 (estiramientos, movimiento, postura, vista, o mezclados) y cuántos por ronda, y la app los saca del
-catálogo de *Ajustes → Ejercicios de las pausas activas* sin repetir los de la vez anterior. Vienen
-dieciséis y puedes añadir los tuyos.
+catálogo de *Ajustes → Pausas guiadas* sin repetir los de la vez anterior.
 
-Cada pausa tiene además color propio y un toque suave al cambiar de fase, que se puede quitar.
+**Dónde aparecen.**
 
-**Dónde aparecen.** Al terminar un bloque, en el mismo diálogo donde se pregunta por las
-distracciones: eliges una y ajustas sus minutos ahí mismo, y se coloca justo antes del bloque
-siguiente. También se pueden dejar puestas desde el principio, en *Pausas guiadas* dentro del plan
-del día. Si prefieres que no te pregunte, se desactiva en *Ajustes*.
+- **En mitad de un bloque**: botón **«Pausa guiada»** del temporizador (o tecla <kbd>G</kbd>). Eliges
+  la pausa y sus ciclos (viene marcada la última que usaste) y el bloque se detiene en ese punto. Al
+  terminar la pausa vuelves **al mismo bloque, sin ninguna pregunta**, con el tiempo exacto que le
+  quedaba. El bloque queda partido en dos en el historial («pausa guiada en medio» y «continuación»),
+  pero cuenta como uno solo en *Tu día*.
+- **Al terminar un bloque**, en el mismo diálogo de las distracciones, para meterla antes del siguiente.
+- **En el plan del día**, desde *Pausas guiadas*, ajustando ciclos o rondas en vez de minutos.
 
-No cuentan como tiempo de estudio: el historial las suma aparte, como el resto de descansos.
+Cuentan como **descanso**, no como distracción ni como estudio.
+
+### Animaciones de la pantalla de color
+Cada tipo de bloque puede tener su animación, que se elige en la *Biblioteca*:
+
+- **Ola**: el borde del color ondula despacio mientras baja. Es la automática para estudiar.
+- **Aurora**: luces suaves que se desplazan dentro del color.
+- **Pulso**: el color se ilumina y se apaga como una respiración lenta. Es la automática para descansos.
+- **Calma**: un brillo que sube y baja muy despacio. La de las pausas por pasos.
+- **Ninguna**: color liso.
+
+En las **respiraciones guiadas** el color deja de vaciarse con el tiempo y **sube al inhalar y baja
+al exhalar**, junto con el círculo o el cuadrado. Todas las animaciones se pueden apagar en
+*Ajustes → Temporizador*, y se desactivan solas si el sistema tiene activada la reducción de movimiento.
 
 ### Los bloques, con la sesión ya empezada
 Bajo la cabecera hay una **tira con todos los bloques del día** a escala según su duración: los
@@ -305,6 +339,7 @@ personas de confianza no es problema, pero no pongas el código a la vista de na
 |---|---|
 | `Espacio` | Pausar / reanudar (la pausa cuenta como distracción) |
 | `D` | Registrar distracción sin parar el reloj |
+| `G` | Pausa guiada ahora; después sigue el mismo bloque |
 | `B` | Bloques de la sesión: tiempos, orden, añadir y saltar |
 | `P` | Abrir o cerrar la miniatura |
 | `F` | Pantalla completa |

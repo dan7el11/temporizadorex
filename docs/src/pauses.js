@@ -55,6 +55,36 @@
     return { key: 'minutes', one: 'minuto', many: 'minutos' };
   };
 
+  /** Cantidad de la pausa en su propia unidad: ciclos, rondas o minutos. */
+  Pauses.amountOf = function (pause) {
+    const unit = Pauses.unitOf(pause).key;
+    if (unit === 'cycles') return pause.cycles || 6;
+    if (unit === 'rounds') return pause.rounds || 1;
+    return Math.max(1, Math.round((pause.seconds || 60) / 60));
+  };
+
+  Pauses.setAmount = function (pause, amount) {
+    const unit = Pauses.unitOf(pause).key;
+    const n = Math.max(1, Math.round(amount) || 1);
+    if (unit === 'cycles') pause.cycles = U.clamp(n, 1, 60);
+    else if (unit === 'rounds') pause.rounds = U.clamp(n, 1, 10);
+    else pause.seconds = U.clamp(n, 1, 60) * 60;
+    return pause;
+  };
+
+  /** Atajos de cantidad que tienen sentido para cada unidad. */
+  Pauses.quickAmounts = function (pause) {
+    const unit = Pauses.unitOf(pause).key;
+    if (unit === 'cycles') return [3, 6, 9, 12];
+    if (unit === 'rounds') return [1, 2, 3];
+    return [1, 2, 3, 5];
+  };
+
+  /** Duración en segundos, estimada si los ejercicios aún no se han sorteado. */
+  Pauses.seconds = function (pause) {
+    return Pauses.total(pause) || Pauses.estimate(pause);
+  };
+
   /**
    * Sortea ejercicios del catálogo para una pausa activa, evitando repetir
    * los de la vez anterior mientras haya de sobra.
@@ -102,8 +132,12 @@
       // El cuadrado se encoge menos que el círculo: si no, queda diminuto y el
       // punto del recorrido deja de leerse.
       const min = pause.shape === 'box' ? 0.62 : 0.34;
+      // Una segunda inhalación corta (el «suspiro fisiológico») llena el último
+      // tramo: la primera inhalación se queda en el 85 %.
+      const top = b.inhale2 ? 0.85 : 1;
       const parts = [
-        { key: 'inhale', label: 'Inhala', secs: b.inhale || 0, from: min, to: 1 },
+        { key: 'inhale', label: 'Inhala', secs: b.inhale || 0, from: min, to: top },
+        { key: 'inhale2', label: 'Otra inhalación corta', secs: b.inhale2 || 0, from: top, to: 1 },
         { key: 'hold1', label: 'Sostén', secs: b.hold1 || 0, from: 1, to: 1 },
         { key: 'exhale', label: 'Exhala', secs: b.exhale || 0, from: 1, to: min },
         { key: 'hold2', label: 'Vacío', secs: b.hold2 || 0, from: min, to: min }
@@ -119,15 +153,20 @@
         index = i + 1;
       }
       const part = parts[Math.min(index, parts.length - 1)];
-      const k = part.secs ? U.clamp(pos / part.secs, 0, 1) : 0;
+      const lin = part.secs ? U.clamp(pos / part.secs, 0, 1) : 0;
+      // Curva suave (seno): arranca y termina despacio, como una respiración
+      // real, en vez de un movimiento a velocidad constante.
+      const k = (1 - Math.cos(Math.PI * lin)) / 2;
       // El punto recorre el perímetro: sube al inhalar, cruza en horizontal
       // mientras sostienes, baja al exhalar y vuelve por abajo en el vacío.
-      const dot = { inhale: { x: 0, y: 1 - k }, hold1: { x: k, y: 0 },
+      const dot = { inhale: { x: 0, y: 1 - k }, inhale2: { x: 0, y: 0 }, hold1: { x: k, y: 0 },
         exhale: { x: 1, y: k }, hold2: { x: 1 - k, y: 1 } }[part.key];
       return {
         label: part.label,
         hint: Math.ceil(part.secs - pos) + ' s',
         scale: part.from + (part.to - part.from) * k,
+        // Lo mismo de 0 (vacío) a 1 (lleno): con ello sube y baja el color.
+        norm: ((part.from + (part.to - part.from) * k) - min) / (1 - min),
         dot: dot,
         cycleIndex: Math.floor(t / cycle) + 1,
         index: Math.floor(t / cycle) * parts.length + index,
@@ -190,9 +229,10 @@
    * Fila de botones para elegir una pausa. Devuelve { node, value } donde
    * value es { pause, minutes } o null si no se ha elegido ninguna.
    */
-  Pauses.picker = function () {
+  Pauses.picker = function (opts) {
     let chosen = null;
     let minutes = 0;
+    const preselect = opts && opts.selected ? Store.getPause(opts.selected) : null;
 
     const wrap = U.el('div', { class: 'pause-picker' });
     const chips = U.el('div', { class: 'chips' });
@@ -200,8 +240,20 @@
     const minInput = U.el('input', {
       type: 'number', min: '1', max: '60', step: '1', value: '2',
       'aria-label': 'Cantidad de la pausa',
-      oninput: function () { minutes = U.clamp(parseInt(minInput.value, 10) || 1, 1, 60); }
+      oninput: function () {
+        minutes = U.clamp(parseInt(minInput.value, 10) || 1, 1, 60);
+        if (chosen) describe();
+      }
     });
+    // La duración que se ve es la de la cantidad elegida, no la del catálogo.
+    function describe() {
+      const sized = Pauses.setAmount(JSON.parse(JSON.stringify(chosen)), minutes);
+      const unit = Pauses.unitOf(chosen);
+      unitText.textContent = minutes === 1 ? unit.one : unit.many;
+      const secs = Pauses.seconds(sized);
+      note.textContent = '= ' + (Pauses.total(sized) ? '' : '≈ ') + (secs >= 60 ? U.fmtHuman(secs * 1000) : secs + ' s') +
+        (chosen.note ? ' · ' + chosen.note : '');
+    }
     const note = U.el('span', { class: 'pause-picker__note' });
     const unitText = U.el('span', { class: 'qitem__unit', text: 'min' });
     extra.appendChild(minInput);
@@ -225,8 +277,7 @@
                   : Math.max(1, Math.round(Pauses.total(chosen) / 60));
               minInput.value = String(minutes);
               minInput.disabled = false;
-              unitText.textContent = minutes === 1 ? unit.one : unit.many;
-              note.textContent = Pauses.amountLabel(chosen) + (chosen.note ? ' · ' + chosen.note : '');
+              describe();
             }
             extra.hidden = !chosen;
             paint();
@@ -238,6 +289,11 @@
     paint();
     wrap.appendChild(chips);
     wrap.appendChild(extra);
+    // Con una pausa preelegida (la última usada) basta con un toque.
+    if (preselect) {
+      const btn = U.$$('.chip', chips)[Store.data.pauses.indexOf(preselect)];
+      if (btn) btn.click();
+    }
 
     return {
       node: wrap,
@@ -357,7 +413,7 @@
         const fu = U.el('div', { class: 'field' });
         fu.appendChild(U.el('label', { text: 'Cómo se mide la duración' }));
         const unitChips = U.el('div', { class: 'chips' });
-        [['cycles', 'Por ciclos de respiración'], ['minutes', 'Por minutos']].forEach(function (o) {
+        [['cycles', 'Por ciclos de respiración'], ['minutes', 'Por minutos, redondeado a ciclos completos']].forEach(function (o) {
           unitChips.appendChild(U.el('button', {
             class: 'chip' + ((model.unit || 'cycles') === o[0] ? ' is-active' : ''), type: 'button', text: o[1],
             onclick: function () { model.unit = o[0]; paintDetail(); }
@@ -382,7 +438,9 @@
           fc.appendChild(totalHint);
           detail.appendChild(fc);
         } else {
-          detail.appendChild(durationField());
+          const df = durationField();
+          df.appendChild(U.el('p', { class: 'hint', text: 'Se ajusta al número de ciclos completos más cercano: nunca acaba a mitad de una fase.' }));
+          detail.appendChild(df);
         }
 
         const fs = U.el('div', { class: 'field' });
@@ -400,7 +458,7 @@
         const f = U.el('div', { class: 'field' });
         f.appendChild(U.el('label', { text: 'Fases del ciclo, en segundos (0 para saltarse una)' }));
         const grid = U.el('div', { class: 'breath-grid' });
-        [['inhale', 'Inhala'], ['hold1', 'Sostén'], ['exhale', 'Exhala'], ['hold2', 'Vacío']].forEach(function (o) {
+        [['inhale', 'Inhala'], ['inhale2', '2.ª inhalación'], ['hold1', 'Sostén'], ['exhale', 'Exhala'], ['hold2', 'Vacío']].forEach(function (o) {
           const input = U.el('input', {
             type: 'number', min: '0', max: '30', step: '1', value: String(model.breath[o[0]] || 0),
             'aria-label': o[1],

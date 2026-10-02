@@ -64,6 +64,15 @@
       gate: false,          // esperando entre bloques
       finished: false,
       blocks: items.map(function (i) {
+        // Las pausas guiadas duran lo que sus ciclos o rondas, no unos minutos
+        // redondos: así nunca se cortan a mitad de una respiración o ejercicio.
+        if (i.pause) {
+          const pb = Pauses.toBlock(i.pause);
+          pb.uid = i.uid || pb.uid;
+          pb.name = i.name || pb.name;
+          pb.color = i.color || pb.color;
+          return pb;
+        }
         return {
           uid: i.uid || U.uid('b'),
           presetId: i.presetId || null,
@@ -340,6 +349,14 @@
     PiP.update(Runner.snapshot());
     showChrome(true);
 
+    // Pausa metida a mitad de un bloque: se vuelve a él en el acto, sin
+    // preguntas, con el tiempo que le quedaba.
+    if (b.resumes) {
+      if (state.index + 1 < state.blocks.length) { state.index++; beginBlock(); }
+      else Runner.finish('completada');
+      return;
+    }
+
     const proceed = function () {
       // La sesión puede haberse terminado mientras el diálogo estaba abierto.
       if (!state || state.finished) return;
@@ -549,6 +566,18 @@
     tick();
   };
 
+  /** Cambia los ciclos o rondas de una pausa guiada; la duración sale exacta. */
+  Runner.setPauseAmount = function (index, amount) {
+    if (!state) return;
+    const b = state.blocks[index];
+    if (!b || !b.pause || index < state.index) return;
+    // Con ejercicios sorteados se repite la misma tanda: solo cambian las rondas.
+    Pauses.setAmount(b.pause, amount);
+    b.plannedMs = Math.max(5, Store.pauseSeconds(b.pause)) * 1000;
+    persist();
+    tick();
+  };
+
   Runner.moveBlock = function (index, delta) {
     if (!state) return;
     const to = index + delta;
@@ -633,6 +662,98 @@
     persist();
     tick();
     return { ok: true, split: split };
+  };
+
+  /**
+   * Mete una pausa guiada AHORA, en mitad del bloque en curso. El bloque se
+   * parte: lo hecho queda como primera parte, viene la pausa (cuenta como
+   * descanso) y después el mismo bloque sigue con el tiempo exacto que le
+   * quedaba. Al acabar la pausa no se pregunta nada: se vuelve directamente.
+   */
+  Runner.insertPauseNow = function (pause, amount) {
+    if (!state || state.finished || state.gate) return false;
+    const b = block();
+    if (!b || b.isBreak || !pause) return false;
+
+    const now = Date.now();
+    // Si estaba en pausa, esa pausa se cierra como distracción, sin preguntar.
+    if (state.pausedAt) {
+      b.distractions.push({ type: 'pause', at: state.pausedAt, ms: now - state.pausedAt, count: 1, reasons: [], freeText: null });
+      state.pausedAt = null;
+      document.getElementById('stage').classList.remove('is-paused');
+      document.getElementById('btnPause').textContent = 'Pausar';
+    }
+
+    const elapsed = elapsedMs();
+    const rest = Math.max(0, b.plannedMs - elapsed);
+    b.elapsedBefore = elapsed;
+    b.plannedMs = elapsed;
+    b.endedAt = now;
+    b.status = 'split';
+    state.runningSince = null;
+    stopLoop();
+
+    // Las distracciones sin pausa aún sin coste se preguntan al final de
+    // verdad del bloque, así que viajan a la continuación.
+    const pending = b.distractions.filter(function (d) { return d.type === 'quick' && !d.ms; });
+    b.distractions = b.distractions.filter(function (d) { return !(d.type === 'quick' && !d.ms); });
+
+    const pb = Pauses.toBlock(pause, amount);
+    pb.resumes = true;
+    const insert = [pb];
+    if (rest >= 1000) {
+      insert.push({
+        uid: U.uid('b'), presetId: b.presetId, name: b.name, color: b.color,
+        topicId: b.topicId || '', isBreak: false, continues: b.uid,
+        plannedMs: rest, elapsedBefore: 0, startedAt: null, endedAt: null,
+        status: 'pending', distractions: pending
+      });
+    }
+    state.blocks.splice.apply(state.blocks, [state.index + 1, 0].concat(insert));
+    timelineSig = '';
+    try { localStorage.setItem(LAST_PAUSE_KEY, pause.id); } catch (e) { /* noop */ }
+
+    UI.closeTransient();
+    state.index++;
+    beginBlock();
+    UI.toast('Pausa: ' + pause.name + (rest >= 1000 ? ' · luego sigues con ' + U.fmtHuman(rest) + ' de ' + b.name : ''));
+    return true;
+  };
+
+  const LAST_PAUSE_KEY = 'mir2027.pause.last.v1';
+
+  /** Diálogo para elegir la pausa guiada que se mete ahora. */
+  Runner.openPauseNow = function () {
+    if (!state || state.finished || state.gate) return;
+    const b = block();
+    if (!b || b.isBreak) { UI.toast('Ya estás en un descanso'); return; }
+    if (!Store.data.pauses.length) { UI.toast('No hay pausas guiadas: créalas en Ajustes'); return; }
+    let last = null;
+    try { last = localStorage.getItem(LAST_PAUSE_KEY); } catch (e) { /* noop */ }
+    let picker;
+    showChrome('stick');
+
+    UI.modal({
+      title: 'Pausa guiada ahora',
+      sub: '«' + b.name + '» se detiene aquí y sigue justo después con los ' + U.fmtHuman(remainingMs()) +
+        ' que le quedan. La pausa cuenta como descanso, no como distracción.',
+      build: function () {
+        picker = Pauses.picker({ selected: last || Store.data.pauses[0].id });
+        return picker.node;
+      },
+      actions: function (close) {
+        return [
+          U.el('button', { class: 'btn btn--ghost', text: 'Seguir estudiando', onclick: function () { close(null); } }),
+          U.el('button', {
+            class: 'btn btn--primary', text: 'Empezar pausa',
+            onclick: function () { close(picker.value); }
+          })
+        ];
+      }
+    }).then(function (choice) {
+      showChrome();
+      if (choice) Runner.insertPauseNow(choice.pause, choice.amount);
+    });
   };
 
   /** Lista de todos los bloques: hechos, el actual y los que vienen. */
@@ -728,7 +849,18 @@
       minInput,
       U.el('span', { class: 'qitem__unit', text: 'min' })
     ]);
-    [-5, 5, 15].forEach(function (d) {
+    // Una pausa guiada se ajusta en ciclos o rondas: en minutos se cortaría.
+    if (b.pause && Pauses.unitOf(b.pause).key !== 'minutes') {
+      const unit = Pauses.unitOf(b.pause);
+      U.clear(ctrls);
+      const amount = U.el('input', {
+        type: 'number', min: '1', max: unit.key === 'rounds' ? '10' : '60', step: '1',
+        value: String(Pauses.amountOf(b.pause)), 'aria-label': unit.many + ' de ' + b.name,
+        onchange: function () { Runner.setPauseAmount(i, parseInt(amount.value, 10) || 1); refresh(); }
+      });
+      ctrls.appendChild(amount);
+      ctrls.appendChild(U.el('span', { class: 'qitem__unit', text: unit.many + ' · ' + U.fmtHuman(b.plannedMs) }));
+    } else [-5, 5, 15].forEach(function (d) {
       ctrls.appendChild(U.el('button', {
         class: 'mini', type: 'button', text: (d > 0 ? '+' : '') + d,
         title: (d > 0 ? 'Añadir ' : 'Quitar ') + Math.abs(d) + ' minutos',
@@ -813,6 +945,9 @@
           name: x.name, color: x.color, presetId: x.presetId,
           topicId: x.topicId || '', isBreak: !!x.isBreak,
           pause: x.pause || null,
+          // Bloque partido por una pausa guiada metida a mitad: la segunda parte
+          // apunta a la primera, y la pausa sabe que volvía a él.
+          continues: x.continues || null, resumes: !!x.resumes,
           // Las horas reales de cada bloque: son las que usa el contador de
           // tiempo perdido para saber cuándo estuvo el temporizador encendido.
           startedAt: x.startedAt || null, endedAt: x.endedAt || null,
@@ -887,7 +1022,7 @@
   }
 
   function statusLabel(s) {
-    return s === 'done' ? 'completo' : s === 'skipped' ? 'saltado' : s === 'partial' ? 'parcial' : 'pendiente';
+    return s === 'done' ? 'completo' : s === 'skipped' ? 'saltado' : s === 'partial' ? 'parcial' : s === 'split' ? 'pausa guiada en medio' : 'pendiente';
   }
 
   /* ── Pintado de la pantalla ────────────────────────────── */
@@ -928,8 +1063,10 @@
       stage.style.setProperty('--dotx', (phase.dot.x * 100).toFixed(2) + '%');
       stage.style.setProperty('--doty', (phase.dot.y * 100).toFixed(2) + '%');
     }
+    const cycleSecs = Store.breathCycle(b.pause);
+    const cycles = cycleSecs ? Math.max(1, Math.round(b.plannedMs / 1000 / cycleSecs)) : 0;
     const count = phase.cycleIndex
-      ? 'ciclo ' + phase.cycleIndex + (b.pause.cycles ? ' de ' + b.pause.cycles : '')
+      ? 'ciclo ' + Math.min(phase.cycleIndex, cycles || phase.cycleIndex) + (cycles ? ' de ' + cycles : '')
       : (phase.stepIndex ? 'ejercicio ' + phase.stepIndex + ' de ' + phase.stepTotal : '');
     setLayers('.js-phase', phase.label + (phase.hint ? '  ·  ' + phase.hint : ''));
     setLayers('.js-phasecount', count);
@@ -949,25 +1086,50 @@
     return phase;
   }
 
+  /**
+   * Cómo se mueve la pantalla de color en cada bloque. Se elige por tipo de
+   * bloque en la biblioteca; las respiraciones guiadas siempre «respiran»:
+   * el color sube al inhalar y baja al exhalar.
+   */
+  const ANIMS = ['ola', 'aurora', 'pulso', 'calma', 'ninguna'];
+  function animFor(b) {
+    if (Store.data.settings.screenAnim === false) return 'ninguna';
+    if (b.pause && b.pause.mode === 'breath') return 'respira';
+    const p = b.presetId ? Store.getPreset(b.presetId) : null;
+    if (p && ANIMS.indexOf(p.anim) >= 0) return p.anim;
+    if (b.pause) return 'calma';
+    return b.isBreak ? 'pulso' : 'ola';
+  }
+  Runner.animFor = animFor;
+
   function render() {
     const b = block();
     if (!b) return;
     const stage = document.getElementById('stage');
     const left = remainingMs();
-    const pct = U.clamp((left / b.plannedMs) * 100, 0, 100);
+    let pct = U.clamp((left / b.plannedMs) * 100, 0, 100);
 
-    stage.style.setProperty('--fill', pct.toFixed(3) + '%');
+    const anim = animFor(b);
+    if (stage.dataset.anim !== anim) stage.dataset.anim = anim;
 
     const timeText = state.gate ? U.fmt(0) : U.fmt(left);
     setLayers('.js-name', state.gate ? b.name + ' · completado' : b.name);
     setLayers('.js-time', timeText);
 
     const phase = renderPause(b, stage);
+    // En la respiración guiada el nivel del color es la respiración misma.
+    if (anim === 'respira' && phase && typeof phase.norm === 'number' && !state.gate) {
+      pct = 18 + phase.norm * 74;
+    }
+    stage.style.setProperty('--fill', pct.toFixed(3) + '%');
 
     const distN = blockDistractionCount();
     const distMs = blockDistractionMs();
+    // Una pausa guiada se describe por sus ciclos o rondas, con su duración exacta.
+    const size = b.pause ? Pauses.amountLabel(Object.assign({}, b.pause, b.pause.mode === 'breath'
+      ? { unit: 'cycles', cycles: Math.max(1, Math.round(b.plannedMs / 1000 / (Store.breathCycle(b.pause) || 1))) } : {})) : U.fmtHuman(b.plannedMs);
     const sub = 'Bloque ' + (state.index + 1) + ' de ' + state.blocks.length +
-      ' · ' + U.fmtHuman(b.plannedMs) +
+      ' · ' + size +
       (distN ? '  ·  ' + U.plural(distN, 'distracción', 'distracciones') + ' (' + U.fmtHuman(distMs) + ')' : '  ·  sin distracciones');
     setLayers('.js-sub', sub);
 
@@ -995,6 +1157,8 @@
     hudPauses.classList.toggle('is-over', !!limit && pauses >= limit);
 
     document.title = (state.pausedAt ? '⏸ ' : '') + timeText + ' · ' + b.name;
+    const guided = document.getElementById('btnGuided');
+    if (guided) guided.disabled = !!(state.gate || b.isBreak);
   }
 
   /** Lo que está haciendo el compañero de sala, si hay sala. */

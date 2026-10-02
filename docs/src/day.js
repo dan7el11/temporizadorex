@@ -42,6 +42,7 @@
         pauseMs: pauseMs(b),
         dist: distCount(b),
         status: live ? 'en curso' : b.status,
+        continues: !!b.continues,
         live: !!live
       });
     }
@@ -81,9 +82,10 @@
       t.pauses += it.pauseMs;
       t.dist += it.dist;
       if (it.isBreak) { t.breaks += it.clockMs; return; }
-      t.eff += it.effMs; t.clock += it.clockMs; t.quick += it.quickMs; t.blocks += 1;
+      // La continuación de un bloque partido por una pausa no es otro bloque.
+      t.eff += it.effMs; t.clock += it.clockMs; t.quick += it.quickMs; t.blocks += it.continues ? 0 : 1;
       const ty = types[it.typeKey] || (types[it.typeKey] = { key: it.typeKey, label: it.name, color: it.color, ms: 0, count: 0 });
-      ty.ms += it.effMs; ty.count += 1;
+      ty.ms += it.effMs; ty.count += it.continues ? 0 : 1;
       ty.label = it.name; ty.color = it.color;   // el nombre y color más recientes
       const tp = topics[it.topicId] || (topics[it.topicId] = { id: it.topicId, label: topicName(it.topicId), ms: 0, count: 0 });
       tp.ms += it.effMs; tp.count += 1;
@@ -205,7 +207,7 @@
         U.el('span', { class: 'daylist__when', text: U.fmtClock(new Date(it.startedAt)) + '–' + U.fmtClock(new Date(it.endedAt)) }),
         U.el('span', { class: 'daylist__dot', style: { background: it.isBreak ? BREAK_COLOR : it.color } }),
         U.el('span', { class: 'daylist__what' }, [
-          U.el('span', { class: 'daylist__name', text: it.name }),
+          U.el('span', { class: 'daylist__name', text: it.name + (it.continues ? ' (continuación)' : '') }),
           U.el('small', { text: it.isBreak ? 'descanso' : topicName(it.topicId) + (it.dist ? ' · ' + U.plural(it.dist, 'distracción', 'distracciones') : '') + (it.live ? ' · en curso' : '') })
         ]),
         U.el('span', { class: 'daylist__ms', text: it.isBreak ? U.fmtHuman(it.clockMs) : U.fmtHuman(it.effMs) })

@@ -576,8 +576,8 @@
           }, { small: true, emptyLabel: 'Sin tema' }),
       U.el('span', { class: 'hblock__num', text: U.fmtHuman(studyMs(b)) + ' / ' + U.fmtHuman(b.plannedMs) }),
       U.el('span', {
-        class: 'badge ' + (b.status === 'done' ? 'badge--ok' : 'badge--warn'),
-        text: b.status === 'done' ? 'completo' : b.status === 'skipped' ? 'saltado' : 'parcial'
+        class: 'badge ' + (b.status === 'done' || b.status === 'split' ? 'badge--ok' : 'badge--warn'),
+        text: b.status === 'done' ? 'completo' : b.status === 'skipped' ? 'saltado' : b.status === 'split' ? 'pausa guiada en medio' : 'parcial'
       }),
       U.el('button', {
         class: 'mini', text: '+ distracción', title: 'Añadir una distracción olvidada',

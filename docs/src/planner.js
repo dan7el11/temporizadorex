@@ -48,7 +48,7 @@
     if (!p) return;
     queue().push({
       uid: U.uid('q'), presetId: null, name: p.name, color: p.color,
-      minutes: Math.max(1, Math.round((Pauses.total(p) || Pauses.estimate(p)) / 60)),
+      minutes: Pauses.seconds(p) / 60,
       isBreak: true, topicId: '', pauseId: p.id, pause: JSON.parse(JSON.stringify(p))
     });
     persist();
@@ -111,8 +111,48 @@
     document.getElementById('queueEta').textContent = totalMs ? U.fmtClock(new Date(Date.now() + totalMs)) : '—';
   };
 
+  /**
+   * Controles de una pausa guiada en la cola: se mide en ciclos o rondas, no
+   * en minutos, y la duración que se muestra es la exacta de esos ciclos.
+   */
+  function pauseControls(item) {
+    const unit = Pauses.unitOf(item.pause);
+    const hint = U.el('span', { class: 'qitem__unit qitem__dur' });
+    const unitText = U.el('span', { class: 'qitem__unit' });
+    function sync() {
+      item.minutes = Pauses.seconds(item.pause) / 60;
+      const n = Pauses.amountOf(item.pause);
+      unitText.textContent = n === 1 ? unit.one : unit.many;
+      const secs = Pauses.seconds(item.pause);
+      hint.textContent = '= ' + (Pauses.total(item.pause) ? '' : '≈ ') + (secs >= 60 ? U.fmtHuman(secs * 1000) : secs + ' s');
+    }
+    const input = U.el('input', {
+      type: 'number', min: '1', max: unit.key === 'rounds' ? '10' : '60', step: '1',
+      value: String(Pauses.amountOf(item.pause)),
+      'aria-label': unit.many + ' de ' + item.name,
+      onchange: function () {
+        Pauses.setAmount(item.pause, parseInt(input.value, 10));
+        input.value = String(Pauses.amountOf(item.pause));
+        sync();
+        persist();
+        Planner.renderTotals();
+      }
+    });
+    sync();
+    const ctrls = U.el('div', { class: 'qitem__ctrls' }, [input, unitText, hint]);
+    Pauses.quickAmounts(item.pause).forEach(function (n) {
+      ctrls.appendChild(U.el('button', {
+        class: 'mini', type: 'button', text: String(n),
+        title: 'Poner ' + n + ' ' + (n === 1 ? unit.one : unit.many),
+        onclick: function () { Pauses.setAmount(item.pause, n); sync(); persist(); Planner.render(); }
+      }));
+    });
+    return ctrls;
+  }
+
   function buildRow(item, index) {
     const items = queue();
+    if (item.pause) return finishRow(item, index, pauseControls(item));
 
     const minInput = U.el('input', {
       type: 'number', min: '1', max: '600', step: '1', value: String(item.minutes),
@@ -145,7 +185,11 @@
         onclick: function () { item.minutes = m; persist(); Planner.render(); }
       }));
     });
+    return finishRow(item, index, ctrls);
+  }
 
+  function finishRow(item, index, ctrls) {
+    const items = queue();
     const first = index === 0;
     const last = index === items.length - 1;
 

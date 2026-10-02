@@ -68,8 +68,95 @@
     {
       id: 'pa_vista', name: 'Descanso visual 20-20-20', color: '#f0b429', mode: 'plain',
       unit: 'minutes', seconds: 60, note: 'Mira algo lejano y parpadea despacio.', sound: false
+    },
+
+    /* Para rachas de agotamiento: bajar la activación, salir del bucle de
+       pensamientos y recuperar la sensación de avance. */
+    {
+      id: 'pa_suspiro', name: 'Suspiro fisiológico', color: '#38bdf8', mode: 'breath',
+      unit: 'cycles', cycles: 10, shape: 'circle',
+      breath: { inhale: 2, inhale2: 1, hold1: 0, exhale: 6, hold2: 0 },
+      note: 'Dos inhalaciones por la nariz (la segunda, corta, para llenar del todo) y una exhalación larga por la boca. La forma más rápida de bajar la tensión.',
+      sound: true
+    },
+    {
+      id: 'pa_coherencia', name: 'Coherencia cardíaca 5-5', color: '#2dd4bf', mode: 'breath',
+      unit: 'cycles', cycles: 18, shape: 'circle',
+      breath: { inhale: 5, hold1: 0, exhale: 5, hold2: 0 },
+      note: 'Seis respiraciones por minuto, sin retener. Calma sin dar sueño.',
+      sound: true
+    },
+    {
+      id: 'pa_anclaje', name: 'Anclaje 5-4-3-2-1', color: '#a3e635', mode: 'steps', source: 'fixed', rounds: 1, sound: true,
+      note: 'Para cuando la cabeza no para: te devuelve al presente a través de los sentidos.',
+      steps: [
+        { text: 'Nombra 5 cosas que ves', seconds: 25 },
+        { text: '4 cosas que puedes tocar: tócalas', seconds: 25 },
+        { text: '3 sonidos que oyes ahora', seconds: 20 },
+        { text: '2 olores, o dos que te gusten', seconds: 15 },
+        { text: '1 sabor, o algo bueno de hoy', seconds: 15 }
+      ]
+    },
+    {
+      id: 'pa_escaneo', name: 'Escaneo corporal', color: '#818cf8', mode: 'steps', source: 'fixed', rounds: 1, sound: true,
+      note: 'Recorre el cuerpo y suelta la tensión que se acumula sin darte cuenta.',
+      steps: [
+        { text: 'Pies y piernas: nota el peso, afloja', seconds: 20 },
+        { text: 'Abdomen: deja que se mueva con la respiración', seconds: 20 },
+        { text: 'Manos y brazos: abre los dedos, suéltalos', seconds: 20 },
+        { text: 'Hombros y cuello: bájalos, lejos de las orejas', seconds: 20 },
+        { text: 'Mandíbula, ojos y frente: despega los dientes', seconds: 20 },
+        { text: 'Todo el cuerpo a la vez, respirando', seconds: 20 }
+      ]
+    },
+    {
+      id: 'pa_tension', name: 'Tensar y soltar', color: '#f472b6', mode: 'steps', source: 'fixed', rounds: 1, sound: true,
+      note: 'Relajación muscular progresiva, versión corta: aprieta 5 segundos y suelta 10.',
+      steps: [
+        { text: 'Aprieta los puños con fuerza', seconds: 5 },
+        { text: 'Suelta y nota la diferencia', seconds: 10 },
+        { text: 'Sube los hombros a las orejas', seconds: 5 },
+        { text: 'Déjalos caer de golpe', seconds: 10 },
+        { text: 'Arruga la frente y cierra los ojos fuerte', seconds: 5 },
+        { text: 'Suelta la cara entera', seconds: 10 },
+        { text: 'Tensa el abdomen', seconds: 5 },
+        { text: 'Suéltalo y respira hondo', seconds: 10 },
+        { text: 'Estira las piernas y tensa los pies', seconds: 5 },
+        { text: 'Suelta todo el cuerpo', seconds: 10 }
+      ]
+    },
+    {
+      id: 'pa_descarga', name: 'Descarga mental', color: '#94a3b8', mode: 'steps', source: 'fixed', rounds: 1, sound: true,
+      note: 'Escribir lo pendiente y su siguiente paso libera la cabeza: deja de dar vueltas.',
+      steps: [
+        { text: 'Papel y boli: escribe todo lo que te ronda (pendientes, dudas, preocupaciones)', seconds: 90 },
+        { text: 'Al lado de cada cosa: su siguiente paso, o «ahora no»', seconds: 45 },
+        { text: 'Cierra el papel: ya está guardado. Vuelve al bloque', seconds: 10 }
+      ]
+    },
+    {
+      id: 'pa_autocompasion', name: 'Pausa de autocompasión', color: '#fb7185', mode: 'steps', source: 'fixed', rounds: 1, sound: true,
+      note: 'Para los días en que todo pesa: tratarte como tratarías a un paciente.',
+      steps: [
+        { text: 'Mano en el pecho. Reconócelo: «esto es difícil ahora mismo»', seconds: 20 },
+        { text: '«No me pasa solo a mí: le pasa a todo el que prepara el MIR»', seconds: 20 },
+        { text: '«Que pueda tratarme con la amabilidad que tendría con un paciente»', seconds: 20 },
+        { text: 'Tres respiraciones lentas, sin prisa', seconds: 20 }
+      ]
+    },
+    {
+      id: 'pa_logros', name: 'Tres logros de hoy', color: '#fbbf24', mode: 'steps', source: 'fixed', rounds: 1, sound: true,
+      note: 'El agotamiento borra la sensación de avance: aquí la recuperas.',
+      steps: [
+        { text: 'Algo que ya has hecho bien hoy', seconds: 20 },
+        { text: 'Otro, aunque sea pequeño: un tema, una duda resuelta', seconds: 20 },
+        { text: 'Uno más. Quédate unos segundos con esa sensación', seconds: 20 }
+      ]
     }
   ];
+  // Pausas que llegaron después de la primera versión: se añaden una vez a
+  // quien ya usaba la app, salvo que las haya borrado.
+  const ADDED_PAUSES = ['pa_suspiro', 'pa_coherencia', 'pa_anclaje', 'pa_escaneo', 'pa_tension', 'pa_descarga', 'pa_autocompasion', 'pa_logros'];
 
   // Temas o asignaturas que se pueden asignar a cada bloque. Editables.
   const DEFAULT_TOPICS = [
@@ -271,6 +358,14 @@
       if (!Array.isArray(this.data.reasons) || !this.data.reasons.length) this.data.reasons = deepClone(DEFAULT_REASONS);
       if (!Array.isArray(this.data.topics)) this.data.topics = deepClone(DEFAULT_TOPICS);
       if (!Array.isArray(this.data.pauses)) this.data.pauses = deepClone(DEFAULT_PAUSES);
+      const pauseTombs = ((this.data.tombstones || {}).pauses) || {};
+      const pauseIds = this.data.pauses.map(function (p) { return p.id; });
+      let addedPauses = 0;
+      DEFAULT_PAUSES.forEach(function (p) {
+        if (ADDED_PAUSES.indexOf(p.id) < 0 || pauseIds.indexOf(p.id) >= 0 || pauseTombs[p.id]) return;
+        Store.data.pauses.push(deepClone(p));
+        addedPauses++;
+      });
       if (!Array.isArray(this.data.exercises)) this.data.exercises = deepClone(DEFAULT_EXERCISES);
       if (!Array.isArray(this.data.lostCauses)) this.data.lostCauses = deepClone(DEFAULT_LOST_CAUSES);
       if (!Array.isArray(this.data.lostTime)) this.data.lostTime = [];
@@ -287,7 +382,7 @@
         if (!Array.isArray(Store.data[k])) Store.data[k] = [];
       });
       // Sin tocar la marca de edición: limpiar no debe hacer ganar estos ajustes al sincronizar.
-      if (dedupeLostTime(this.data)) this.save(true);
+      if (dedupeLostTime(this.data) || addedPauses) this.save(true);
       return this.data;
     },
 
@@ -467,7 +562,7 @@
     /** Segundos de un ciclo de respiración. */
     breathCycle: function (pause) {
       const b = (pause && pause.breath) || {};
-      return (b.inhale || 0) + (b.hold1 || 0) + (b.exhale || 0) + (b.hold2 || 0);
+      return (b.inhale || 0) + (b.inhale2 || 0) + (b.hold1 || 0) + (b.exhale || 0) + (b.hold2 || 0);
     },
     /**
      * Duración total. Por defecto se mide en ciclos de respiración o rondas de
@@ -482,6 +577,12 @@
       }
       if (pause.mode === 'breath' && pause.unit !== 'minutes') {
         return this.breathCycle(pause) * Math.max(1, pause.cycles || 1);
+      }
+      // Respiración medida en minutos: se ajusta a ciclos completos, al número
+      // de ciclos más cercano a ese tiempo. Nunca acaba a mitad de una fase.
+      if (pause.mode === 'breath') {
+        const cycle = this.breathCycle(pause);
+        if (cycle) return cycle * Math.max(1, Math.round((pause.seconds || 60) / cycle));
       }
       return pause.seconds || 60;
     },

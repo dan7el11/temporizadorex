@@ -4,6 +4,16 @@
 
   const Library = {};
 
+  // [clave, nombre, explicación]. «auto»: ola si es de estudio, pulso si es descanso.
+  Library.ANIMS = [
+    ['auto', 'Automática', 'Ola si es un bloque de estudio; pulso si es un descanso.'],
+    ['ola', 'Ola', 'El borde del color ondula despacio mientras baja.'],
+    ['aurora', 'Aurora', 'Luces suaves que se desplazan dentro del color.'],
+    ['pulso', 'Pulso', 'El color se ilumina y se apaga como una respiración lenta.'],
+    ['calma', 'Calma', 'Un brillo que sube y baja muy despacio desde abajo.'],
+    ['ninguna', 'Ninguna', 'Color liso, sin movimiento.']
+  ];
+
   Library.render = function () {
     const box = U.clear(document.getElementById('library'));
     const presets = Store.data.presets;
@@ -43,6 +53,7 @@
     const isNew = !preset;
     const model = preset || { name: '', color: UI.PALETTE[0], minutes: 60, note: '', isBreak: false };
     let nameInput, minInput, noteInput, picker, breakInput;
+    let anim = model.anim || '';
 
     return UI.modal({
       title: isNew ? 'Nuevo tipo de temporizador' : 'Editar tipo',
@@ -68,6 +79,28 @@
         picker = UI.colorPicker(model.color);
         f3.appendChild(picker.node);
         frag.appendChild(f3);
+
+        // Cómo se mueve la pantalla de color durante este bloque.
+        const fa = U.el('div', { class: 'field' });
+        fa.appendChild(U.el('label', { text: 'Animación de la pantalla' }));
+        const animChips = U.el('div', { class: 'chips' });
+        function paintAnim() {
+          U.clear(animChips);
+          Library.ANIMS.forEach(function (a) {
+            const on = (anim || 'auto') === a[0];
+            animChips.appendChild(U.el('button', {
+              class: 'chip' + (on ? ' is-active' : ''), type: 'button', text: a[1], title: a[2],
+              'aria-pressed': on ? 'true' : 'false',
+              onclick: function () { anim = a[0] === 'auto' ? '' : a[0]; paintAnim(); }
+            }));
+          });
+          animHint.textContent = (Library.ANIMS.find(function (a) { return a[0] === (anim || 'auto'); }) || [])[2] || '';
+        }
+        const animHint = U.el('p', { class: 'hint' });
+        fa.appendChild(animChips);
+        fa.appendChild(animHint);
+        paintAnim();
+        frag.appendChild(fa);
 
         breakInput = U.el('input', { type: 'checkbox', checked: model.isBreak ? true : null });
         frag.appendChild(U.el('div', { class: 'setting', style: { paddingTop: '0' } }, [
@@ -101,7 +134,7 @@
       const minutes = U.clamp(parseInt(minInput.value, 10) || 1, 1, 600);
       close({
         name: name, minutes: minutes, color: picker.value,
-        note: noteInput.value.trim(), isBreak: breakInput.checked
+        note: noteInput.value.trim(), isBreak: breakInput.checked, anim: anim
       });
     }
   };
@@ -131,7 +164,7 @@
   Library.duplicate = function (id) {
     const p = Store.getPreset(id);
     if (!p) return;
-    const copy = { name: p.name + ' (copia)', color: p.color, minutes: p.minutes, note: p.note, isBreak: !!p.isBreak };
+    const copy = { name: p.name + ' (copia)', color: p.color, minutes: p.minutes, note: p.note, isBreak: !!p.isBreak, anim: p.anim || '' };
     Store.addPreset(copy);
     Library.render();
     Planner.renderPicker();

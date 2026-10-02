@@ -259,6 +259,7 @@
 
     document.getElementById('btnPause').addEventListener('click', function () { Runner.togglePause(); });
     document.getElementById('btnDistraction').addEventListener('click', function () { Runner.quickDistraction(); });
+    document.getElementById('btnGuided').addEventListener('click', function () { Runner.openPauseNow(); });
     document.getElementById('btnPip').addEventListener('click', function () { PiP.toggle(); });
     document.getElementById('btnBlocks').addEventListener('click', function () {
       Runner.showChrome('stick');
@@ -305,6 +306,7 @@
       const k = e.key.toLowerCase();
       if (e.code === 'Space' || k === ' ') { e.preventDefault(); Runner.togglePause(); }
       else if (k === 'd') { e.preventDefault(); Runner.quickDistraction(); }
+      else if (k === 'g') { e.preventDefault(); Runner.openPauseNow(); }
       else if (k === 'b') { e.preventDefault(); Runner.showChrome('stick'); Runner.openQueue(); }
       else if (k === 'p') { e.preventDefault(); PiP.toggle(); }
       else if (k === 'f') { e.preventDefault(); Runner.toggleFullscreen(); }

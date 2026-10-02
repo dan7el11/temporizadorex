@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="assets/styles.css?v=14">
+<link rel="stylesheet" href="assets/styles.css?v=15">
 </head>
 <body>
 
@@ -309,6 +309,7 @@
               <ul class="keys">
                 <li><kbd>Espacio</kbd> Pausar / reanudar (la pausa cuenta como distracción)</li>
                 <li><kbd>D</kbd> Registrar distracción rápida sin pausar</li>
+          <li><kbd>G</kbd> Pausa guiada ahora (respiración, etc.); luego sigue el mismo bloque</li>
                 <li><kbd>B</kbd> Bloques de la sesión: tiempos, orden y saltar</li>
                 <li><kbd>P</kbd> Ventana miniatura (Picture in Picture)</li>
                 <li><kbd>F</kbd> Pantalla completa</li>
@@ -327,6 +328,9 @@
 <div id="runner" class="runner" hidden>
   <div class="stage" id="stage">
     <div class="stage__fill" id="stageFill"></div>
+    <!-- Animación «ola»: dos crestas que se desplazan sobre el borde del color -->
+    <div class="stage__wave stage__wave--back" aria-hidden="true"></div>
+    <div class="stage__wave" aria-hidden="true"></div>
     <div class="stage__edge" id="stageEdge"></div>
 
     <div class="stage__layer stage__layer--over">
@@ -380,6 +384,7 @@
     <div class="runner__controls">
       <button class="ctrl ctrl--primary" id="btnPause" title="Pausar (Espacio)">Pausar</button>
       <button class="ctrl" id="btnDistraction" title="Distracción rápida sin pausar (D)">+ Distracción</button>
+      <button class="ctrl ctrl--guided" id="btnGuided" title="Pausa guiada ahora; luego sigues con este bloque (G)"><span data-icon="wind"></span>Pausa guiada</button>
       <button class="ctrl" id="btnPip" title="Miniatura Picture in Picture (P)">Miniatura</button>
       <button class="ctrl" id="btnBlocks" title="Ver y cambiar los bloques de la sesión (B)">Bloques</button>
       <button class="ctrl" id="btnTogether" title="Proponer un descanso a la sala" hidden>Descanso juntos</button>
@@ -393,24 +398,24 @@
 <video id="pipVideo" playsinline muted hidden></video>
 <canvas id="pipCanvas" width="640" height="360" hidden></canvas>
 
-<script src="src/utils.js?v=14"></script>
-<script src="src/store.js?v=14"></script>
-<script src="src/audio.js?v=14"></script>
-<script src="src/ui.js?v=14"></script>
-<script src="src/reasons.js?v=14"></script>
-<script src="src/topics.js?v=14"></script>
-<script src="src/pauses.js?v=14"></script>
-<script src="src/lost.js?v=14"></script>
-<script src="src/notify.js?v=14"></script>
-<script src="src/sync.js?v=14"></script>
-<script src="src/room.js?v=14"></script>
-<script src="src/library.js?v=14"></script>
-<script src="src/planner.js?v=14"></script>
-<script src="src/pip.js?v=14"></script>
-<script src="src/runner.js?v=14"></script>
-<script src="src/day.js?v=14"></script>
-<script src="src/history.js?v=14"></script>
-<script src="src/settings.js?v=14"></script>
-<script src="src/app.js?v=14"></script>
+<script src="src/utils.js?v=15"></script>
+<script src="src/store.js?v=15"></script>
+<script src="src/audio.js?v=15"></script>
+<script src="src/ui.js?v=15"></script>
+<script src="src/reasons.js?v=15"></script>
+<script src="src/topics.js?v=15"></script>
+<script src="src/pauses.js?v=15"></script>
+<script src="src/lost.js?v=15"></script>
+<script src="src/notify.js?v=15"></script>
+<script src="src/sync.js?v=15"></script>
+<script src="src/room.js?v=15"></script>
+<script src="src/library.js?v=15"></script>
+<script src="src/planner.js?v=15"></script>
+<script src="src/pip.js?v=15"></script>
+<script src="src/runner.js?v=15"></script>
+<script src="src/day.js?v=15"></script>
+<script src="src/history.js?v=15"></script>
+<script src="src/settings.js?v=15"></script>
+<script src="src/app.js?v=15"></script>
 </body>
 </html>
