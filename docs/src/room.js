@@ -111,7 +111,10 @@
     write(KEY, conf);
     peers = [];
     Room.restart();
-    return publish();
+    return publish().then(function (r) {
+      if (global.Push) Push.refresh();
+      return r;
+    });
   };
 
   Room.lastCode = function () {
@@ -243,6 +246,13 @@
       minutes: Math.max(1, breakMinutes)
     };
     remember(myProposal.id);
+    if (global.Push) {
+      Push.notify({
+        title: 'Descanso propuesto',
+        body: conf.name + ' propone descansar a las ' + U.fmtClock(new Date(myProposal.startsAt)) + ' (' + U.plural(myProposal.minutes, 'minuto', 'minutos') + ')',
+        tag: 'mir2027-break-' + myProposal.id, kind: 'break', id: myProposal.id
+      });
+    }
     return publish().then(function () {
       if (Room.onChange) Room.onChange();
       Room.restart();
@@ -302,7 +312,7 @@
     const when = U.fmtClock(new Date(prop.startsAt));
     const inMin = Math.max(1, Math.round((prop.startsAt - Date.now()) / 60000));
     Sound.start();
-    Notify.show('Descanso propuesto', peer.name + ' propone descansar a las ' + when);
+    Notify.show('Descanso propuesto', peer.name + ' propone descansar a las ' + when, false, { tag: 'mir2027-break-' + prop.id, renotify: false });
 
     UI.modal({
       title: peer.name + ' propone un descanso',

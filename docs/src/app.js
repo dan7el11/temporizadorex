@@ -19,6 +19,7 @@
       Settings.render(); Reasons.render(); Topics.render();
       Settings.renderSync(); Settings.renderRoom(); Pauses.render();
       Lost.renderSettings(); Lost.renderCauses(); Pauses.renderExercises();
+      Push.render();
       App.showSettings(section || App.lastSection());
     }
     if (name === 'library') Library.render();
@@ -406,6 +407,8 @@
     Room.restart();
     // Ánimos que llegaron y no se llegaron a ver (por ejemplo, al recargar).
     setTimeout(Cheers.flush, 1200);
+    // El alta push se renueva al abrir: el navegador puede cambiar la suscripción.
+    setTimeout(Push.refresh, 4000);
     // Cada minuto: la cuenta atrás del examen y la tarjeta de tiempo perdido,
     // que así sigue lo que vas haciendo sin tener que recargar.
     setInterval(function () {

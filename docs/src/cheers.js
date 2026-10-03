@@ -87,6 +87,15 @@
     out.push(cheer);
     write(OUT_KEY, out.slice(-MAX_OUT));
     Room.pushNow();
+    // Y por push, por si el otro tiene la app cerrada.
+    if (global.Push) {
+      Push.notify({
+        title: cheer.emoji + ' ' + (Room.myName() || 'Tu pareja'),
+        body: cheer.text || 'Te ha enviado un ánimo',
+        tag: 'mir2027-cheer-' + cheer.id, kind: 'cheer', id: cheer.id,
+        vibrate: cheer.effect === 'zumbido' ? [90, 50, 90, 50, 160] : [60]
+      });
+    }
     const peer = Room.peers()[0];
     UI.toast(cheer.emoji + ' Enviado' + (peer ? ' a ' + peer.name + (peer.online ? '' : ' · le llegará al abrir la app') : ''));
     return cheer;
@@ -366,15 +375,22 @@
         frag.appendChild(det);
 
         // Avisos con la app minimizada
-        if (!Store.data.settings.notify || Notify.permission() !== 'granted') {
+        const pushOn = global.Push && Push.enabled();
+        if (!pushOn && (!Store.data.settings.notify || Notify.permission() !== 'granted' || (global.Push && !Push.blocker()))) {
           frag.appendChild(U.el('div', { class: 'cheer-notify' }, [
-            U.el('span', { text: 'Para recibir los ánimos con la app minimizada, activa las notificaciones en este dispositivo.' }),
+            U.el('span', { text: 'Para recibir los ánimos aunque la app esté cerrada, activa las notificaciones en este dispositivo.' }),
             U.el('button', {
               class: 'btn btn--ghost btn--sm', type: 'button', text: 'Activar',
               onclick: function () {
-                Notify.request().then(function (ok) {
-                  Store.setSetting('notify', ok);
-                  UI.toast(ok ? 'Notificaciones activadas' : 'El navegador no ha dado permiso');
+                // Push si se puede (llega con la app cerrada); si no, avisos normales.
+                const tryPush = global.Push && !Push.blocker() ? Push.enable() : Promise.reject(new Error(''));
+                tryPush.then(function () {
+                  UI.toast('Notificaciones push activadas');
+                }).catch(function (err) {
+                  Notify.request().then(function (ok) {
+                    Store.setSetting('notify', ok);
+                    UI.toast(ok ? 'Avisos activados con la app abierta' + (err.message ? ' · ' + err.message : '') : 'El navegador no ha dado permiso', 6000);
+                  });
                 });
               }
             })

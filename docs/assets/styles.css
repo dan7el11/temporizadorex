@@ -1120,3 +1120,13 @@ dialog.modal.modal--wide{width:min(760px,calc(100vw - 24px))}
 .roomstrip__cheer-last{color:var(--text-dim);font-size:.82rem}
 .iconbtn--cheer{color:#ff9ab5}
 .iconbtn .ico svg{width:18px;height:18px}
+
+/* Notificaciones push */
+.push-steps{margin:4px 0 14px;padding-left:20px;display:flex;flex-direction:column;gap:10px;color:var(--text-dim);font-size:.88rem}
+.push-steps li > span{display:block;margin-bottom:6px}
+.push-steps li .btn{margin-right:6px}
+.push-status{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:10px;background:var(--bg-soft);border:1px solid var(--line-soft);font-size:.88rem;color:var(--text-dim);margin-bottom:12px}
+.push-status__dot{width:9px;height:9px;border-radius:50%;background:var(--text-faint);flex:0 0 auto}
+.push-status.is-on{color:var(--text)}
+.push-status.is-on .push-status__dot{background:var(--ok);box-shadow:0 0 10px rgba(55,211,153,.8)}
+.sqlbox--tall{max-height:52vh;overflow:auto}

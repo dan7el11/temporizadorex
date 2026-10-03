@@ -228,6 +228,7 @@
 
   /* ── Sincronización entre dispositivos ─────────────────── */
   Settings.renderSync = function () {
+    if (window.Push) setTimeout(Push.render, 0);   // el panel push depende de la sesión
     const box = document.getElementById('syncPanel');
     if (!box) return;
     U.clear(box);

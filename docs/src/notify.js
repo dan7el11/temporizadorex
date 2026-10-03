@@ -67,7 +67,7 @@
   /** Un ánimo recibido con la app minimizada: cada uno con su propia notificación. */
   Notify.cheer = function (c) {
     Notify.show((c.emoji || '💛') + ' ' + (c.from || 'Tu pareja'), (c.text || 'Te ha enviado un ánimo') + ' · ábrela para verlo',
-      false, { tag: 'mir2027-cheer-' + c.id, vibrate: c.effect === 'zumbido' ? [90, 50, 90, 50, 160] : [60] });
+      false, { tag: 'mir2027-cheer-' + c.id, renotify: false, vibrate: c.effect === 'zumbido' ? [90, 50, 90, 50, 160] : [60] });
   };
 
   global.Notify = Notify;

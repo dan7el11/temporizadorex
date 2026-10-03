@@ -358,10 +358,40 @@ publicado 12 horas, así que llega aunque el otro abra la app más tarde; un dis
 conectado no reproduce los antiguos. Viajan por la misma sala (la fila de presencia de cada uno),
 así que no hace falta nada nuevo en Supabase.
 
-**Límite honesto:** sin un servidor de notificaciones push, la app solo recibe mientras está abierta,
-aunque sea en segundo plano. En el ordenador con la pestaña minimizada llegan (el navegador consulta
-con menos frecuencia, como mucho cada minuto). En el móvil, si el sistema congela la app, el ánimo
-se recibe y se anima en cuanto la vuelves a abrir.
+Con las **notificaciones push** (siguiente apartado) los ánimos y las propuestas de descanso llegan
+aunque la app esté cerrada o el móvil bloqueado. Sin ellas, la app solo recibe mientras está abierta
+(en segundo plano en el ordenador, con hasta un minuto de retraso); en el móvil, si el sistema la
+congela, el ánimo aparece al volver a abrirla.
+
+### Notificaciones push
+Para que los avisos lleguen **con la app cerrada** hace falta una pequeña función en vuestro proyecto
+de Supabase. Se instala **una sola vez por proyecto** (basta con que lo haga uno de los dos) y no hay
+que crear ni copiar claves: la función genera las suyas la primera vez.
+
+1. **SQL.** En Supabase → *SQL Editor*, ejecuta el SQL de *Ajustes → Sincronizar → Notificaciones
+   push → Ver el SQL*. Crea dos tablas privadas (`push_subscriptions` y `push_config`) con RLS
+   activo y sin reglas: solo la función puede leerlas.
+2. **Función.** En Supabase → *Edge Functions* → *Deploy a new function* → *Via Editor*: nómbrala
+   **`mir-push`**, pega el código de *Ver el código* (es `docs/supabase/functions/mir-push/index.ts`)
+   y pulsa *Deploy*. Deja activada la verificación de JWT, que viene por defecto.
+   Con la línea de comandos de Supabase también vale: desde `docs/`,
+   `supabase functions deploy mir-push --project-ref <tu-proyecto>`.
+3. **Cada dispositivo.** En *Ajustes → Sincronizar → Notificaciones push*, **Activar en este
+   dispositivo** y **Enviar una prueba**.
+
+Qué se envía por push: los **ánimos** y las **propuestas de descanso**, solo a la otra persona de la
+sala y solo si quien lo envía está en ella. Si la app está a la vista no sale la notificación (ya
+está la animación en pantalla) pero la app consulta la sala al instante. Si llegan el push y el
+aviso de la propia app, el segundo sustituye al primero sin volver a sonar.
+
+**iPhone y iPad:** el push solo funciona con la app **añadida a la pantalla de inicio** (Compartir →
+Añadir a pantalla de inicio, iOS 16.4 o posterior) y abierta desde ahí; en Safari normal no está
+disponible.
+
+Por dentro: la función no tiene dependencias; cifra cada mensaje según el estándar Web Push
+(RFC 8291, `aes128gcm`) y lo firma con VAPID (RFC 8292) usando WebCrypto. Solo envía a los servicios
+push de los navegadores (Google, Mozilla, Apple, Microsoft), borra las suscripciones que el navegador
+da de baja y recorta los mensajes a un tamaño seguro.
 
 ### Atajos durante la sesión
 | Tecla | Acción |
@@ -426,6 +456,8 @@ docs/                         Lo que se publica en GitHub Pages
   src/sync.js                 Sincronización con Supabase por API REST, sin dependencias
   src/room.js                 Sala compartida: estado del compañero y descansos acordados
   src/cheers.js               Ánimos entre los dos de la sala: mensajes, efectos y notificaciones
+  src/push.js                 Notificaciones push: suscripción del dispositivo y avisos al otro
+  supabase/functions/mir-push Función de Supabase que envía los avisos push
   src/library.js              Biblioteca de tipos de temporizador
   src/day.js                  «Tu día»: en qué se fue el tiempo de un día
   src/planner.js              Plan del día: orden, tiempos y plantillas
