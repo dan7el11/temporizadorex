@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="assets/styles.css?v=15">
+<link rel="stylesheet" href="assets/styles.css?v=16">
 </head>
 <body>
 
@@ -310,6 +310,7 @@
                 <li><kbd>Espacio</kbd> Pausar / reanudar (la pausa cuenta como distracción)</li>
                 <li><kbd>D</kbd> Registrar distracción rápida sin pausar</li>
           <li><kbd>G</kbd> Pausa guiada ahora (respiración, etc.); luego sigue el mismo bloque</li>
+          <li><kbd>A</kbd> Enviar un ánimo a tu pareja (con la sala abierta)</li>
                 <li><kbd>B</kbd> Bloques de la sesión: tiempos, orden y saltar</li>
                 <li><kbd>P</kbd> Ventana miniatura (Picture in Picture)</li>
                 <li><kbd>F</kbd> Pantalla completa</li>
@@ -374,6 +375,7 @@
       </div>
       <div class="hud__right">
         <span class="hud__pill" id="hudSession"></span>
+        <button class="iconbtn iconbtn--cheer" id="btnCheer" title="Enviar un ánimo (A)" aria-label="Enviar un ánimo" hidden><span data-icon="heart"></span></button>
         <button class="iconbtn" id="btnMiniCfg" title="Qué se ve en la miniatura" aria-label="Configurar la ventana miniatura"><span data-icon="menu"></span></button>
         <button class="iconbtn" id="btnFull" title="Pantalla completa (F)" aria-label="Pantalla completa"><span data-icon="expand"></span></button>
       </div>
@@ -398,24 +400,25 @@
 <video id="pipVideo" playsinline muted hidden></video>
 <canvas id="pipCanvas" width="640" height="360" hidden></canvas>
 
-<script src="src/utils.js?v=15"></script>
-<script src="src/store.js?v=15"></script>
-<script src="src/audio.js?v=15"></script>
-<script src="src/ui.js?v=15"></script>
-<script src="src/reasons.js?v=15"></script>
-<script src="src/topics.js?v=15"></script>
-<script src="src/pauses.js?v=15"></script>
-<script src="src/lost.js?v=15"></script>
-<script src="src/notify.js?v=15"></script>
-<script src="src/sync.js?v=15"></script>
-<script src="src/room.js?v=15"></script>
-<script src="src/library.js?v=15"></script>
-<script src="src/planner.js?v=15"></script>
-<script src="src/pip.js?v=15"></script>
-<script src="src/runner.js?v=15"></script>
-<script src="src/day.js?v=15"></script>
-<script src="src/history.js?v=15"></script>
-<script src="src/settings.js?v=15"></script>
-<script src="src/app.js?v=15"></script>
+<script src="src/utils.js?v=16"></script>
+<script src="src/store.js?v=16"></script>
+<script src="src/audio.js?v=16"></script>
+<script src="src/ui.js?v=16"></script>
+<script src="src/reasons.js?v=16"></script>
+<script src="src/topics.js?v=16"></script>
+<script src="src/pauses.js?v=16"></script>
+<script src="src/lost.js?v=16"></script>
+<script src="src/notify.js?v=16"></script>
+<script src="src/sync.js?v=16"></script>
+<script src="src/room.js?v=16"></script>
+<script src="src/cheers.js?v=16"></script>
+<script src="src/library.js?v=16"></script>
+<script src="src/planner.js?v=16"></script>
+<script src="src/pip.js?v=16"></script>
+<script src="src/runner.js?v=16"></script>
+<script src="src/day.js?v=16"></script>
+<script src="src/history.js?v=16"></script>
+<script src="src/settings.js?v=16"></script>
+<script src="src/app.js?v=16"></script>
 </body>
 </html>

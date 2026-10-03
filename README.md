@@ -334,12 +334,42 @@ su estado envejece y pasa a mostrarse como **desconectado**. Y ojo con la regla 
 con cuenta **en tu proyecto** y que sepa el código puede leer la presencia de esa sala; con dos
 personas de confianza no es problema, pero no pongas el código a la vista de nadie más.
 
+### Ánimos (como los guiños de MSN)
+Dentro de la sala podéis mandaros **mensajes cortos de ánimo** con emoji y un efecto en pantalla.
+Se envían con el botón **Ánimo** de la tarjeta de la sala, con el corazón de la cabecera del
+temporizador o con la tecla <kbd>A</kbd>.
+
+- **Doce predefinidos que salen con un toque**: «¡Tú puedes!», «Estoy contigo», «El MIR es tuyo»,
+  «Abrazo virtual», «Te estoy viendo… ¡a estudiar!», «¡Zumbido!»…
+- **O uno propio**: emoji, texto (hasta 80 caracteres), efecto y color, con un botón *Probar aquí*
+  para verlo antes de mandarlo. Los últimos que escribes quedan a mano para repetirlos.
+- **Efectos**: *destello* (la pantalla se tiñe un momento del color elegido), *lluvia* de emojis,
+  *latido* (el emoji late en grande), *confeti* y *zumbido*, que hace temblar la pantalla y vibrar
+  el móvil, como el de MSN. Cada uno con su sonido.
+
+**Si la app está a la vista**, la animación sale al momento, también encima del temporizador a
+pantalla completa. **Si está minimizada**, llega una notificación (hay que activarlas en ese
+dispositivo; el diálogo lo ofrece) y las animaciones **esperan a que vuelvas**: al abrir la app se
+reproducen en orden, como los guiños que te encontrabas al volver al ordenador. Al que lo envió le
+aparece un aviso cuando el otro lo ha **visto**.
+
+Para que no se conviertan en spam hay un margen de unos segundos entre envíos. Un ánimo sigue
+publicado 12 horas, así que llega aunque el otro abra la app más tarde; un dispositivo recién
+conectado no reproduce los antiguos. Viajan por la misma sala (la fila de presencia de cada uno),
+así que no hace falta nada nuevo en Supabase.
+
+**Límite honesto:** sin un servidor de notificaciones push, la app solo recibe mientras está abierta,
+aunque sea en segundo plano. En el ordenador con la pestaña minimizada llegan (el navegador consulta
+con menos frecuencia, como mucho cada minuto). En el móvil, si el sistema congela la app, el ánimo
+se recibe y se anima en cuanto la vuelves a abrir.
+
 ### Atajos durante la sesión
 | Tecla | Acción |
 |---|---|
 | `Espacio` | Pausar / reanudar (la pausa cuenta como distracción) |
 | `D` | Registrar distracción sin parar el reloj |
 | `G` | Pausa guiada ahora; después sigue el mismo bloque |
+| `A` | Enviar un ánimo (con la sala abierta) |
 | `B` | Bloques de la sesión: tiempos, orden, añadir y saltar |
 | `P` | Abrir o cerrar la miniatura |
 | `F` | Pantalla completa |
@@ -395,6 +425,7 @@ docs/                         Lo que se publica en GitHub Pages
   src/notify.js               Avisos del sistema cuando la pestaña no está a la vista
   src/sync.js                 Sincronización con Supabase por API REST, sin dependencias
   src/room.js                 Sala compartida: estado del compañero y descansos acordados
+  src/cheers.js               Ánimos entre los dos de la sala: mensajes, efectos y notificaciones
   src/library.js              Biblioteca de tipos de temporizador
   src/day.js                  «Tu día»: en qué se fue el tiempo de un día
   src/planner.js              Plan del día: orden, tiempos y plantillas

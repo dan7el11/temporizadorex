@@ -94,6 +94,21 @@
       this.play([[587.33, 0, 0.22, 0.18]], 'sine');
     },
 
+    /** Ánimo recibido: un arpegio corto y alegre. */
+    cheer: function () {
+      this.play([
+        [783.99, 0, 0.22, 0.32], [987.77, 0.09, 0.22, 0.3],
+        [1174.66, 0.18, 0.22, 0.28], [1567.98, 0.27, 0.5, 0.26]
+      ], 'sine');
+    },
+
+    /** Zumbido: un traqueteo grave y rápido, como el de MSN. */
+    nudge: function () {
+      const notes = [];
+      for (let i = 0; i < 9; i++) notes.push([i % 2 ? 196 : 233.08, i * 0.06, 0.07, 0.3]);
+      this.play(notes, 'square');
+    },
+
     /** Fin de toda la sesión. */
     finish: function () {
       this.play([

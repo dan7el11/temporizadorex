@@ -23,27 +23,51 @@
   };
 
   /**
+   * Muestra la notificación. Primero con el service worker: en Android,
+   * «new Notification()» no está permitido y fallaba en silencio.
+   */
+  function display(title, opts) {
+    function legacy() {
+      try {
+        const n = new Notification(title, opts);
+        n.onclick = function () {
+          try { global.focus(); } catch (e) { /* noop */ }
+          n.close();
+        };
+        setTimeout(function () { try { n.close(); } catch (e) { /* noop */ } }, 20000);
+      } catch (e) { /* el navegador lo bloquea fuera de un service worker */ }
+    }
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+      navigator.serviceWorker.getRegistration().then(function (reg) {
+        if (reg && reg.showNotification) return reg.showNotification(title, opts);
+        legacy();
+      }).catch(legacy);
+    } else {
+      legacy();
+    }
+  }
+
+  /**
    * Avisa solo si el usuario lo activó y la pestaña no está visible: si está
    * mirando la pantalla del temporizador, la notificación sobra.
    */
-  Notify.show = function (title, body, force) {
+  Notify.show = function (title, body, force, extra) {
     if (!Store.data.settings.notify) return;
     if (!Notify.supported() || Notification.permission !== 'granted') return;
     if (!force && !document.hidden) return;
-    try {
-      const n = new Notification(title, {
-        body: body,
-        icon: 'assets/icon-192.png',
-        badge: 'assets/icon-192.png',
-        tag: 'mir2027-timer',
-        renotify: true
-      });
-      n.onclick = function () {
-        try { global.focus(); } catch (e) { /* noop */ }
-        n.close();
-      };
-      setTimeout(function () { try { n.close(); } catch (e) { /* noop */ } }, 20000);
-    } catch (e) { /* algunos navegadores lo bloquean fuera de un service worker */ }
+    display(title, Object.assign({
+      body: body,
+      icon: 'assets/icon-192.png',
+      badge: 'assets/icon-192.png',
+      tag: 'mir2027-timer',
+      renotify: true
+    }, extra || {}));
+  };
+
+  /** Un ánimo recibido con la app minimizada: cada uno con su propia notificación. */
+  Notify.cheer = function (c) {
+    Notify.show((c.emoji || '💛') + ' ' + (c.from || 'Tu pareja'), (c.text || 'Te ha enviado un ánimo') + ' · ábrela para verlo',
+      false, { tag: 'mir2027-cheer-' + c.id, vibrate: c.effect === 'zumbido' ? [90, 50, 90, 50, 160] : [60] });
   };
 
   global.Notify = Notify;

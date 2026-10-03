@@ -139,6 +139,8 @@
   function myState() {
     const st = global.Runner ? Runner.getState() : null;
     const out = { at: Date.now(), proposal: myProposal, response: conf ? conf.response || null : null };
+    // Ánimos: los míos de las últimas horas y los suyos que ya he visto.
+    if (global.Cheers) { out.cheers = Cheers.outbox(); out.cheersSeen = Cheers.seenIds(); }
     if (!st || st.finished) { out.session = false; return out; }
 
     const b = st.blocks[st.index];
@@ -264,6 +266,7 @@
 
     peers.forEach(function (peer) {
       const st = peer.state || {};
+      if (global.Cheers) Cheers.receive(peer);
 
       // Una propuesta suya que todavía no he visto.
       const prop = st.proposal;

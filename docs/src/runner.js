@@ -1168,6 +1168,8 @@
     if (!pill || !btn) return;
     const active = global.Room && Room.joined() && Room.available();
     btn.hidden = !active;
+    const cheer = document.getElementById('btnCheer');
+    if (cheer) cheer.hidden = !active;
     if (!active) { pill.textContent = ''; pill.hidden = true; return; }
 
     const peers = Room.peers();

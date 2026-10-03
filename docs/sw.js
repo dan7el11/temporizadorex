@@ -7,7 +7,7 @@
  * VERSION debe coincidir con el ?v= de index.html: así una versión nueva pide
  * URLs distintas y no puede reutilizar nada de la caché anterior.
  */
-const VERSION = '15';
+const VERSION = '16';
 const CACHE = 'mir2027-v' + VERSION;
 
 const ASSETS = [
@@ -29,6 +29,7 @@ const ASSETS = [
   'src/notify.js',
   'src/sync.js',
   'src/room.js',
+  'src/cheers.js',
   'src/library.js',
   'src/planner.js',
   'src/pip.js',
@@ -74,6 +75,20 @@ self.addEventListener('fetch', function (e) {
         if (req.mode === 'navigate') return caches.match('index.html');
         return Response.error();
       });
+    })
+  );
+});
+
+// Al tocar una notificación (un ánimo, el fin de un bloque…) se vuelve a la
+// app si ya está abierta, o se abre si no lo está.
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+      for (let i = 0; i < list.length; i++) {
+        if ('focus' in list[i]) return list[i].focus();
+      }
+      return self.clients.openWindow ? self.clients.openWindow('./') : null;
     })
   );
 });

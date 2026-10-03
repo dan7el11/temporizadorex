@@ -1043,3 +1043,80 @@ dialog.modal.modal--wide{width:min(760px,calc(100vw - 24px))}
   .runner__hud{flex-wrap:nowrap}
   .hud__left{flex-wrap:nowrap;min-width:0;overflow:hidden}
 }
+
+/* ── Ánimos (guiños) ───────────────────────────────────── */
+.cheer{position:fixed;inset:0;z-index:500;pointer-events:auto;overflow:hidden;display:grid;place-items:center;cursor:pointer}
+.cheer__wash{
+  position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 50% 45%, var(--cheer) 0%, transparent 70%);
+  opacity:0;animation:cheerWash 4.6s ease forwards;
+}
+.cheer--destello .cheer__wash{background:var(--cheer);animation-name:cheerFlash}
+.cheer--latido .cheer__wash{animation-name:cheerBeatWash}
+@keyframes cheerWash{0%{opacity:0}12%{opacity:.55}70%{opacity:.4}100%{opacity:0}}
+@keyframes cheerFlash{0%{opacity:0}8%{opacity:.75}22%{opacity:.25}34%{opacity:.6}60%{opacity:.3}100%{opacity:0}}
+@keyframes cheerBeatWash{0%,100%{opacity:0}10%,30%,50%{opacity:.55}20%,40%,60%{opacity:.25}}
+
+.cheer__card{
+  position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;
+  max-width:min(86vw,520px);padding:22px 26px;border-radius:24px;text-align:center;
+  background:rgba(12,14,22,.82);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.14);box-shadow:0 30px 80px -20px rgba(0,0,0,.8), 0 0 0 1px var(--cheer) inset;
+  color:#fff;animation:cheerIn .55s cubic-bezier(.2,1.4,.4,1) both;
+}
+.cheer__emoji{font-size:clamp(64px,14vw,120px);line-height:1}
+.cheer--latido .cheer__emoji{animation:cheerBeat 1.1s ease-in-out .3s 3}
+.cheer__text{font-size:clamp(1.15rem,3.6vw,1.6rem);font-weight:650;letter-spacing:-.01em}
+.cheer__from{font-size:.82rem;color:rgba(255,255,255,.7)}
+@keyframes cheerIn{from{opacity:0;transform:translateY(24px) scale(.82)}to{opacity:1;transform:none}}
+@keyframes cheerBeat{0%,100%{transform:scale(1)}15%{transform:scale(1.28)}30%{transform:scale(1)}45%{transform:scale(1.18)}}
+.cheer.is-leaving{animation:cheerOut .45s ease forwards}
+@keyframes cheerOut{to{opacity:0}}
+
+.cheer__drop{position:absolute;top:-60px;pointer-events:none;animation:cheerFall 3s linear both}
+@keyframes cheerFall{from{transform:translateY(0) rotate(0)}to{transform:translateY(calc(100vh + 120px)) rotate(var(--spin,20deg))}}
+.cheer__bit{
+  position:absolute;left:50%;top:48%;width:9px;height:14px;border-radius:2px;pointer-events:none;
+  animation:cheerBurst 2.6s cubic-bezier(.15,.7,.3,1) both;
+}
+@keyframes cheerBurst{
+  0%{transform:translate(-50%,-50%) rotate(0);opacity:1}
+  70%{opacity:1}
+  100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy) + 22vh)) rotate(var(--rot));opacity:0}
+}
+.cheer--calm .cheer__card{animation:cheerFade .4s ease both}
+@keyframes cheerFade{from{opacity:0}to{opacity:1}}
+
+/* Zumbido: tiembla la app entera (y el temporizador), como en MSN */
+.is-nudged{animation:nudge .7s cubic-bezier(.36,.07,.19,.97) both}
+@keyframes nudge{
+  10%,90%{transform:translate3d(-2px,1px,0)}
+  20%,80%{transform:translate3d(5px,-2px,0)}
+  30%,50%,70%{transform:translate3d(-9px,3px,0)}
+  40%,60%{transform:translate3d(9px,-3px,0)}
+}
+
+/* Diálogo para enviar */
+.cheer-presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.cheer-preset{
+  display:flex;align-items:center;gap:9px;text-align:left;min-width:0;
+  padding:10px 11px;border-radius:12px;cursor:pointer;font-size:.86rem;color:var(--text);
+  background:var(--card-2);border:1px solid var(--line);
+  box-shadow:inset 3px 0 0 var(--cheer);
+  transition:transform .08s, background .15s, border-color .15s;
+}
+.cheer-preset:hover{background:#222941;border-color:var(--cheer)}
+.cheer-preset:active{transform:scale(.97)}
+.cheer-preset__emoji{font-size:1.45rem;line-height:1;flex:0 0 auto}
+.cheer-custom{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px}
+.cheer-custom summary{cursor:pointer;font-weight:600;color:var(--text-dim)}
+.cheer-custom[open] summary{margin-bottom:10px}
+.cheer-custom input[type=text]{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:10px 12px;width:100%}
+.chip--emoji{font-size:1.2rem;padding:3px 9px}
+.cheer-notify{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border-radius:10px;background:rgba(255,184,77,.08);border:1px solid #544224;color:var(--text-dim);font-size:.84rem;margin-bottom:12px}
+.cheer-log__row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:.84rem;padding:4px 0;color:var(--text-dim)}
+.cheer-log__text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cheer-log__at{color:var(--text-faint);font-variant-numeric:tabular-nums}
+.roomstrip__cheer-last{color:var(--text-dim);font-size:.82rem}
+.iconbtn--cheer{color:#ff9ab5}
+.iconbtn .ico svg{width:18px;height:18px}

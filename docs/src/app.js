@@ -181,6 +181,15 @@
       });
     }
 
+    // El último ánimo recibido, para releerlo.
+    const last = Cheers.log().slice(-1)[0];
+    if (last && Date.now() - last.at < 12 * 3600000) {
+      body.appendChild(U.el('span', {
+        class: 'roomstrip__cheer-last',
+        text: last.emoji + ' «' + (last.text || 'ánimo') + '» · ' + last.from + ', ' + U.fmtClock(new Date(last.at))
+      }));
+    }
+
     const pending = Room.pending();
     if (pending) {
       body.appendChild(U.el('span', {
@@ -193,6 +202,10 @@
       class: 'btn btn--primary btn--sm', text: 'Descanso juntos',
       onclick: function () { Runner.proposeBreak(); }
     }));
+    actions.appendChild(U.el('button', {
+      class: 'btn btn--ghost btn--sm roomstrip__cheer', title: 'Enviar un mensaje de ánimo',
+      onclick: function () { Cheers.open(); }
+    }, [U.icon('heart', 15), U.el('span', { text: 'Ánimo' })]));
     // El nombre es también el botón para cambiarlo.
     actions.appendChild(U.el('button', {
       class: 'btn btn--ghost btn--sm roomstrip__name',
@@ -260,6 +273,7 @@
     document.getElementById('btnPause').addEventListener('click', function () { Runner.togglePause(); });
     document.getElementById('btnDistraction').addEventListener('click', function () { Runner.quickDistraction(); });
     document.getElementById('btnGuided').addEventListener('click', function () { Runner.openPauseNow(); });
+    document.getElementById('btnCheer').addEventListener('click', function () { Runner.showChrome('stick'); Cheers.open(); });
     document.getElementById('btnPip').addEventListener('click', function () { PiP.toggle(); });
     document.getElementById('btnBlocks').addEventListener('click', function () {
       Runner.showChrome('stick');
@@ -307,6 +321,7 @@
       if (e.code === 'Space' || k === ' ') { e.preventDefault(); Runner.togglePause(); }
       else if (k === 'd') { e.preventDefault(); Runner.quickDistraction(); }
       else if (k === 'g') { e.preventDefault(); Runner.openPauseNow(); }
+      else if (k === 'a' && Room.joined()) { e.preventDefault(); Runner.showChrome('stick'); Cheers.open(); }
       else if (k === 'b') { e.preventDefault(); Runner.showChrome('stick'); Runner.openQueue(); }
       else if (k === 'p') { e.preventDefault(); PiP.toggle(); }
       else if (k === 'f') { e.preventDefault(); Runner.toggleFullscreen(); }
@@ -389,6 +404,8 @@
       if (document.getElementById('view-settings').classList.contains('is-active')) Settings.renderRoom();
     };
     Room.restart();
+    // Ánimos que llegaron y no se llegaron a ver (por ejemplo, al recargar).
+    setTimeout(Cheers.flush, 1200);
     // Cada minuto: la cuenta atrás del examen y la tarjeta de tiempo perdido,
     // que así sigue lo que vas haciendo sin tener que recargar.
     setInterval(function () {
