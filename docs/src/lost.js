@@ -47,6 +47,10 @@
           targetMs: Math.max(0, parseInt(w.targetMin, 10) || 0) * 60000
         };
       })
+      // Una franja repetida (p. ej. «+ Añadir franja» pulsado dos veces) no cuenta dos veces.
+      .filter(function (w, i, all) {
+        return !all.slice(0, i).some(function (o) { return o.from === w.from && o.to === w.to && o.targetMs === w.targetMs; });
+      })
       .sort(function (a, b) { return a.from - b.from; });
   };
 
@@ -150,85 +154,145 @@
 
   /** Huecos de las franjas que ya han pasado y en los que no hubo temporizador. */
   Lost.gaps = function (dayKey, nowTs) {
-    let out = [];
-    Lost.slices(dayKey, nowTs).forEach(function (sl) { out = out.concat(sl.gaps); });
-    return out;
+    return Lost.daySummary(dayKey, nowTs).gaps;
   };
 
-  /** Tramos horarios que ya tienen causa apuntada, unidos y ordenados. */
-  function justifiedRanges(entries) {
-    const r = entries
-      .filter(function (e) { return e.from && e.to > e.from; })
-      .map(function (e) { return [e.from, e.to]; })
+  /** Une intervalos [desde, hasta] solapados o contiguos. */
+  function unionOf(list) {
+    const sorted = list.filter(function (x) { return x[1] > x[0]; })
+      .map(function (x) { return [x[0], x[1]]; })
       .sort(function (a, b) { return a[0] - b[0]; });
     const out = [];
-    r.forEach(function (x) {
+    sorted.forEach(function (x) {
       const last = out[out.length - 1];
       if (last && x[0] <= last[1]) last[1] = Math.max(last[1], x[1]);
-      else out.push([x[0], x[1]]);
+      else out.push(x);
     });
     return out;
   }
-
-  /** Quita de los huecos los tramos ya justificados; lo que queda menor de un minuto no cuenta. */
-  function subtractRanges(gaps, ranges) {
+  function lengthOf(list) { return list.reduce(function (a, x) { return a + (x[1] - x[0]); }, 0); }
+  /** Lo que tienen en común dos listas de intervalos ya unidas. */
+  function intersect(a, b) {
     const out = [];
-    gaps.forEach(function (g) {
-      let pieces = [{ window: g.window, from: g.from, to: g.to }];
-      ranges.forEach(function (r) {
+    a.forEach(function (x) {
+      b.forEach(function (y) {
+        const from = Math.max(x[0], y[0]);
+        const to = Math.min(x[1], y[1]);
+        if (to > from) out.push([from, to]);
+      });
+    });
+    return unionOf(out);
+  }
+  function minus(a, b) {
+    const out = [];
+    a.forEach(function (x) {
+      let pieces = [[x[0], x[1]]];
+      b.forEach(function (r) {
         const next = [];
         pieces.forEach(function (p) {
-          if (r[1] <= p.from || r[0] >= p.to) { next.push(p); return; }
-          if (r[0] > p.from) next.push({ window: p.window, from: p.from, to: r[0] });
-          if (r[1] < p.to) next.push({ window: p.window, from: r[1], to: p.to });
+          if (r[1] <= p[0] || r[0] >= p[1]) { next.push(p); return; }
+          if (r[0] > p[0]) next.push([p[0], r[0]]);
+          if (r[1] < p[1]) next.push([r[1], p[1]]);
         });
         pieces = next;
       });
-      pieces.forEach(function (p) { if (p.to - p.from >= 60000) out.push(p); });
+      pieces.forEach(function (p) { out.push(p); });
     });
     return out;
   }
-  Lost.subtractRanges = subtractRanges;
+  Lost.unionOf = unionOf;
+
+  /**
+   * Reparte el tiempo perdido entre lo apuntado. Cada minuto perdido se
+   * atribuye a UN solo registro, el más antiguo que lo cubra; así no se cuenta
+   * dos veces aunque haya registros repetidos o solapados (otro dispositivo,
+   * un tramo apuntado antes de sincronizar las sesiones…). Los registros sin
+   * hora se descuentan de los primeros ratos que sigan libres.
+   * Devuelve los ratos que quedan abiertos y lo que cuenta de cada registro.
+   */
+  function allocate(gaps, entries) {
+    let free = unionOf(gaps);
+    const counted = {};
+    const ordered = entries.slice().sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
+
+    ordered.forEach(function (e) {
+      if (!(e.from && e.to > e.from)) return;
+      const mine = intersect(free, [[e.from, e.to]]);
+      counted[e.id] = lengthOf(mine);
+      free = minus(free, mine);
+    });
+    ordered.forEach(function (e) {
+      if (e.from && e.to > e.from) return;
+      let left = e.ms || 0;
+      const taken = [];
+      for (let i = 0; i < free.length && left > 0; i++) {
+        const len = free[i][1] - free[i][0];
+        const use = Math.min(len, left);
+        taken.push([free[i][0], free[i][0] + use]);
+        left -= use;
+      }
+      counted[e.id] = lengthOf(taken);
+      // Lo que no cabe en tus franjas (p. ej. «otro rato, sin hora» por la
+      // tarde) se apunta igual como causa, pero no tapa ningún hueco.
+      counted[e.id + ':extra'] = left;
+      free = minus(free, taken);
+    });
+    return { free: free, counted: counted };
+  }
 
   /** Resumen de un día: lo previsto, lo cubierto, el hueco y lo ya justificado. */
   Lost.daySummary = function (dayKey, nowTs) {
     const now = nowTs || Date.now();
     const slices = Lost.slices(dayKey, now);
     const wins = slices.map(function (sl) { return sl.window; });
-    const expected = slices.reduce(function (a, sl) { return a + sl.expectedMs; }, 0);
-    const studied = slices.reduce(function (a, sl) { return a + sl.coveredMs; }, 0);
-    let gaps = [];
-    slices.forEach(function (sl) { gaps = gaps.concat(sl.gaps); });
-    const gapMs = slices.reduce(function (a, sl) { return a + sl.gapMs; }, 0);
+    const covered = Lost.coverage(dayKey);
+
+    // Franjas solapadas: el tiempo común se cuenta una vez.
+    const freeWins = slices.filter(function (sl) { return !sl.window.targetMs; })
+      .map(function (sl) { return [sl.window.from, Math.min(sl.window.to, now)]; });
+    const targeted = slices.filter(function (sl) { return sl.window.targetMs; });
+    const expected = lengthOf(unionOf(freeWins)) + targeted.reduce(function (a, sl) { return a + sl.expectedMs; }, 0);
+    const allWins = unionOf(slices.map(function (sl) { return [sl.window.from, Math.min(sl.window.to, now)]; }));
+    const studied = lengthOf(intersect(allWins, unionOf(covered)));
+
+    const rawGaps = [];
+    slices.forEach(function (sl) { sl.gaps.forEach(function (g) { rawGaps.push([g.from, g.to]); }); });
+    const gapList = unionOf(rawGaps);
+    const gapMs = lengthOf(gapList);
+    const gaps = gapList.map(function (g) { return { from: g[0], to: g[1] }; });
+
     const logged = Store.lostTimeOf(dayKey);
-    const loggedMs = logged.reduce(function (a, e) { return a + (e.ms || 0); }, 0);
+    const share = allocate(gapList, logged);
+    const open = share.free.filter(function (g) { return g[1] - g[0] >= 60000; })
+      .map(function (g) { return { from: g[0], to: g[1] }; });
 
-    // Lo justificado con hora tapa su tramo; lo apuntado sin hora (registros
-    // antiguos o «otro rato») se descuenta del total que quede.
-    const open = subtractRanges(gaps, justifiedRanges(logged));
-    const openMs = open.reduce(function (a, g) { return a + (g.to - g.from); }, 0);
-    const manualMs = logged.reduce(function (a, e) { return a + (e.from ? 0 : (e.ms || 0)); }, 0);
-
+    let loggedMs = 0;
     const byCause = {};
-    logged.forEach(function (e) {
-      const key = e.causeId || '';
-      if (!byCause[key]) byCause[key] = { id: key, label: Store.lostCauseLabel(key), ms: 0, count: 0 };
-      byCause[key].ms += e.ms || 0;
-      byCause[key].count += 1;
+    const entries = logged.map(function (e) {
+      const inGaps = share.counted[e.id] || 0;
+      const extra = share.counted[e.id + ':extra'] || 0;
+      loggedMs += inGaps;
+      const effMs = inGaps + extra;
+      if (effMs > 0) {
+        const key = e.causeId || '';
+        if (!byCause[key]) byCause[key] = { id: key, label: Store.lostCauseLabel(key), ms: 0, count: 0 };
+        byCause[key].ms += effMs;
+        byCause[key].count += 1;
+      }
+      return Object.assign({}, e, { effMs: effMs });
     });
 
     // El primer arranque del día, para el «deberías haber empezado a las…».
-    const covered = Lost.coverage(dayKey);
     const firstStart = covered.length ? covered[0][0] : null;
     const plannedStart = wins.length ? wins[0].from : null;
 
     return {
-      dayKey: dayKey, windows: wins, slices: slices, gaps: gaps, openGaps: open, entries: logged,
+      dayKey: dayKey, windows: wins, slices: slices, gaps: gaps, openGaps: open, entries: entries,
       expectedMs: expected,
       coveredMs: studied,
       gapMs: gapMs,
       loggedMs: loggedMs,
-      pendingMs: Math.max(0, openMs - manualMs),
+      pendingMs: open.reduce(function (a, g) { return a + (g.to - g.from); }, 0),
       lateMs: firstStart && plannedStart ? Math.max(0, firstStart - plannedStart) : 0,
       firstStart: firstStart,
       plannedStart: plannedStart,
@@ -300,6 +364,17 @@
    */
   Lost.logDialog = function (dayKey) {
     if (openDialog) return openDialog;
+    // Con otro dispositivo de por medio, primero se traen sus sesiones y sus
+    // registros: si no, se ofrecen como perdidos ratos que allí ya constan.
+    if (global.Sync && Sync.ready() && navigator.onLine && Date.now() - Sync.lastSync() > 60000 && !Lost._synced) {
+      Lost._synced = true;
+      const done = function () { Lost._synced = false; return Lost.logDialog(dayKey); };
+      openDialog = Promise.race([
+        Sync.run(true).catch(function () { /* sin conexión: se sigue con lo que hay */ }),
+        new Promise(function (r) { setTimeout(r, 4000); })
+      ]).then(function () { openDialog = null; return done(); });
+      return openDialog;
+    }
     const key = dayKey || U.dayKey();
     const first = Lost.daySummary(key);
     let causeId = (Store.data.lostCauses[0] || {}).id || '';
@@ -423,10 +498,18 @@
         const list = U.el('div', { class: 'lostlog' });
         d.entries.slice().sort(function (a, b) { return (a.from || a.at || 0) - (b.from || b.at || 0); })
           .forEach(function (e) {
-            list.appendChild(U.el('div', { class: 'lostlog__row' }, [
+            // Si otro registro anterior ya cubre ese rato, este no suma nada:
+            // se avisa para poder borrarlo.
+            const dup = (e.effMs || 0) < (e.ms || 0) - 30000;
+            list.appendChild(U.el('div', { class: 'lostlog__row' + (dup ? ' is-dup' : '') }, [
               U.el('span', { class: 'lostlog__when', text: e.from ? rangeText(e.from, e.to) : 'sin hora' }),
-              U.el('span', { class: 'lostlog__what', text: Store.lostCauseLabel(e.causeId) + (e.note ? ' · ' + e.note : '') }),
-              U.el('span', { class: 'lostlog__ms', text: U.fmtHuman(e.ms || 0) }),
+              U.el('span', { class: 'lostlog__what' }, [
+                U.el('span', { text: Store.lostCauseLabel(e.causeId) + (e.note ? ' · ' + e.note : '') }),
+                dup ? U.el('small', { class: 'lostlog__dup', text: e.effMs
+                  ? 'se solapa con otro registro: solo cuentan ' + U.fmtHuman(e.effMs)
+                  : (e.from ? 'repetido o en un rato en que sí estudiaste: no cuenta' : 'no queda tiempo perdido que cubrir: no cuenta') }) : null
+              ]),
+              U.el('span', { class: 'lostlog__ms', text: U.fmtHuman(dup ? (e.effMs || 0) : (e.ms || 0)) }),
               U.el('button', {
                 class: 'qbtn qbtn--danger qbtn--xs', type: 'button', title: 'Borrar este registro',
                 'aria-label': 'Borrar ' + Store.lostCauseLabel(e.causeId) + ' ' + U.fmtHuman(e.ms || 0),
@@ -671,6 +754,19 @@
     }));
   };
 
+  /** Aviso si esta franja comparte horas y días con otra (se cuenta una vez). */
+  function overlapNote(sch, w) {
+    const a = toMinutes(w.start), b = toMinutes(w.end);
+    const other = (sch.windows || []).find(function (o) {
+      if (o === w) return false;
+      const sameDay = (o.days || []).some(function (d) { return (w.days || []).indexOf(d) >= 0; });
+      return sameDay && toMinutes(o.start) < b && a < toMinutes(o.end);
+    });
+    if (!other) return null;
+    return U.el('p', { class: 'hint lost__warn', text: 'Se solapa con «' + (other.label || 'otra franja') +
+      '» (' + other.start + '–' + other.end + '). Las horas comunes se cuentan una sola vez; si está repetida, bórrala.' });
+  }
+
   function windowRow(sch, w, index) {
     function save() {
       Store.setSetting('schedule', sch);
@@ -684,11 +780,11 @@
     });
     const start = U.el('input', {
       type: 'time', class: 'num-setting num-setting--date', value: w.start,
-      onchange: function () { w.start = start.value || '06:00'; save(); }
+      onchange: function () { w.start = start.value || '06:00'; save(); Lost.renderSettings(); }
     });
     const end = U.el('input', {
       type: 'time', class: 'num-setting num-setting--date', value: w.end,
-      onchange: function () { w.end = end.value || '08:00'; save(); }
+      onchange: function () { w.end = end.value || '08:00'; save(); Lost.renderSettings(); }
     });
 
     const days = U.el('div', { class: 'daypick' });
@@ -737,6 +833,7 @@
         ])
       ]),
       days,
+      overlapNote(sch, w),
       U.el('p', { class: 'hint', text: w.targetMin
         ? 'Solo se cuenta como perdido lo que falte para esos ' + w.targetMin + ' min.'
         : 'Sin objetivo: se cuenta como perdida toda la franja sin temporizador.' })

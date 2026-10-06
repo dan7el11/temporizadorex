@@ -137,6 +137,18 @@ una vez por minuto, así que lo que llevas hecho se descuenta según lo haces.
 - «Ahora no» sin haber apuntado nada silencia el aviso hasta el día siguiente; si ya apuntaste algo,
   al próximo inicio vuelve a preguntar por lo que falte.
 
+**Cada minuto se cuenta una sola vez.** El resumen une franjas y registros en lugar de sumarlos:
+
+- Una franja repetida o dos que se solapan no duplican el tiempo perdido (Ajustes avisa del solape).
+- Cada minuto perdido se atribuye a **un solo registro**, el más antiguo que lo cubra. Un registro
+  repetido, uno hecho en otro dispositivo para el mismo rato o uno que cubre horas en las que sí
+  estudiaste (apuntado antes de que llegaran tus sesiones) no suma de más: en *Ya apuntado* aparece
+  marcado («no cuenta» o «solo cuentan X min») para que lo borres si quieres.
+- Los registros sin hora se descuentan de los primeros ratos libres, y esos ratos ya no se vuelven a
+  ofrecer para justificar.
+- Con la sincronización activa, antes de abrir el registro se traen las sesiones y registros del otro
+  dispositivo, para no apuntar como perdido un rato que allí consta como estudio.
+
 ### Tiempo efectivo
 Las distracciones que anotas **sin parar el reloj** ahora cuestan. Al terminar el bloque la app te
 las lista y te pregunta cuántos minutos te llevó cada una (por defecto dos, configurable), y ese

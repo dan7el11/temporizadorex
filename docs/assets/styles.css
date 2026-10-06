@@ -1130,3 +1130,7 @@ dialog.modal.modal--wide{width:min(760px,calc(100vw - 24px))}
 .push-status.is-on{color:var(--text)}
 .push-status.is-on .push-status__dot{background:var(--ok);box-shadow:0 0 10px rgba(55,211,153,.8)}
 .sqlbox--tall{max-height:52vh;overflow:auto}
+
+.lostlog__what{display:flex;flex-direction:column}
+.lostlog__dup{color:var(--warn);font-size:.74rem;white-space:normal}
+.lostlog__row.is-dup{border-style:dashed;opacity:.85}
