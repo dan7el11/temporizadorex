@@ -19,7 +19,7 @@
       Settings.render(); Reasons.render(); Topics.render();
       Settings.renderSync(); Settings.renderRoom(); Pauses.render();
       Lost.renderSettings(); Lost.renderCauses(); Pauses.renderExercises();
-      Push.render();
+      Push.render(); Game.renderSettings();
       App.showSettings(section || App.lastSection());
     }
     if (name === 'library') Library.render();
@@ -61,6 +61,7 @@
   /** Tarjeta «Hoy»: lo estudiado (efectivo) frente al objetivo diario. */
   App.renderTodayStudy = function () {
     const box = document.getElementById('todayStudy');
+    if (window.Game) Game.renderTile();
     if (!box) return;
     U.clear(box);
     const key = U.dayKey();
@@ -107,6 +108,9 @@
         onclick: function () { Day.open(U.dayKey()); }
       }, [U.icon('chart', 15), U.el('span', { text: 'En qué se fue el día' })])
     ]));
+    // El tiempo desde la última sesión, y los huecos de hoy sin clasificar.
+    const between = window.Between ? Between.lineNode() : null;
+    if (between) box.insertBefore(between, box.lastChild);
     App.hydrateIcons(box);
   };
 
@@ -126,6 +130,7 @@
     Settings.renderSync();
     Settings.renderRoom();
     App.renderRoomStrip();
+    Game.renderTile();
     App.renderCountdown();
   };
 
@@ -176,7 +181,10 @@
     } else {
       peers.forEach(function (p) {
         body.appendChild(U.el('span', { class: 'peerbar__item' + (p.online ? '' : ' is-off') }, [
-          U.el('span', { class: 'peer-dot' }),
+          // Su avatar, si lo ha creado; si no, el punto de conectado.
+          p.state && p.state.avatar && p.state.avatar.sex
+            ? Avatar.node(p.state.avatar, p.state.lives && p.state.lives.left === 0 ? 'ko' : 'happy', 26, 'peer-avatar')
+            : U.el('span', { class: 'peer-dot' }),
           U.el('span', { text: Room.peerLine(p) })
         ]));
       });
@@ -261,14 +269,13 @@
       const items = Store.data.queue;
       if (!items.length) return;
 
-      // Si hoy tenías que haber empezado antes, se pregunta a qué se fue ese
-      // rato justo ahora, que es cuando se tiene fresco.
-      const pending = Lost.enabled() && !Lost.snoozedToday() ? Lost.daySummary(U.dayKey()).pendingMs : 0;
-      if (pending >= 300000) {
-        Lost.logDialog(U.dayKey()).then(function () { Runner.start(items); });
-        return;
-      }
-      Runner.start(items);
+      // Primero, qué fue el tiempo desde la última sesión; después, si hoy
+      // tenías que haber empezado antes, a qué se fue ese rato. Se pregunta
+      // justo ahora, que es cuando se tiene fresco.
+      Between.beforeStart().then(function () {
+        const pending = Lost.enabled() && !Lost.snoozedToday() ? Lost.daySummary(U.dayKey()).pendingMs : 0;
+        if (pending >= 300000) return Lost.logDialog(U.dayKey());
+      }).then(function () { Runner.start(items); });
     });
 
     document.getElementById('btnPause').addEventListener('click', function () { Runner.togglePause(); });

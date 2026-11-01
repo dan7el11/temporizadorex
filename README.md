@@ -277,6 +277,38 @@ el botón **«En qué se fue el día»**, que abre la vista completa del día:
 Incluye la sesión en curso y se actualiza sola mientras estudias. Con las flechas se pasa a días
 anteriores, y en *Historial* cada día tiene un botón «Ver el día» que abre la misma vista.
 
+### Modo juego: avatar y vidas
+Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
+
+- **Avatar**: un médico o una médica con pijama o bata y fonendo. Se elige hombre o mujer, tono de
+  piel, color de pelo, ropa y gafas; nada más. Su cara cambia: contento, con dolor al perder una vida
+  o KO sin vidas.
+- **Vidas** (5 por sesión; de 1 a 10): se pierde una con **cada pausa**, **cada distracción rápida** y
+  **cada distracción que declares** al terminar un bloque. Un bloque terminado **sin ninguna
+  distracción** devuelve una (se puede desactivar). Las pausas guiadas y los descansos no cuestan.
+- En el temporizador, arriba a la izquierda, el avatar y los corazones; al perder una vida suena un
+  golpe de 8 bits y el marcador tiembla. **Sin vidas, el reloj no se para**: sale un aviso de «¡Sin
+  vidas!» y la forma de recuperarlas es terminar un bloque limpio.
+- Al terminar, el resumen dice con cuántas vidas acabaste, las perdidas, las recuperadas y los
+  bloques perfectos; el historial lo muestra en cada sesión. En la pantalla principal, la tarjeta
+  *Modo juego* lleva la cuenta de bloques perfectos de hoy y de sesiones sin perder vidas.
+- En la sala, tu pareja ve tu avatar y tus vidas («❤️ 3/5»), y tú los suyos.
+
+### Tiempo entre sesiones
+Desde que termina una sesión hasta que empieza otra, la tarjeta *Estudio de hoy* va contando
+(«40 min desde tu última sesión»). **Al empezar la siguiente**, la app pregunta qué fue ese rato:
+
+- **Seguí estudiando**: es una **ampliación** del cronómetro anterior; se añade como continuación del
+  último bloque y cuenta como estudio.
+- **Descanso**: cuenta como descanso.
+- **Distracción**: va a tus distracciones (con su razón, si la pones) y justifica ese rato en el
+  tiempo perdido con la causa «Distracción entre sesiones».
+
+Se puede repartir: por ejemplo 15 minutos de ampliación, 10 de descanso y el resto de distracción
+(en ese orden: primero lo que seguiste estudiando). «Ahora no» lo deja para luego: queda en la
+tarjeta con un botón *¿Qué fue?*. Solo se pregunta por huecos del mismo día y a partir de 3 minutos
+(ajustable en *Ajustes → Distracciones*, donde también se puede desactivar).
+
 ### Historial
 La pestaña *Historial* se agrupa **por día o por semana**, y eliges el periodo (7, 14, 30, 90 días o
 todo). Con eso tienes:
@@ -469,6 +501,9 @@ docs/                         Lo que se publica en GitHub Pages
   src/room.js                 Sala compartida: estado del compañero y descansos acordados
   src/cheers.js               Ánimos entre los dos de la sala: mensajes, efectos y notificaciones
   src/push.js                 Notificaciones push: suscripción del dispositivo y avisos al otro
+  src/avatar.js               Avatar en SVG y su editor
+  src/game.js                 Modo juego: vidas, recompensas y marcador
+  src/between.js              Tiempo entre sesiones: ampliación, descanso o distracción
   supabase/functions/mir-push Función de Supabase que envía los avisos push
   src/library.js              Biblioteca de tipos de temporizador
   src/day.js                  «Tu día»: en qué se fue el tiempo de un día

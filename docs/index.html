@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="assets/styles.css?v=18">
+<link rel="stylesheet" href="assets/styles.css?v=19">
 </head>
 <body>
 
@@ -41,6 +41,7 @@
         <div class="tile tile--study" id="todayStudy"></div>
         <div class="tile lost" id="lostToday" hidden></div>
         <div class="tile roomstrip" id="roomStrip" hidden></div>
+        <div class="tile tile--game" id="gameTile" hidden></div>
       </div>
 
       <div class="plan">
@@ -182,6 +183,7 @@
           <button class="snav__btn" data-section="focus"><span data-icon="bell"></span><span>Distracciones</span></button>
           <button class="snav__btn" data-section="goals"><span data-icon="target"></span><span>Objetivos</span></button>
           <button class="snav__btn" data-section="schedule"><span data-icon="clock"></span><span>Horario</span></button>
+          <button class="snav__btn" data-section="game"><span data-icon="heart"></span><span>Avatar y vidas</span></button>
           <button class="snav__btn" data-section="topics"><span data-icon="tag"></span><span>Temas</span></button>
           <button class="snav__btn" data-section="pauses"><span data-icon="wind"></span><span>Pausas guiadas</span></button>
           <button class="snav__btn" data-section="mini"><span data-icon="pip"></span><span>Miniatura</span></button>
@@ -229,6 +231,18 @@
             </div>
               <p class="hint">Lo que te impide empezar a la hora: pacientes, papeleo, visitas…</p>
               <div class="reason-list" id="lostCauseList"></div>
+            </div>
+          </div>
+
+          <div class="spane" data-section="game">
+            <header class="spane__head"><h2>Avatar y vidas</h2><p>Modo juego: tu avatar pierde una vida con cada pausa o distracción y recupera una con cada bloque limpio.</p></header>
+            <div class="card">
+              <div class="card__head"><div class="card__title"><span class="card__icon" data-icon="heart"></span><h2>Vidas</h2></div></div>
+              <div class="settings" id="gamePanel"></div>
+            </div>
+            <div class="card">
+              <div class="card__head"><div class="card__title"><span class="card__icon" data-icon="users"></span><h2>Tu avatar</h2></div></div>
+              <div id="avatarEditor"></div>
             </div>
           </div>
 
@@ -374,6 +388,7 @@
   <div class="runner__chrome" id="runnerChrome">
     <div class="runner__hud">
       <div class="hud__left">
+        <span class="hud__game" id="hudGame" hidden></span>
         <span class="hud__pill" id="hudProgress">Bloque 1 / 1</span>
         <span class="hud__pill" id="hudNext"></span>
         <span class="hud__pill" id="hudPauses"></span>
@@ -406,26 +421,29 @@
 <video id="pipVideo" playsinline muted hidden></video>
 <canvas id="pipCanvas" width="640" height="360" hidden></canvas>
 
-<script src="src/utils.js?v=18"></script>
-<script src="src/store.js?v=18"></script>
-<script src="src/audio.js?v=18"></script>
-<script src="src/ui.js?v=18"></script>
-<script src="src/reasons.js?v=18"></script>
-<script src="src/topics.js?v=18"></script>
-<script src="src/pauses.js?v=18"></script>
-<script src="src/lost.js?v=18"></script>
-<script src="src/notify.js?v=18"></script>
-<script src="src/sync.js?v=18"></script>
-<script src="src/room.js?v=18"></script>
-<script src="src/cheers.js?v=18"></script>
-<script src="src/push.js?v=18"></script>
-<script src="src/library.js?v=18"></script>
-<script src="src/planner.js?v=18"></script>
-<script src="src/pip.js?v=18"></script>
-<script src="src/runner.js?v=18"></script>
-<script src="src/day.js?v=18"></script>
-<script src="src/history.js?v=18"></script>
-<script src="src/settings.js?v=18"></script>
-<script src="src/app.js?v=18"></script>
+<script src="src/utils.js?v=19"></script>
+<script src="src/store.js?v=19"></script>
+<script src="src/audio.js?v=19"></script>
+<script src="src/ui.js?v=19"></script>
+<script src="src/reasons.js?v=19"></script>
+<script src="src/topics.js?v=19"></script>
+<script src="src/pauses.js?v=19"></script>
+<script src="src/lost.js?v=19"></script>
+<script src="src/notify.js?v=19"></script>
+<script src="src/sync.js?v=19"></script>
+<script src="src/room.js?v=19"></script>
+<script src="src/cheers.js?v=19"></script>
+<script src="src/push.js?v=19"></script>
+<script src="src/avatar.js?v=19"></script>
+<script src="src/game.js?v=19"></script>
+<script src="src/between.js?v=19"></script>
+<script src="src/library.js?v=19"></script>
+<script src="src/planner.js?v=19"></script>
+<script src="src/pip.js?v=19"></script>
+<script src="src/runner.js?v=19"></script>
+<script src="src/day.js?v=19"></script>
+<script src="src/history.js?v=19"></script>
+<script src="src/settings.js?v=19"></script>
+<script src="src/app.js?v=19"></script>
 </body>
 </html>

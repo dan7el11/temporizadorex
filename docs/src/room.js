@@ -144,6 +144,8 @@
     const out = { at: Date.now(), proposal: myProposal, response: conf ? conf.response || null : null };
     // Ánimos: los míos de las últimas horas y los suyos que ya he visto.
     if (global.Cheers) { out.cheers = Cheers.outbox(); out.cheersSeen = Cheers.seenIds(); }
+    // Modo juego: el avatar y, con sesión, las vidas que quedan.
+    if (global.Avatar && Avatar.config()) out.avatar = Avatar.config();
     if (!st || st.finished) { out.session = false; return out; }
 
     const b = st.blocks[st.index];
@@ -156,6 +158,7 @@
     // Instante en que termina el bloque: así el otro lo cuenta sin depender del sondeo.
     out.endsAt = st.pausedAt ? null : Date.now() + Runner.remaining();
     out.remainingMs = st.pausedAt ? Runner.remaining() : null;
+    if (st.game && global.Game && Game.enabled()) out.lives = { left: st.game.left, max: st.game.max };
     return out;
   }
 
@@ -352,7 +355,8 @@
     if (!st.session) return peer.name + ' · sin sesión';
     if (st.paused) return peer.name + ' · en pausa' + (st.blockName ? ' (' + st.blockName + ')' : '');
     const left = st.endsAt ? Math.max(0, st.endsAt - Date.now()) : 0;
-    return peer.name + ' · ' + (st.blockName || 'estudiando') + ' · ' + U.fmt(left);
+    const lives = st.lives ? ' · ❤️ ' + st.lives.left + '/' + st.lives.max : '';
+    return peer.name + ' · ' + (st.blockName || 'estudiando') + ' · ' + U.fmt(left) + lives;
   };
 
   global.Room = Room;

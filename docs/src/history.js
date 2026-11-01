@@ -528,6 +528,11 @@
         class: 'hsession__meta',
         text: U.fmtHuman(study) + ' · ' + U.plural(s.blocks.length, 'bloque', 'bloques') + ' · ' + U.plural(dn, 'distracción', 'distracciones')
       }),
+      // Resultado de la partida, si se jugó con vidas.
+      s.game ? U.el('span', { class: 'hsession__game', title: s.game.left + ' de ' + s.game.max + ' vidas al terminar' }, [
+        Avatar.hearts(Math.min(s.game.left, 5), Math.min(s.game.max, 5), 12),
+        s.game.max > 5 ? U.el('small', { text: ' ' + s.game.left + '/' + s.game.max }) : null
+      ]) : null,
       U.el('span', { class: 'hsession__chevron' }, [U.icon('chevron', 16)])
     ]));
 
@@ -588,7 +593,7 @@
     (b.distractions || []).forEach(function (d, di) {
       const labels = Store.reasonLabels(d);
       const when = d.at ? U.fmtClock(new Date(d.at)) : '';
-      const kind = d.type === 'pause' ? 'pausa' : d.type === 'quick' ? 'sin parar' : 'añadida';
+      const kind = d.type === 'pause' ? 'pausa' : d.type === 'quick' ? 'sin parar' : d.type === 'gap' ? 'entre sesiones' : 'añadida';
       wrap.appendChild(U.el('div', { class: 'dist' }, [
         U.el('span', { class: 'dist__when', text: when }),
         U.el('span', { class: 'dist__kind', text: kind }),

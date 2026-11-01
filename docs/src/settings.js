@@ -15,6 +15,7 @@
     ['askDistractions', 'Preguntar por distracciones', 'Al terminar un bloque, ofrecer registrar las que no se detectaron; y etiquetar cada pausa.', 'focus'],
     ['askReasonQuick', 'Preguntar la razón al pulsar «+ Distracción»', 'Si lo desactivas, la distracción rápida se registra sin razón y sin abrir nada.', 'focus'],
     ['askQuickCost', 'Preguntar cuánto costó cada distracción sin pausa', 'Al cerrar el bloque; ese tiempo se resta del tiempo efectivo.', 'focus'],
+    ['betweenAsk', 'Preguntar por el tiempo entre sesiones', 'Al empezar otra sesión: si fue ampliación del cronómetro anterior, descanso o distracción.', 'focus'],
     ['offerPause', 'Ofrecer una pausa guiada al terminar un bloque', 'Aparece junto a la pregunta de las distracciones, si queda algún bloque por delante.', 'pauses']
   ];
 
@@ -111,7 +112,8 @@
     // Fricción al pausar, tope de pausas y coste de cada distracción sin pausa
     [['pauseFriction', 'Segundos antes de poder pausar', 'El botón de pausar tarda en habilitarse mientras el reloj sigue. 0 lo desactiva.', 0, 30, 1],
      ['pauseLimit', 'Pausas recomendadas por bloque', 'Al llegar a este número, el aviso es más insistente. No impide pausar. 0 lo desactiva.', 0, 20, 1],
-     ['quickMinutes', 'Minutos por distracción sin pausa', 'Lo que se propone restar por cada una al cerrar el bloque.', 0, 30, 1]]
+     ['quickMinutes', 'Minutos por distracción sin pausa', 'Lo que se propone restar por cada una al cerrar el bloque.', 0, 30, 1],
+     ['betweenMin', 'Tiempo entre sesiones a partir del cual preguntar', 'En minutos. Los huecos más cortos no se preguntan.', 1, 120, 1]]
       .forEach(function (g) {
         boxes.focus.appendChild(settingRow(g[1], g[2], numberInput(g[0], g[3], g[4], g[5])));
       });

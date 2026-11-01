@@ -91,6 +91,7 @@
         };
       })
     };
+    Game.init(state);
     openRunner();
     beginBlock();
   };
@@ -99,6 +100,7 @@
   Runner.restore = function (saved) {
     state = saved;
     openRunner();
+    Game.renderHud(state);
     applyColors();
     tick();
     if (!state.gate) startLoop();
@@ -121,6 +123,7 @@
     startLoop();
     persist();
     tick();
+    Game.renderHud(state);
     if (global.Lost) Lost.renderToday();
   }
 
@@ -247,6 +250,7 @@
     state.runningSince = null;
     state.pausedAt = Date.now();
     Sound.distraction();
+    Game.lose(state, 1, 'pausa');
     document.getElementById('stage').classList.add('is-paused');
     document.getElementById('btnPause').textContent = 'Reanudar';
     showChrome(true);
@@ -308,6 +312,7 @@
     const entry = { type: 'quick', at: Date.now(), ms: 0, count: 1, reasons: [], freeText: null };
     b.distractions.push(entry);
     Sound.distraction();
+    Game.lose(state, 1, 'distracción');
     persist();
     tick();
 
@@ -360,6 +365,8 @@
     const proceed = function () {
       // La sesión puede haberse terminado mientras el diálogo estaba abierto.
       if (!state || state.finished) return;
+      // Bloque sin ninguna distracción, ni siquiera declarada: vida extra.
+      if (!skipped) Game.blockDone(state, b);
       if (state.index + 1 < state.blocks.length) {
         if (Store.data.settings.autoNext) { state.index++; beginBlock(); }
         else showGate();
@@ -498,6 +505,7 @@
                   reasons: chosen.reasons,
                   freeText: chosen.freeText
                 });
+                Game.lose(state, Math.max(count, 1), 'declarada');
                 persist();
               }
               close(true);
@@ -940,6 +948,7 @@
       startedAt: state.startedAt,
       endedAt: state.endedAt,
       reason: state.reason,
+      game: Game.snapshot(state),
       blocks: state.blocks.map(function (x) {
         return {
           name: x.name, color: x.color, presetId: x.presetId,
@@ -990,7 +999,11 @@
       title: 'Sesión ' + session.reason,
       sub: done + ' de ' + session.blocks.length + ' bloques completados.',
       build: function () {
+        const frag = document.createDocumentFragment();
+        const gameNode = Game.summaryNode(session.game);
+        if (gameNode) frag.appendChild(gameNode);
         const list = U.el('ul', { class: 'summary-list' });
+        frag.appendChild(list);
         list.appendChild(U.el('li', { class: 'hblock' }, [
           U.el('span', { class: 'hblock__name', text: 'Tiempo efectivo' }),
           U.el('strong', { text: U.fmtHuman(effective) })
@@ -1013,7 +1026,7 @@
             U.el('span', { class: 'badge ' + (b.status === 'done' ? 'badge--ok' : 'badge--warn'), text: statusLabel(b.status) })
           ]));
         });
-        return list;
+        return frag;
       },
       actions: function (close) {
         return [U.el('button', { class: 'btn btn--primary', text: 'Cerrar', onclick: function () { close(true); } })];

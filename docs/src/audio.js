@@ -109,6 +109,26 @@
       this.play(notes, 'square');
     },
 
+    /** Modo juego: pierdes una vida (dos notas que caen, en 8 bits). */
+    hurt: function () {
+      this.play([[392, 0, 0.09, 0.28], [261.63, 0.08, 0.16, 0.28]], 'square');
+    },
+
+    /** Modo juego: vida extra. */
+    oneUp: function () {
+      this.play([
+        [659.25, 0, 0.08, 0.22], [783.99, 0.08, 0.08, 0.22], [1318.5, 0.16, 0.08, 0.22],
+        [1046.5, 0.24, 0.08, 0.22], [1174.66, 0.32, 0.08, 0.22], [1567.98, 0.4, 0.18, 0.22]
+      ], 'square');
+    },
+
+    /** Modo juego: sin vidas. */
+    gameOver: function () {
+      this.play([
+        [523.25, 0, 0.18, 0.26], [392, 0.18, 0.18, 0.26], [329.63, 0.36, 0.18, 0.26], [261.63, 0.54, 0.5, 0.28]
+      ], 'square');
+    },
+
     /** Fin de toda la sesión. */
     finish: function () {
       this.play([

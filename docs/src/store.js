@@ -175,7 +175,8 @@
     { id: 'lc_transporte', label: 'Transporte' },
     { id: 'lc_personal', label: 'Personal o familia' },
     { id: 'lc_imprevisto', label: 'Imprevisto' },
-    { id: 'lc_arranque', label: 'Me costó arrancar' }
+    { id: 'lc_arranque', label: 'Me costó arrancar' },
+    { id: 'lc_entre', label: 'Distracción entre sesiones' }
   ];
 
   // Franjas en las que deberías estar estudiando. days: 0 domingo … 6 sábado.
@@ -241,6 +242,10 @@
     askQuickCost: true,      // preguntar al final del bloque cuánto costaron
     schedule: DEFAULT_SCHEDULE,
     lostTolerance: 5,        // minutos de hueco que no se cuentan como perdidos
+    betweenAsk: true,        // preguntar por el tiempo entre sesiones al empezar otra
+    betweenMin: 3,           // a partir de cuántos minutos se pregunta
+    game: { enabled: true, lives: 5, regain: true },   // modo juego: vidas por sesión
+    avatar: null,            // se crea al elegir hombre o mujer
 
     askReasonQuick: true,    // preguntar la razón en la distracción rápida
     mini: DEFAULT_MINI
@@ -368,6 +373,12 @@
       });
       if (!Array.isArray(this.data.exercises)) this.data.exercises = deepClone(DEFAULT_EXERCISES);
       if (!Array.isArray(this.data.lostCauses)) this.data.lostCauses = deepClone(DEFAULT_LOST_CAUSES);
+      // Causa nueva para quien ya usaba la app (salvo que la borrara).
+      const causeTombs = ((this.data.tombstones || {}).lostCauses) || {};
+      if (!this.data.lostCauses.some(function (c) { return c.id === 'lc_entre'; }) && !causeTombs.lc_entre) {
+        this.data.lostCauses.push({ id: 'lc_entre', label: 'Distracción entre sesiones' });
+        addedPauses++;
+      }
       if (!Array.isArray(this.data.lostTime)) this.data.lostTime = [];
       this.data.settings.schedule = Object.assign(deepClone(DEFAULT_SCHEDULE), this.data.settings.schedule || {});
       if (!this.data.settings.schedule.since) this.data.settings.schedule.since = U.dayKey();
@@ -495,8 +506,10 @@
      * del contador pero no fue estudio.
      */
     runningLostMs: function (block) {
+      // Ni las pausas (el reloj estaba parado) ni lo ocurrido entre sesiones
+      // (fuera del reloj) se restan de lo que marcó el bloque.
       return (block.distractions || []).reduce(function (a, d) {
-        return a + (d.type === 'pause' ? 0 : (d.ms || 0));
+        return a + (d.type === 'pause' || d.type === 'gap' ? 0 : (d.ms || 0));
       }, 0);
     },
     effectiveMs: function (block) {
