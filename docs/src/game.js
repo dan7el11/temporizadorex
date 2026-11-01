@@ -93,7 +93,7 @@
     box.hidden = false;
     U.clear(box);
     const cfg = Avatar.config();
-    if (cfg) box.appendChild(Avatar.node(cfg, mood(g), 30, 'hud__avatar'));
+    if (cfg) box.appendChild(Avatar.node(cfg, mood(g), 30, 'hud__avatar', true));
     box.appendChild(Avatar.hearts(g.left, g.max, 15));
     box.classList.toggle('is-ko', g.left === 0);
     box.title = g.left + ' de ' + g.max + ' vidas · se pierde una por pausa o distracción';

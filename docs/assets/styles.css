@@ -1042,6 +1042,9 @@ dialog.modal.modal--wide{width:min(760px,calc(100vw - 24px))}
   #hudNext,#hudSession{display:none}
   .runner__hud{flex-wrap:nowrap}
   .hud__left{flex-wrap:nowrap;min-width:0;overflow:hidden}
+  .hud__right{flex-wrap:nowrap;flex:0 0 auto}
+  /* Con avatar y vidas no cabe todo: las pausas se ven en el menú de bloques. */
+  .hud__left:has(#hudGame:not([hidden])) #hudPauses{display:none}
 }
 
 /* ── Ánimos (guiños) ───────────────────────────────────── */
@@ -1148,7 +1151,7 @@ dialog.modal.modal--wide{width:min(760px,calc(100vw - 24px))}
 }
 .hud__game .hearts{color:rgba(255,255,255,.75)}
 .hud__avatar{border-radius:50%;background:rgba(255,255,255,.14);overflow:hidden;width:30px;height:30px;justify-content:center;align-items:flex-end}
-.hud__avatar svg{width:30px;height:32px;margin-bottom:-5px}
+.hud__avatar svg{width:30px;height:30px}
 .hud__game.is-lose{animation:hudLose .8s ease}
 .hud__game.is-lose .hud__avatar{animation:nudge .5s ease}
 .hud__game.is-gain{animation:hudGain .9s ease}
@@ -1176,7 +1179,7 @@ body > .gameover{position:fixed}
 .game-tile__info{display:flex;flex-direction:column;gap:4px;min-width:0}
 .game-tile__stats{font-size:.8rem;color:var(--text-faint)}
 .hsession__game{display:inline-flex;align-items:center;gap:4px;color:var(--text-faint);font-size:.75rem}
-.peer-avatar svg{width:26px;height:28px}
+.peer-avatar svg{width:26px;height:26px}
 
 .avatar-editor{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center}
 .avatar-editor__preview{
@@ -1208,3 +1211,13 @@ body > .gameover{position:fixed}
 .avatar,.heart{image-rendering:pixelated}
 .avatar-editor__row .chips{gap:6px}
 .avatar-editor__row .chip{padding:5px 10px;font-size:.82rem}
+.avatar-editor__row:has(.style-picks){align-items:start}
+.style-picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:6px}
+.style-pick{
+  display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 3px 6px;cursor:pointer;
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:12px;color:var(--text-dim);
+  font:inherit;font-size:.7rem;line-height:1.15;text-align:center;transition:border-color .15s,background .15s;
+}
+.style-pick svg{width:42px;height:auto;border-radius:8px;background:rgba(91,140,255,.10)}
+.style-pick:hover{border-color:var(--text-faint)}
+.style-pick.is-active{border-color:var(--accent,#5b8cff);background:rgba(91,140,255,.16);color:var(--text)}

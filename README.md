@@ -281,11 +281,20 @@ anteriores, y en *Historial* cada día tiene un botón «Ver el día» que abre 
 Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
 
 - **Avatar** en **pixel art**, al estilo de los retratos de Stardew Valley: un médico o una médica con
-  pijama o bata y el fonendo colgado del cuello. Se elige hombre o mujer, tono de piel, **peinado**
-  (corto, raya al lado, tupé, rizado, rapado, calvo, melena, bob, flequillo, coleta o moño), color de
-  pelo, **vello facial** en el hombre (afeitado, barba de 3 días, bigote, perilla, barba corta o
-  completa), ropa y gafas. Su cara cambia: contento, con dolor al perder una vida o KO sin vidas. Los
-  corazones también son de 8 bits.
+  pijama o bata (con placa y bolígrafo) y el fonendo colgado del cuello. Retrato de 48 × 52 píxeles con
+  luz desde arriba a la izquierda, sombras más frías y brillos más cálidos, contorno suave del lado de
+  la luz, mechones y brillo en el pelo, y ojos con iris y destello.
+  Se elige hombre o mujer, tono de piel, **peinado** (con miniatura de cada uno), color de pelo y de
+  ojos, ropa y gafas. Los peinados van **por género**:
+  - Hombre: corto, raya al lado, tupé, hacia atrás, degradado, pinchos, rizado, afro, rapado, con
+    entradas, calvo, media melena y moño.
+  - Mujer: melena lisa, melena ondulada, con flequillo, media melena, bob, pixie, coleta alta, moño,
+    dos trenzas, trenza de lado, rizos largos, afro y rapado.
+  - **Vello facial** en el hombre: afeitado, barba de 3 días, bigote, perilla, candado, barba corta o
+    completa.
+  Su cara cambia: contento, con dolor al perder una vida o KO sin vidas. En tamaños pequeños (cabecera
+  del temporizador, sala) se muestra solo la cabeza. Los avatares guardados con peinados antiguos se
+  pasan solos al equivalente nuevo. Los corazones también son de 8 bits.
 - **Vidas** (5 por sesión; de 1 a 10): se pierde una con **cada pausa**, **cada distracción rápida** y
   **cada distracción que declares** al terminar un bloque. Un bloque terminado **sin ninguna
   distracción** devuelve una (se puede desactivar). Las pausas guiadas y los descansos no cuestan.

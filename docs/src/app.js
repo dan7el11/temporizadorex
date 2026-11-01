@@ -183,7 +183,7 @@
         body.appendChild(U.el('span', { class: 'peerbar__item' + (p.online ? '' : ' is-off') }, [
           // Su avatar, si lo ha creado; si no, el punto de conectado.
           p.state && p.state.avatar && p.state.avatar.sex
-            ? Avatar.node(p.state.avatar, p.state.lives && p.state.lives.left === 0 ? 'ko' : 'happy', 26, 'peer-avatar')
+            ? Avatar.node(p.state.avatar, p.state.lives && p.state.lives.left === 0 ? 'ko' : 'happy', 26, 'peer-avatar', true)
             : U.el('span', { class: 'peer-dot' }),
           U.el('span', { text: Room.peerLine(p) })
         ]));

@@ -1,36 +1,51 @@
 /*
  * Avatar en pixel art, al estilo de los retratos de Stardew Valley.
  *
- * Se dibuja en una rejilla de 32 × 34 «píxeles». Cada pieza (cabeza, ropa,
- * pelo, barba…) es una silueta hecha a mano con tramos de píxeles; el motor le
- * pone su contorno y su sombreado según el material, y al final junta los
- * píxeles del mismo color en rectángulos para que el SVG pese poco.
- * Pocas opciones a propósito: sexo, piel, peinado, color de pelo, vello facial
- * (hombre), ropa y gafas. La cara cambia con la partida: contenta, con dolor
- * al perder una vida o KO sin vidas.
+ * Rejilla de 48 × 52 «píxeles». Cada pieza (cabeza, ropa, pelo, barba…) se
+ * construye con formas sencillas (elipses, polígonos, cápsulas) y el motor la
+ * sombrea como lo haría un pixel artist:
+ *   - luz desde arriba a la izquierda, calculada con la normal de la silueta;
+ *   - rampas de color con cambio de tono (sombras más frías, brillos más cálidos);
+ *   - contorno selectivo: oscuro en la sombra y más suave del lado de la luz;
+ *   - sombras proyectadas (el pelo sobre la frente, la barbilla sobre el cuello);
+ *   - mechones y brillo en el pelo.
+ * Al final se juntan los píxeles iguales de cada fila en rectángulos.
  */
 (function (global) {
   'use strict';
 
   const Avatar = {};
-  const W = 32;
-  const H = 34;
+  const W = 48;
+  const H = 52;
+  const CX = 24;          // centro de la cara
+  const CY = 25;
 
-  Avatar.SKINS = ['#f7d9c4', '#ecbf98', '#cf9568', '#a06a44', '#64412a'];
-  Avatar.HAIRS = [['#2a2224', 'Negro'], ['#6b4128', 'Castaño'], ['#e1b65a', 'Rubio'], ['#c4592c', 'Pelirrojo'], ['#c3c3c8', 'Canoso']];
+  Avatar.SKINS = ['#f8dcc8', '#efc29b', '#d29a6c', '#a5704a', '#6a452d'];
+  Avatar.HAIRS = [['#2b2326', 'Negro'], ['#6e4429', 'Castaño'], ['#e3b75c', 'Rubio'], ['#c55a2d', 'Pelirrojo'], ['#c6c6cc', 'Canoso']];
+  Avatar.EYES = [['#5a3a24', 'Marrones'], ['#3f7a4a', 'Verdes'], ['#3d6fb6', 'Azules'], ['#6f7884', 'Grises']];
   Avatar.OUTFITS = [
     ['#3f72e8', 'Pijama azul'], ['#2a9a73', 'Pijama verde'], ['#9a3256', 'Pijama granate'],
     ['coat', 'Bata blanca'], ['#363b4a', 'Negro']
   ];
-  // [clave, nombre]. Todos para los dos; el orden propone primero los más habituales.
-  Avatar.STYLES = [
-    ['corto', 'Corto'], ['lado', 'Raya al lado'], ['tupe', 'Tupé'], ['rizado', 'Rizado'], ['rapado', 'Rapado'],
-    ['calvo', 'Calvo'], ['melena', 'Melena'], ['bob', 'Bob'], ['flequillo', 'Flequillo'], ['coleta', 'Coleta'], ['mono', 'Moño']
+  // Peinados por género. [clave, nombre]
+  Avatar.STYLES_M = [
+    ['corto', 'Corto'], ['raya', 'Raya al lado'], ['tupe', 'Tupé'], ['atras', 'Hacia atrás'], ['degradado', 'Degradado'],
+    ['pinchos', 'Pinchos'], ['rizado', 'Rizado'], ['afro', 'Afro'], ['rapado', 'Rapado'], ['entradas', 'Con entradas'],
+    ['calvo', 'Calvo'], ['largo', 'Media melena'], ['monom', 'Moño']
+  ];
+  Avatar.STYLES_F = [
+    ['melena', 'Melena lisa'], ['ondas', 'Melena ondulada'], ['flequillo', 'Con flequillo'], ['media', 'Media melena'],
+    ['bob', 'Bob'], ['pixie', 'Pixie'], ['coleta', 'Coleta alta'], ['monof', 'Moño'], ['trenzas', 'Dos trenzas'],
+    ['trenza', 'Trenza de lado'], ['rizos', 'Rizos largos'], ['afrof', 'Afro'], ['rapadof', 'Rapado']
   ];
   Avatar.FACIAL = [
     ['ninguno', 'Afeitado'], ['tresdias', 'Barba de 3 días'], ['bigote', 'Bigote'], ['perilla', 'Perilla'],
-    ['corta', 'Barba corta'], ['completa', 'Barba completa']
+    ['candado', 'Candado'], ['corta', 'Barba corta'], ['completa', 'Barba completa']
   ];
+  Avatar.stylesFor = function (sex) { return sex === 'f' ? Avatar.STYLES_F : Avatar.STYLES_M; };
+
+  // Peinados de la versión anterior → los nuevos equivalentes.
+  const LEGACY = { lado: 'raya', melena: 'melena', bob: 'bob', flequillo: 'flequillo', coleta: 'coleta', mono: 'monof', rapado: 'rapado', calvo: 'calvo', rizado: 'rizado', tupe: 'tupe', corto: 'corto' };
 
   /** Configuración guardada, o null si todavía no se ha creado. */
   Avatar.config = function () {
@@ -39,283 +54,659 @@
   };
 
   function normal(cfg) {
-    const a = Object.assign({ sex: 'm', skin: 1, hair: 1, outfit: 0, glasses: false }, cfg || {});
-    if (!Avatar.STYLES.some(function (s) { return s[0] === a.style; })) a.style = a.sex === 'f' ? 'melena' : 'corto';
+    const a = Object.assign({ sex: 'm', skin: 1, hair: 1, eyes: 0, outfit: 0, glasses: false }, cfg || {});
+    const list = Avatar.stylesFor(a.sex);
+    if (!list.some(function (s) { return s[0] === a.style; })) {
+      let mapped = LEGACY[a.style];
+      if (a.sex === 'f' && mapped === 'rapado') mapped = 'rapadof';
+      if (a.sex === 'f' && mapped === 'raya') mapped = 'media';
+      a.style = list.some(function (s) { return s[0] === mapped; }) ? mapped : list[0][0];
+    }
     if (a.sex !== 'm' || !Avatar.FACIAL.some(function (s) { return s[0] === a.facial; })) a.facial = 'ninguno';
     return a;
   }
   Avatar.normal = normal;
 
-  /* ── Color ──────────────────────────────────────────────── */
-  function shade(hex, f) {
+  /* ── Color: rampas con cambio de tono ───────────────────── */
+  function hexToHsl(hex) {
     const n = parseInt(hex.slice(1), 16);
-    const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(function (v) {
-      return Math.round(Math.min(255, Math.max(0, f > 1 ? v + (255 - v) * (f - 1) : v * f)));
-    });
+    const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      h *= 60;
+    }
+    return [h, s, l];
+  }
+  function hslToHex(h, s, l) {
+    h = ((h % 360) + 360) % 360; s = Math.max(0, Math.min(1, s)); l = Math.max(0, Math.min(1, l));
+    const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; } else if (h < 180) { g = c; b = x; }
+    else if (h < 240) { g = x; b = c; } else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+    return '#' + [r, g, b].map(function (v) { return Math.round((v + m) * 255).toString(16).padStart(2, '0'); }).join('');
+  }
+  /** Mueve el tono hacia «target» (en grados) como mucho «amount». */
+  function towards(h, target, amount) {
+    let d = ((target - h + 540) % 360) - 180;
+    return h + Math.max(-amount, Math.min(amount, d));
+  }
+  function ramp(hex, soft) {
+    const hsl = hexToHsl(hex), h = hsl[0], l = hsl[2];
+    const s = soft ? hsl[1] * 0.78 : hsl[1];
+    const grey = s < 0.08;
+    return {
+      hi: hslToHex(grey ? h : towards(h, 55, 10), s * 0.85, Math.min(0.97, l + 0.16)),
+      light: hslToHex(grey ? h : towards(h, 55, 5), s * 0.95, Math.min(0.94, l + 0.08)),
+      base: hex,
+      shadow: hslToHex(grey ? 225 : towards(h, 250, 10), grey ? 0.12 : Math.min(1, s * 1.08), l - 0.11),
+      deep: hslToHex(grey ? 230 : towards(h, 255, 18), grey ? 0.16 : Math.min(1, s * 1.12), l - 0.21),
+      line: hslToHex(grey ? 232 : towards(h, 260, 24), grey ? 0.2 : Math.min(1, s * 1.15), Math.max(0.07, l - 0.36))
+    };
+  }
+  function mix(a, b, t) {
+    const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16);
+    const c = [16, 8, 0].map(function (sh) { return Math.round(((x >> sh) & 255) * (1 - t) + ((y >> sh) & 255) * t); });
     return '#' + c.map(function (v) { return v.toString(16).padStart(2, '0'); }).join('');
   }
 
-  /* ── Lienzo de píxeles ──────────────────────────────────── */
-  function canvas() {
-    const px = [];
-    for (let y = 0; y < H; y++) px.push(new Array(W).fill(null));
-    return px;
-  }
-  function put(px, x, y, color) { if (x >= 0 && x < W && y >= 0 && y < H && color) px[y][x] = color; }
-
-  /** Máscara a partir de tramos: [[y, x0, x1, (x0b, x1b…)], …]. */
-  function mask(spans) {
-    const m = {};
-    spans.forEach(function (s) {
-      for (let i = 1; i + 1 < s.length; i += 2) {
-        for (let x = s[i]; x <= s[i + 1]; x++) m[s[0] * 100 + x] = true;
-      }
-    });
+  /* ── Máscaras a partir de formas ────────────────────────── */
+  function M() { return new Uint8Array(W * H); }
+  function fill(test) {
+    const m = M();
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (test(x + 0.5, y + 0.5)) m[y * W + x] = 1;
     return m;
   }
-  function has(m, x, y) { return !!m[y * 100 + x]; }
-  function each(m, fn) { Object.keys(m).forEach(function (k) { fn(k % 100, Math.floor(k / 100)); }); }
-  function minus(a, b) { const out = {}; Object.keys(a).forEach(function (k) { if (!b[k]) out[k] = true; }); return out; }
+  function ell(cx, cy, rx, ry) { return function (x, y) { const dx = (x - cx) / rx, dy = (y - cy) / ry; return dx * dx + dy * dy <= 1; }; }
+  function rect(x0, y0, x1, y1) { return function (x, y) { return x >= x0 && x <= x1 && y >= y0 && y <= y1; }; }
+  function poly(pts) {
+    return function (x, y) {
+      let inside = false;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const xi = pts[i][0], yi = pts[i][1], xj = pts[j][0], yj = pts[j][1];
+        if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+      }
+      return inside;
+    };
+  }
+  /** Tubo que pasa por varios puntos, con radio r (o r0→r1 si se estrecha). */
+  function capsule(pts, r0, r1) {
+    const r1v = r1 === undefined ? r0 : r1;
+    return function (x, y) {
+      const n = pts.length - 1;
+      for (let i = 0; i < n; i++) {
+        const ax = pts[i][0], ay = pts[i][1], bx = pts[i + 1][0], by = pts[i + 1][1];
+        const vx = bx - ax, vy = by - ay;
+        const t = Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy || 1)));
+        const px = ax + vx * t - x, py = ay + vy * t - y;
+        const r = r0 + (r1v - r0) * ((i + t) / n);
+        if (px * px + py * py <= r * r) return true;
+      }
+      return false;
+    };
+  }
+  function or() { const fs = arguments; return function (x, y) { for (let i = 0; i < fs.length; i++) if (fs[i](x, y)) return true; return false; }; }
+  function and() { const fs = arguments; return function (x, y) { for (let i = 0; i < fs.length; i++) if (!fs[i](x, y)) return false; return true; }; }
+  function not(f) { return function (x, y) { return !f(x, y); }; }
+
+  /* ── Lienzo ─────────────────────────────────────────────── */
+  function canvas() { return new Array(W * H).fill(null); }
+  function put(px, x, y, c) { if (x >= 0 && x < W && y >= 0 && y < H && c) px[y * W + x] = c; }
+  function get(px, x, y) { return x >= 0 && x < W && y >= 0 && y < H ? px[y * W + x] : null; }
+  function inM(m, x, y) { return x >= 0 && x < W && y >= 0 && y < H && m[y * W + x] === 1; }
+
+  /** Normales a partir de la silueta suavizada: dicen hacia dónde mira cada píxel. */
+  function normals(m) {
+    const blur = new Float32Array(W * H);
+    const R = 2;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let s = 0, n = 0;
+      for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { n++; if (inM(m, x + dx, y + dy)) s++; }
+      blur[y * W + x] = s / n;
+    }
+    const nx = new Float32Array(W * H), ny = new Float32Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const at = function (xx, yy) { return xx < 0 || yy < 0 || xx >= W || yy >= H ? 0 : blur[yy * W + xx]; };
+      nx[y * W + x] = at(x - 1, y) - at(x + 1, y);   // apunta hacia fuera
+      ny[y * W + x] = at(x, y - 1) - at(x, y + 1);
+    }
+    return { nx: nx, ny: ny };
+  }
+
+  const LX = -0.62, LY = -0.78;   // la luz viene de arriba a la izquierda
 
   /**
-   * Pinta una silueta con contorno y sombreado: luz arriba a la izquierda,
-   * sombra abajo a la derecha, como en el pixel art clásico.
-   * opts: { outline: color|null, shadow, light, texture: fn(x,y)->color|null }
+   * Pinta una pieza sombreada. opts:
+   *   outline: true|false     contorno (selectivo)
+   *   texture(x, y, tone)     devuelve otro tono para mechones, rizos…
+   *   flat                    sin volumen (solo base y contorno)
+   *   bias                    desplaza el sombreado (+ más luz, − más sombra)
    */
-  function paint(px, m, base, opts) {
+  function shade(px, m, base, opts) {
     const o = opts || {};
-    const outline = o.outline === undefined ? shade(base, 0.55) : o.outline;
-    const shadow = o.shadow || shade(base, 0.8);
-    const light = o.light === undefined ? shade(base, 1.18) : o.light;
-    each(m, function (x, y) {
-      const edge = !has(m, x - 1, y) || !has(m, x + 1, y) || !has(m, x, y - 1) || !has(m, x, y + 1);
-      let c = base;
-      if (edge && outline) c = outline;
-      else if (!has(m, x + 2, y) || !has(m, x, y + 2)) c = shadow;
-      else if (light && (!has(m, x - 2, y) || !has(m, x, y - 2)) && (x + y) % 3 !== 0) c = light;
-      if (!(edge && outline) && o.texture) c = o.texture(x, y, c) || c;
-      put(px, x, y, c);
+    const r = typeof base === 'string' ? ramp(base) : base;
+    const nm = normals(m);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!m[y * W + x]) continue;
+      const i = y * W + x;
+      const edge = !inM(m, x - 1, y) || !inM(m, x + 1, y) || !inM(m, x, y - 1) || !inM(m, x, y + 1);
+      const len = Math.hypot(nm.nx[i], nm.ny[i]) || 1;
+      const d = (nm.nx[i] * LX + nm.ny[i] * LY) / len;          // −1 sombra … 1 luz
+      const strength = Math.min(1, len * 2.2);
+      const v = d * strength + (o.bias || 0);
+      let tone;
+      if (o.flat) tone = 'base';
+      else if (v > 0.55) tone = 'hi';
+      else if (v > 0.2) tone = 'light';
+      else if (v < -0.55) tone = 'deep';
+      else if (v < -0.18) tone = 'shadow';
+      else tone = 'base';
+      if (o.texture) tone = o.texture(x, y, tone) || tone;
+      if (edge && o.outline !== false) {
+        // Contorno selectivo: del lado de la luz, un tono intermedio.
+        tone = d > 0.25 ? 'shadow' : (d > -0.1 ? 'deep' : 'line');
+        if (o.softEdge) tone = d > 0.1 ? 'shadow' : 'deep';
+      }
+      px[i] = r[tone] || r.base;
+    }
+    return r;
+  }
+
+  /** Sombra que proyecta una pieza sobre lo que hay debajo (abajo a la derecha). */
+  function castShadow(px, m, dx, dy, amount) {
+    const out = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!m[y * W + x]) continue;
+      for (let k = 1; k <= (dy || 1); k++) {
+        const tx = x + (dx || 0), ty = y + k;
+        if (!inM(m, tx, ty)) out.push([tx, ty]);
+      }
+    }
+    out.forEach(function (p) {
+      const c = get(px, p[0], p[1]);
+      if (c) put(px, p[0], p[1], mix(c, '#2a1830', amount || 0.28));
     });
   }
 
-  /* ── Siluetas ───────────────────────────────────────────── */
-  const HEAD = mask([
-    [5, 12, 19], [6, 10, 21], [7, 9, 22], [8, 9, 22], [9, 9, 22], [10, 9, 22], [11, 9, 22], [12, 8, 23], [13, 8, 23],
-    [14, 8, 23], [15, 8, 23], [16, 9, 22], [17, 9, 22], [18, 10, 21], [19, 10, 21], [20, 11, 20], [21, 12, 19]
-  ]);
-  const EARS = mask([[12, 7, 8, 23, 24], [13, 6, 8, 23, 25], [14, 6, 8, 23, 25], [15, 7, 8, 23, 24]]);
-  const NECK = mask([[20, 13, 18], [21, 13, 18], [22, 13, 18], [23, 13, 18], [24, 13, 18]]);
-  const BODY = mask([
-    [23, 11, 20], [24, 8, 23], [25, 6, 25], [26, 5, 26], [27, 4, 27], [28, 3, 28], [29, 3, 28], [30, 2, 29],
-    [31, 2, 29], [32, 2, 29], [33, 2, 29]
-  ]);
-  const VNECK = mask([[23, 13, 18], [24, 14, 17], [25, 15, 16]]);
+  /* ── Cuerpo y cabeza ────────────────────────────────────── */
+  function headTest(sex) {
+    const jaw = sex === 'f' ? 6.6 : 7.8;
+    return function (x, y) {
+      const dy = y - CY;
+      const ry = dy < 0 ? 12.6 : 12.4;
+      let rx = 10.6;
+      if (dy > 1) rx = 10.6 - (10.6 - jaw) * Math.min(1, (dy - 1) / 10.5);
+      const ex = (x - CX) / rx, ey = dy / ry;
+      return ex * ex + ey * ey <= 1;
+    };
+  }
 
-  // Pelo: «front» va delante de la cabeza; «back», detrás (melenas, moños…).
-  const STYLE_SHAPES = {
-    corto: { front: [[3, 12, 19], [4, 10, 21], [5, 9, 22], [6, 8, 23], [7, 8, 23], [8, 8, 11, 20, 23], [9, 8, 9, 22, 23], [10, 8, 9, 22, 23], [11, 8, 8, 23, 23]] },
-    lado: { front: [[3, 13, 20], [4, 10, 22], [5, 9, 23], [6, 8, 23], [7, 8, 23], [8, 8, 16, 21, 23], [9, 8, 12, 22, 23], [10, 8, 10, 22, 23], [11, 8, 8, 23, 23]] },
-    tupe: { front: [[0, 15, 20], [1, 13, 22], [2, 11, 22], [3, 10, 22], [4, 9, 22], [5, 8, 23], [6, 8, 23], [7, 8, 10, 19, 23], [8, 8, 9, 22, 23], [9, 8, 9, 22, 23], [10, 8, 8, 23, 23]] },
-    rizado: { front: [[1, 11, 13, 16, 18, 21, 22], [2, 9, 23], [3, 8, 24], [4, 7, 24], [5, 7, 24], [6, 7, 24], [7, 7, 24], [8, 7, 12, 15, 16, 19, 24], [9, 7, 9, 22, 24], [10, 7, 8, 23, 24], [11, 7, 8, 23, 24]], curly: true },
-    rapado: { front: [[4, 11, 20], [5, 10, 21], [6, 9, 22], [7, 9, 10, 21, 22], [8, 9, 9, 22, 22]], thin: true },
-    calvo: { front: [[10, 8, 8, 23, 23], [11, 8, 8, 23, 23], [12, 8, 8, 23, 23]] },
-    melena: {
-      back: [[5, 8, 23], [6, 7, 24], [7, 6, 25], [8, 6, 25], [9, 6, 25], [10, 6, 25], [11, 5, 26], [12, 5, 26], [13, 5, 26], [14, 5, 26], [15, 5, 26], [16, 5, 26], [17, 5, 26], [18, 5, 26], [19, 5, 26], [20, 5, 26], [21, 5, 26], [22, 5, 26], [23, 6, 25], [24, 6, 9, 22, 25], [25, 7, 9, 22, 24], [26, 7, 8, 23, 24]],
-      front: [[3, 12, 19], [4, 10, 21], [5, 9, 15, 16, 22], [6, 8, 14, 17, 23], [7, 8, 13, 18, 23], [8, 8, 11, 20, 23], [9, 8, 10, 21, 23], [10, 7, 9, 22, 24], [11, 7, 9, 22, 24], [12, 7, 8, 23, 24], [13, 7, 8, 23, 24], [14, 7, 8, 23, 24], [15, 7, 8, 23, 24], [16, 7, 8, 23, 24], [17, 7, 8, 23, 24], [18, 7, 9, 22, 24], [19, 7, 9, 22, 24], [20, 7, 10, 21, 24]],
-      part: true
-    },
-    bob: {
-      back: [[6, 7, 24], [7, 6, 25], [8, 6, 25], [9, 6, 25], [10, 6, 25], [11, 6, 25], [12, 6, 25], [13, 6, 25], [14, 6, 25], [15, 6, 25], [16, 6, 25], [17, 6, 25], [18, 6, 25], [19, 7, 24]],
-      front: [[3, 12, 19], [4, 10, 21], [5, 9, 22], [6, 8, 23], [7, 8, 23], [8, 7, 14, 19, 24], [9, 7, 11, 21, 24], [10, 7, 9, 22, 24], [11, 7, 8, 23, 24], [12, 7, 8, 23, 24], [13, 7, 8, 23, 24], [14, 7, 8, 23, 24], [15, 7, 8, 23, 24], [16, 7, 9, 22, 24], [17, 7, 9, 22, 24], [18, 8, 9, 22, 23]]
-    },
-    flequillo: {
-      back: [[6, 7, 24], [7, 6, 25], [8, 6, 25], [9, 6, 25], [10, 6, 25], [11, 5, 26], [12, 5, 26], [13, 5, 26], [14, 5, 26], [15, 5, 26], [16, 5, 26], [17, 5, 26], [18, 5, 26], [19, 5, 26], [20, 5, 26], [21, 5, 26], [22, 5, 26], [23, 6, 25], [24, 6, 9, 22, 25], [25, 7, 8, 23, 24]],
-      front: [[3, 12, 19], [4, 10, 21], [5, 9, 22], [6, 8, 23], [7, 8, 23], [8, 8, 23], [9, 8, 23], [10, 8, 10, 13, 13, 17, 18, 21, 23], [11, 7, 9, 22, 24], [12, 7, 8, 23, 24], [13, 7, 8, 23, 24], [14, 7, 8, 23, 24], [15, 7, 8, 23, 24], [16, 7, 8, 23, 24], [17, 7, 8, 23, 24], [18, 7, 9, 22, 24], [19, 7, 9, 22, 24]]
-    },
-    coleta: {
-      back: [[7, 24, 26], [8, 24, 27], [9, 25, 27], [10, 25, 28], [11, 25, 28], [12, 25, 28], [13, 26, 28], [14, 26, 28], [15, 26, 28], [16, 26, 28], [17, 26, 27], [18, 26, 27], [19, 26, 27], [20, 26, 26]],
-      front: [[3, 12, 19], [4, 10, 21], [5, 9, 22], [6, 8, 23], [7, 8, 23], [8, 8, 10, 21, 24], [9, 8, 9, 22, 24], [10, 8, 9, 22, 23], [11, 8, 8, 23, 23]],
-      tie: [9, 24, 25]
-    },
-    mono: {
-      back: [[0, 13, 18], [1, 12, 19], [2, 12, 19], [3, 13, 18]],
-      front: [[3, 12, 19], [4, 10, 21], [5, 9, 22], [6, 8, 23], [7, 8, 23], [8, 8, 10, 21, 23], [9, 8, 9, 22, 23], [10, 8, 9, 22, 23], [11, 8, 8, 23, 23]],
-      tie: [3, 13, 18]
+  function bodyTest() {
+    // Hombros redondeados: superelipse ancha que sale por abajo del lienzo.
+    return function (x, y) {
+      const dx = Math.abs(x - CX) / 22.5, dy = Math.abs(y - 54) / 15.5;
+      return Math.pow(dx, 2.6) + Math.pow(dy, 2.6) <= 1;
+    };
+  }
+
+  /* ── Pelo ───────────────────────────────────────────────── */
+  function vol(v, dy) { return ell(CX, CY - 0.5 - v * 0.55 + (dy || 0), 11 + v, 12.9 + v); }
+  /** Línea de nacimiento del pelo: y = base + curva·(x/11)² + inclinación·(x/11). */
+  function under(base, curve, tilt) {
+    return function (x, y) { const t = (x - CX) / 11; return y < base + (curve || 0) * t * t + (tilt || 0) * t; };
+  }
+  const HEADF = headTest('f');
+  const HEADM = headTest('m');
+
+  /**
+   * Cada peinado devuelve { front, back, flow, curly, part, tie, speckle }.
+   * front: delante de la cara; back: detrás de la cabeza y los hombros.
+   */
+  function styleShapes(style, sex) {
+    const head = sex === 'f' ? HEADF : HEADM;
+    const outsideHead = not(head);
+    // Gorro básico: volumen v, nacimiento del pelo y hasta dónde bajan los lados.
+    function cap(v, hairline, sideBottom) {
+      return and(vol(v), or(and(head, hairline), and(outsideHead, function (x, y) { return y < sideBottom; })));
     }
-  };
-
-  // Vello facial (color del pelo). La boca se pinta encima.
-  const FACIAL_SHAPES = {
-    bigote: [[17, 12, 19], [18, 12, 12, 19, 19]],
-    perilla: [[17, 13, 18], [20, 14, 17], [21, 14, 17], [22, 15, 16]],
-    corta: [[13, 9, 9, 22, 22], [14, 9, 9, 22, 22], [15, 9, 10, 21, 22], [16, 9, 11, 20, 22], [17, 10, 21], [18, 10, 12, 19, 21], [19, 10, 13, 18, 21], [20, 11, 20], [21, 12, 19], [22, 14, 17]],
-    completa: [[11, 8, 8, 23, 23], [12, 8, 9, 22, 23], [13, 8, 9, 22, 23], [14, 8, 10, 21, 23], [15, 8, 11, 20, 23], [16, 8, 23], [17, 9, 22], [18, 9, 12, 19, 22], [19, 9, 13, 18, 22], [20, 10, 21], [21, 10, 21], [22, 11, 20], [23, 12, 19], [24, 14, 17]]
-  };
-
-  /* ── Cara según el estado ───────────────────────────────── */
-  function face(px, a, mood, skin) {
-    const dark = '#2b1e1e';
-    const hair = (Avatar.HAIRS[a.hair] || Avatar.HAIRS[1])[0];
-    const brow = shade(hair, a.hair === 4 ? 0.7 : 0.85);
-    const f = a.sex === 'f';
-    const mouth = f ? '#a33a4f' : '#6e3428';
-
-    if (mood !== 'ko' && mood !== 'hurt') {
-      // Cejas
-      [[11, 12, 13], [18, 19, 20]].forEach(function (b) { b.forEach(function (x) { put(px, x, 11, brow); }); });
+    const sideburns = or(rect(13.2, 21, 15.2, 28.5), rect(32.8, 21, 34.8, 28.5));
+    const s = {};
+    switch (style) {
+      // ── Hombre ──
+      case 'corto':
+        s.front = or(cap(1.3, under(16.6, 2.6), 24.5), sideburns); s.flow = 'crown'; break;
+      case 'raya':
+        s.front = or(cap(1.7, under(16.2, 2.4, 1.2), 24.5), sideburns,
+          poly([[13.5, 16], [27, 12.5], [22, 18.5], [15.5, 21.5]]));
+        s.part = [[19, 9], [20, 13]]; s.flow = 'crown'; break;
+      case 'tupe':
+        s.front = or(cap(1.2, under(16.4, 2.6), 24.5), sideburns, ell(25.5, 10.5, 9.5, 5.4), ell(21, 12.8, 7, 4));
+        s.flow = 'crown'; s.shine = true; break;
+      case 'atras':
+        s.front = or(cap(1.1, under(14.6, 3.5), 24.5), sideburns); s.flow = 'back'; s.shine = true; break;
+      case 'degradado':
+        s.front = or(and(cap(2.3, under(16.2, 2.2), 20), rect(13.5, 0, 34.5, 30)),
+          and(cap(0.6, under(16.5, 3), 25), not(rect(14, 0, 34, 30))), sideburns);
+        s.fade = true; s.flow = 'crown'; break;
+      case 'pinchos':
+        s.front = or(cap(1.2, under(16.4, 2.4), 24.5), sideburns,
+          poly([[13, 15], [14, 6.5], [18, 12]]), poly([[16, 12], [19, 3.8], [22.5, 11]]), poly([[21, 11], [24.5, 2.6], [27.5, 11]]),
+          poly([[26, 11], [30, 4], [31.5, 12.5]]), poly([[30, 12], [34.5, 7], [35, 16]]));
+        s.flow = 'crown'; break;
+      case 'rizado': {
+        const curls = [];
+        for (let a = 0; a <= 12; a++) {
+          const t = Math.PI * (1.02 + a / 12 * 0.96);
+          curls.push(ell(CX + Math.cos(t) * 12.4, CY - 1.5 + Math.sin(t) * 14, 2.9, 2.6));
+        }
+        s.front = or(cap(1.6, under(16.4, 2.6), 24.5), sideburns, or.apply(null, curls)); s.curly = true; break;
+      }
+      case 'afro': case 'afrof': {
+        const blobs = [];
+        for (let a = 0; a < 18; a++) {
+          const t = a / 18 * Math.PI * 2;
+          blobs.push(ell(CX + Math.cos(t) * 14.2, CY - 4 + Math.sin(t) * 14.2, 3.6, 3.6));
+        }
+        s.back = and(or(ell(CX, CY - 4, 15.6, 15.6), or.apply(null, blobs)), function (x, y) { return y < CY + 9; });
+        s.front = cap(2.6, under(16.6, 2.2), 23);
+        s.curly = true; break;
+      }
+      case 'rapado': case 'rapadof':
+        s.front = cap(0.5, under(16.8, 2.6), 24.5); s.speckle = true; break;
+      case 'entradas':
+        s.front = or(and(cap(1.1, under(16.2, 2), 24.5), not(poly([[13, 13], [19.5, 17.5], [13, 20]])), not(poly([[35, 13], [28.5, 17.5], [35, 20]]))), sideburns);
+        s.flow = 'crown'; break;
+      case 'calvo':
+        s.front = or(and(or(rect(12.6, 19, 15.4, 27.5), rect(32.6, 19, 35.4, 27.5)), vol(0.8)), sideburns);
+        s.scalp = true; break;
+      case 'largo':
+        s.back = and(or(ell(CX, 20, 13.6, 14.5), rect(10.6, 20, 37.4, 37)), function (x, y) { return y < 38; });
+        s.front = or(cap(1.6, under(17, 1.4), 25), capsule([[14, 18], [13.4, 34]], 2.2), capsule([[34, 18], [34.6, 34]], 2.2));
+        s.part = [[CX, 11], [CX, 15]]; s.flow = 'down'; break;
+      case 'monom':
+        s.front = or(cap(1.0, under(15.6, 2.8), 24.5), sideburns);
+        s.back = ell(CX, 9.5, 4.6, 4); s.tie = [[21, 12.6], [27, 12.6]]; s.flow = 'back'; break;
+      // ── Mujer ──
+      case 'melena':
+        s.back = or(rect(10.2, 18, 37.8, 48), ell(CX, 19, 13.8, 13), ell(CX, 47, 13.8, 4));
+        s.front = or(cap(1.5, under(16.8, 2.2), 26), capsule([[13.8, 17], [13.2, 43]], 2.5), capsule([[34.2, 17], [34.8, 43]], 2.5));
+        s.part = [[CX, 11], [CX, 16]]; s.flow = 'down'; break;
+      case 'ondas': {
+        const wave = function (x, y) { return Math.sin(y / 2.3) * 1.3; };
+        s.back = function (x, y) { const w = wave(x, y); return (x > 10.2 - w && x < 37.8 + w && y > 18 && y < 49) || ell(CX, 19, 13.8, 13)(x, y); };
+        s.front = or(cap(1.6, under(16.8, 2.2), 26),
+          function (x, y) { const w = wave(x, y); return y > 16 && y < 45 && ((x > 11.4 + w && x < 16.2 + w) || (x > 31.8 - w && x < 36.6 - w)); });
+        s.part = [[22, 11], [21, 16]]; s.flow = 'wave'; break;
+      }
+      case 'flequillo':
+        s.back = or(rect(10.2, 18, 37.8, 47), ell(CX, 19, 13.8, 13), ell(CX, 46, 13.8, 4));
+        s.front = or(cap(1.6, under(20.6, 0.6), 26), capsule([[13.8, 17], [13.2, 42]], 2.4), capsule([[34.2, 17], [34.8, 42]], 2.4));
+        s.bangs = true; s.flow = 'down'; break;
+      case 'media':
+        s.back = or(rect(10.6, 18, 37.4, 37), ell(CX, 19, 13.6, 13), ell(CX, 37, 13.4, 3));
+        s.front = or(cap(1.7, under(16.4, 2.4, 1.4), 26), poly([[13.5, 16.5], [28, 12.5], [22, 19.5], [15, 22.5]]),
+          capsule([[13.8, 18], [14.6, 35]], 2.4), capsule([[34.2, 18], [33.6, 35]], 2.4));
+        s.flow = 'down'; break;
+      case 'bob':
+        s.back = or(rect(10.4, 18, 37.6, 33), ell(CX, 19, 13.7, 13));
+        s.front = or(cap(1.8, under(17.6, 1.8, -1.2), 26), poly([[34.5, 16], [21, 12.5], [26.5, 19.5], [33, 21.5]]),
+          capsule([[13.6, 18], [14.2, 32], [16.2, 33.4]], 2.6), capsule([[34.4, 18], [33.8, 32], [31.8, 33.4]], 2.6));
+        s.flow = 'down'; break;
+      case 'pixie':
+        s.front = or(cap(1.6, under(16.6, 2.4), 25), poly([[13, 16], [30, 12], [25, 18.5], [16.5, 22.8], [13.5, 22]]),
+          rect(13.2, 21, 15, 27), rect(33, 21, 34.8, 26));
+        s.flow = 'crown'; break;
+      case 'coleta':
+        s.front = cap(1.1, under(15.8, 2.8), 24.5);
+        s.back = or(capsule([[31, 10], [37.5, 15], [39, 25], [37.2, 35], [35.6, 41]], 3.8, 1.6));
+        s.tie = [[31, 9.2], [33.4, 11.6]]; s.flow = 'back'; s.tail = true; break;
+      case 'monof':
+        s.front = cap(1.0, under(15.8, 2.8), 24.5);
+        s.back = or(ell(CX, 7.6, 5.6, 4.8), ell(CX, 10, 3.6, 2.4)); s.tie = [[21, 11.4], [27, 11.4]]; s.flow = 'back'; break;
+      case 'trenzas': {
+        const braid = function (side) {
+          const x0 = side < 0 ? 12.6 : 35.4;
+          const segs = [];
+          for (let k = 0; k < 6; k++) segs.push(ell(x0 + side * 0.15 * k, 27.5 + k * 3.6, 2.6, 2.1));
+          return or.apply(null, segs);
+        };
+        s.front = or(cap(1.3, under(16.8, 2.2), 27), braid(-1), braid(1), capsule([[13.6, 17], [12.8, 26]], 2.2), capsule([[34.4, 17], [35.2, 26]], 2.2));
+        s.part = [[CX, 11], [CX, 16]]; s.braid = true; s.tie = [[11.4, 47.6], [13.8, 47.6], [34.2, 47.6], [36.6, 47.6]]; s.flow = 'down'; break;
+      }
+      case 'trenza': {
+        const segs = [];
+        for (let k = 0; k < 6; k++) segs.push(ell(15.6 + k * 0.6, 29 + k * 3.5, 2.8, 2.2));
+        s.front = or(cap(1.6, under(16.6, 2.4, 1.2), 26), poly([[13.5, 16.5], [27.5, 12.5], [22, 19], [15, 22.5]]),
+          capsule([[13.8, 17], [14.6, 28]], 2.6), or.apply(null, segs));
+        s.back = or(ell(CX, 19, 13.6, 13), rect(11, 18, 37, 30));
+        s.braid = true; s.tie = [[17.4, 48.8], [20.4, 48.8]]; s.flow = 'down'; break;
+      }
+      case 'rizos': {
+        const blobs = [];
+        for (let k = 0; k < 9; k++) { blobs.push(ell(10.6, 20 + k * 3.4, 2.8, 2.4)); blobs.push(ell(37.4, 20 + k * 3.4, 2.8, 2.4)); }
+        for (let a = 0; a <= 10; a++) {
+          const t = Math.PI * (1.0 + a / 10);
+          blobs.push(ell(CX + Math.cos(t) * 13, CY - 2 + Math.sin(t) * 14.2, 3, 2.7));
+        }
+        s.back = or(rect(10.6, 18, 37.4, 48), ell(CX, 19, 14, 13.4), or.apply(null, blobs));
+        s.front = or(cap(1.8, under(16.6, 2.2), 26), capsule([[14, 17], [13.4, 40]], 2.6), capsule([[34, 17], [34.6, 40]], 2.6));
+        s.curly = true; break;
+      }
+      default:
+        s.front = or(cap(1.3, under(16.6, 2.6), 24.5), sideburns); s.flow = 'crown';
     }
-    if (mood === 'ko') {
-      [[11, 12], [13, 12], [12, 13], [11, 14], [13, 14], [18, 12], [20, 12], [19, 13], [18, 14], [20, 14]].forEach(function (p) { put(px, p[0], p[1], dark); });
-      for (let x = 14; x <= 17; x++) put(px, x, 18, mouth);
-      put(px, 17, 19, '#d9536b');   // lengua
-    } else if (mood === 'hurt') {
-      [[11, 12], [12, 13], [11, 14], [20, 12], [19, 13], [20, 14]].forEach(function (p) { put(px, p[0], p[1], dark); });
-      put(px, 15, 18, mouth); put(px, 16, 18, mouth); put(px, 15, 19, '#3a1414'); put(px, 16, 19, '#3a1414');
-      // Gota de sudor
-      put(px, 24, 7, '#bfe9ff'); put(px, 24, 8, '#8fd3ff'); put(px, 23, 9, '#8fd3ff'); put(px, 24, 9, '#5bb8ef');
-    } else {
-      // Ojos: blanco + pupila, con brillo
-      [[12, 13], [18, 19]].forEach(function (e) {
-        put(px, e[0], 13, '#ffffff'); put(px, e[1], 13, dark);
-        put(px, e[0], 14, '#ffffff'); put(px, e[1], 14, dark);
-      });
-      if (f) { put(px, 11, 12, dark); put(px, 20, 12, dark); }   // pestañas
-      if (mood === 'happy') {
-        put(px, 13, 17, mouth); put(px, 18, 17, mouth);
-        for (let x = 14; x <= 17; x++) put(px, x, 18, mouth);
-        put(px, 10, 16, '#f2899a'); put(px, 11, 16, '#f2899a'); put(px, 20, 16, '#f2899a'); put(px, 21, 16, '#f2899a');
+    return s;
+  }
+
+  /** Mechones: líneas algo más oscuras que siguen la caída del pelo, y un brillo. */
+  function hairTexture(style, s) {
+    return function (x, y, tone) {
+      if (s.curly) {
+        const k = (x * 7 + y * 11) % 9;
+        if (k === 0) return tone === 'hi' ? 'light' : 'shadow';
+        if (k === 4 && (tone === 'base' || tone === 'light')) return 'light';
+        return null;
+      }
+      if (s.speckle) return (x + y) % 2 ? null : 'skin';
+      let streak = false;
+      if (s.flow === 'crown' || s.flow === 'back') {
+        const ang = Math.atan2(y - 6, x - CX);
+        streak = Math.sin(ang * (s.flow === 'back' ? 34 : 26) + y * 0.12) > 0.82;
+        // Brillo en arco
+        const r = Math.hypot((x - CX) / 1.1, y - 6);
+        if (r > 7 && r < 9.2 && x < CX + 3 && tone !== 'deep' && tone !== 'shadow') return 'hi';
+        if (s.shine && r > 9.2 && r < 10.4 && x < CX && tone === 'base') return 'light';
       } else {
-        for (let x = 14; x <= 17; x++) put(px, x, 18, mouth);
+        const w = s.flow === 'wave' ? Math.sin(y / 2.3) * 1.3 : 0;
+        streak = (Math.round(x + w) % 3 === 0) && y > 15;
+        if (y > 12 && y < 16 && x < CX - 1 && x > 15 && tone !== 'deep') return 'hi';
+      }
+      if (streak) return tone === 'hi' ? 'light' : tone === 'light' ? 'base' : 'shadow';
+      return null;
+    };
+  }
+
+  /* ── Cara ───────────────────────────────────────────────── */
+  function face(px, a, mood, skinR, hairR) {
+    const ink = '#2a1c22';
+    const eye = (Avatar.EYES[a.eyes] || Avatar.EYES[0])[0];
+    const eyeR = ramp(eye);
+    const f = a.sex === 'f';
+    const lip = f ? '#b5465a' : mix(skinR.deep, '#7a3a34', 0.5);
+    const lipLight = f ? '#d9707f' : skinR.shadow;
+
+    // Cejas
+    if (mood !== 'ko') {
+      const brow = hairR.deep;
+      const up = mood === 'hurt' ? 1 : 0;
+      if (f) {
+        [[17, 21 + up], [18, 20 + up], [19, 20 + up], [20, 20 + up], [21, 21 + up]].forEach(function (p) { put(px, p[0], p[1], brow); });
+        [[26, 21 + up], [27, 20 + up], [28, 20 + up], [29, 20 + up], [30, 21 + up]].forEach(function (p) { put(px, p[0], p[1], brow); });
+      } else {
+        for (let x = 17; x <= 21; x++) { put(px, x, 20 + up, brow); if (x > 17) put(px, x, 21 + up, brow); }
+        for (let x = 26; x <= 30; x++) { put(px, x, 20 + up, brow); if (x < 30) put(px, x, 21 + up, brow); }
       }
     }
-    // Nariz: un píxel de sombra
-    put(px, 16, 15, shade(skin, 0.78)); put(px, 16, 16, shade(skin, 0.78));
+
+    function openEye(x0, flip) {
+      // Párpado, blanco, iris de 2×2 con pupila y brillo
+      for (let x = x0; x <= x0 + 3; x++) put(px, x, 23, ink);
+      put(px, x0, 24, '#f4f1f4'); put(px, x0, 25, '#e6e0ea');
+      put(px, x0 + 3, 24, '#f4f1f4'); put(px, x0 + 3, 25, '#e6e0ea');
+      put(px, x0 + 1, 24, eyeR.deep); put(px, x0 + 2, 24, ink);
+      put(px, x0 + 1, 25, eyeR.base); put(px, x0 + 2, 25, eyeR.light);
+      put(px, flip ? x0 + 2 : x0 + 1, 24, '#ffffff');                      // brillo
+      put(px, x0, 26, skinR.shadow); put(px, x0 + 3, 26, skinR.shadow);       // ojera suave
+      if (f) { put(px, flip ? x0 + 4 : x0 - 1, 22, ink); put(px, flip ? x0 + 4 : x0 - 1, 23, ink); }   // pestañas
+    }
+
+    if (mood === 'ko') {
+      [[17, 23], [20, 23], [18, 24], [19, 24], [18, 25], [19, 25], [17, 26], [20, 26]].forEach(function (p) { put(px, p[0], p[1], ink); put(px, p[0] + 10, p[1], ink); });
+      for (let x = 21; x <= 26; x++) put(px, x, 31, lip);
+      put(px, 25, 32, '#e05a72'); put(px, 26, 32, '#c4405a');
+    } else if (mood === 'hurt') {
+      [[17, 23], [18, 24], [19, 24], [20, 25], [17, 26]].forEach(function (p) { put(px, p[0], p[1], ink); });
+      [[30, 23], [29, 24], [28, 24], [27, 25], [30, 26]].forEach(function (p) { put(px, p[0], p[1], ink); });
+      // Boca abierta torcida
+      put(px, 22, 31, lip); put(px, 23, 30, lip); put(px, 24, 30, lip); put(px, 25, 30, lip); put(px, 26, 31, lip);
+      put(px, 23, 31, '#3a1520'); put(px, 24, 31, '#3a1520'); put(px, 25, 31, '#3a1520');
+      put(px, 23, 32, lip); put(px, 24, 32, lip); put(px, 25, 32, lip);
+      // Gota de sudor
+      put(px, 36, 15, '#d6f2ff'); put(px, 36, 16, '#9edcff'); put(px, 35, 17, '#9edcff'); put(px, 36, 17, '#6cc3f0'); put(px, 37, 17, '#6cc3f0'); put(px, 36, 18, '#4aa6dc');
+    } else {
+      openEye(17, false);
+      openEye(27, true);
+      if (mood === 'happy') {
+        put(px, 21, 30, lip); put(px, 27, 30, lip);
+        for (let x = 22; x <= 26; x++) put(px, x, 31, lip);
+        for (let x = 23; x <= 25; x++) put(px, x, 32, lipLight);
+        // Rubor
+        [[16, 29], [17, 29], [18, 29], [30, 29], [31, 29], [32, 29]].forEach(function (p) { put(px, p[0], p[1], mix(get(px, p[0], p[1]) || skinR.base, '#ff7f96', 0.45)); });
+      } else {
+        for (let x = 22; x <= 26; x++) put(px, x, 31, lip);
+        if (f) for (let x = 23; x <= 25; x++) put(px, x, 32, lipLight);
+      }
+    }
+    // Nariz: sombra a la derecha, brillo arriba
+    put(px, 24, 26, skinR.light); put(px, 25, 27, skinR.shadow); put(px, 25, 28, skinR.shadow);
+    put(px, 23, 29, skinR.shadow); put(px, 24, 29, skinR.deep);
+  }
+
+  /* ── Vello facial ───────────────────────────────────────── */
+  function facialMask(kind) {
+    const mouth = rect(21, 29.6, 27.4, 32.6);
+    const mustache = poly([[20.4, 30.6], [22, 29], [24, 29.6], [26, 29], [27.6, 30.6], [26.6, 31], [24, 30.4], [21.4, 31]]);
+    switch (kind) {
+      case 'bigote': return mustache;
+      case 'perilla': return or(mustache, ell(CX, 35.4, 3.3, 2.6), rect(23, 32.6, 25, 34));
+      case 'candado': return or(mustache, and(ell(CX, 32.5, 5.8, 5.2), not(ell(CX, 31.4, 3.6, 2.3))), rect(20, 30, 21, 33), rect(27, 30, 28, 33));
+      case 'corta': return and(or(mustache, and(HEADM, function (x, y) { return y > 27.5; }, not(ell(CX, 27, 7.8, 6.4)))), not(mouth));
+      case 'completa': return and(or(mustache, and(or(HEADM, ell(CX, 37, 8.6, 4.4)), function (x, y) { return y > 24; }, not(ell(CX, 25.5, 8.2, 5.8)))), not(mouth));
+      default: return null;
+    }
   }
 
   /* ── Dibujo completo ────────────────────────────────────── */
   function draw(cfg, mood) {
     const a = normal(cfg);
+    const m = mood || 'happy';
     const px = canvas();
     const skin = Avatar.SKINS[a.skin] || Avatar.SKINS[1];
-    const hair = (Avatar.HAIRS[a.hair] || Avatar.HAIRS[1])[0];
+    const skinR = ramp(skin, true);
+    const neckR = { hi: skinR.light, light: skinR.base, base: mix(skinR.base, skinR.shadow, 0.6), shadow: skinR.shadow, deep: skinR.deep, line: skinR.line };
+    const hairHex = (Avatar.HAIRS[a.hair] || Avatar.HAIRS[1])[0];
+    const hairR = ramp(hairHex);
+    hairR.skin = mix(skinR.shadow, hairR.base, 0.35);   // para el rapado: piel entre el pelo
     const outfit = (Avatar.OUTFITS[a.outfit] || Avatar.OUTFITS[0])[0];
     const coat = outfit === 'coat';
-    const style = STYLE_SHAPES[a.style] || STYLE_SHAPES.corto;
-    const m = mood || 'happy';
-    const hairOpts = {
-      outline: shade(hair, 0.5), shadow: shade(hair, 0.72), light: shade(hair, 1.35),
-      texture: style.curly ? function (x, y, c) { return (x * 3 + y * 2) % 5 === 0 ? shade(hair, 0.72) : null; } : null
-    };
+    const head = a.sex === 'f' ? HEADF : HEADM;
+    const st = styleShapes(a.style, a.sex);
+    const hairOpts = { texture: hairTexture(a.style, st) };
 
     // 1. Pelo de detrás
-    if (style.back) paint(px, mask(style.back), hair, hairOpts);
+    if (st.back) {
+      const bm = fill(st.back);
+      shade(px, bm, hairR, { texture: hairTexture(a.style, Object.assign({}, st, { flow: st.tail ? 'down' : st.flow })), bias: -0.15 });
+    }
+
     // 2. Ropa
-    const cloth = coat ? '#f2f4f8' : outfit;
-    paint(px, minus(BODY, VNECK), cloth, { outline: shade(coat ? '#9aa3b5' : cloth, coat ? 1 : 0.55), shadow: coat ? '#d5dae4' : shade(cloth, 0.8) });
+    const body = fill(bodyTest());
     if (coat) {
-      // Camiseta oscura en el escote y solapas
-      paint(px, mask([[24, 13, 18], [25, 13, 18], [26, 14, 17], [27, 14, 17], [28, 15, 16]]), '#3e4560', { light: null });
-      [[12, 24], [12, 25], [13, 26], [13, 27], [14, 28], [19, 24], [19, 25], [18, 26], [18, 27], [17, 28]].forEach(function (p) { put(px, p[0], p[1], '#c3c9d6'); });
-      // Bolsillo con bolígrafo
-      [[6, 30], [7, 30], [8, 30], [9, 30], [6, 31], [9, 31]].forEach(function (p) { put(px, p[0], p[1], '#c3c9d6'); });
-      put(px, 7, 29, '#3f72e8'); put(px, 7, 28, '#3f72e8');
-    } else {
-      // Bolsillo del pijama
-      [[21, 29], [22, 29], [23, 29], [24, 29], [21, 30], [24, 30], [21, 31], [24, 31]].forEach(function (p) { put(px, p[0], p[1], shade(cloth, 0.7)); });
-    }
-    // 3. Cuello y cabeza
-    paint(px, NECK, shade(skin, 0.86), { outline: shade(skin, 0.6), light: null });
-    paint(px, mask([[23, 13, 18], [24, 14, 17], [25, 15, 16]]), shade(skin, 0.86), { outline: null, light: null });
-    paint(px, EARS, skin, { outline: shade(skin, 0.62), light: null });
-    paint(px, HEAD, skin, { outline: shade(skin, 0.62), shadow: shade(skin, 0.88), light: shade(skin, 1.08) });
-    // 4. Cara
-    face(px, a, m, skin);
-    // 5. Vello facial
-    if (a.facial === 'tresdias') {
-      const stub = shade(skin, 0.7);
-      for (let y = 15; y <= 21; y++) {
-        for (let x = 9; x <= 22; x++) {
-          if (has(HEAD, x, y) && (x + y) % 2 === 0 && (y >= 19 || x <= 11 || x >= 20 || y === 17)) {
-            if (!(y === 18 && x >= 13 && x <= 18)) put(px, x, y, stub);
-          }
-        }
+      const coatR = ramp('#eef1f7');
+      shade(px, body, coatR, { bias: 0.1 });
+      // Pijama azul debajo, en el escote
+      const vee = fill(poly([[17.5, 38.5], [30.5, 38.5], [24, 50.5]]));
+      shade(px, vee, ramp('#3f72e8'), { outline: false, bias: -0.2 });
+      // Solapas: líneas en diagonal con su sombra
+      for (let k = 0; k <= 11; k++) {
+        const y = 39 + k;
+        const xl = Math.round(17.6 + k * 0.55), xr = Math.round(30.4 - k * 0.55);
+        put(px, xl, y, coatR.shadow); put(px, xl - 1, y, coatR.light);
+        put(px, xr, y, coatR.deep); put(px, xr + 1, y, coatR.shadow);
       }
-    } else if (FACIAL_SHAPES[a.facial]) {
-      paint(px, mask(FACIAL_SHAPES[a.facial]), hair, { outline: shade(hair, 0.55), shadow: shade(hair, 0.75), light: shade(hair, 1.2) });
-      // La boca vuelve a verse encima de la barba
-      if (m !== 'hurt') for (let x = 14; x <= 17; x++) put(px, x, 18, '#6e3428');
-      else { put(px, 15, 18, '#3a1414'); put(px, 16, 18, '#3a1414'); }
+      // Placa con el nombre y bolsillo con bolígrafo
+      for (let x = 31; x <= 35; x++) { put(px, x, 42, '#3f72e8'); put(px, x, 43, '#ffffff'); }
+      put(px, 31, 43, '#c9d3e6'); put(px, 35, 43, '#c9d3e6');
+      for (let x = 8; x <= 13; x++) put(px, x, 46, coatR.shadow);
+      put(px, 8, 47, coatR.shadow); put(px, 13, 47, coatR.shadow); put(px, 8, 48, coatR.shadow); put(px, 13, 48, coatR.shadow);
+      put(px, 10, 43, '#e05a72'); put(px, 10, 44, '#e05a72'); put(px, 10, 45, '#9aa3b5');
+    } else {
+      const clothR = ramp(outfit);
+      shade(px, body, clothR, {});
+      // Cuello en V con ribete
+      const vee = fill(poly([[19, 37.8], [29, 37.8], [24, 45.2]]));
+      shade(px, vee, neckR, { outline: false, flat: true });
+      for (let k = 0; k <= 7; k++) {
+        put(px, Math.round(19 + k * 0.62), 38 + k, clothR.deep);
+        put(px, Math.round(29 - k * 0.62), 38 + k, clothR.deep);
+      }
+      // Pliegues y bolsillo con bolígrafo
+      [[12, 44], [12, 45], [13, 46], [13, 47], [36, 44], [36, 45], [35, 46], [35, 47]].forEach(function (p) { put(px, p[0], p[1], clothR.shadow); });
     }
-    // 6. Pelo de delante
-    paint(px, mask(style.front), hair, hairOpts);
-    if (style.part) { put(px, 15, 4, shade(hair, 0.6)); put(px, 15, 5, skin); put(px, 16, 5, skin); }
-    if (style.tie) for (let x = style.tie[1]; x <= style.tie[2]; x++) put(px, x, style.tie[0], '#e0546f');   // goma del pelo
-    if (style.thin) {
-      // Rapado: se deja ver un poco la piel entre el pelo
-      each(mask(style.front), function (x, y) { if ((x + y) % 2 === 0 && y > 4 && y < 7) put(px, x, y, shade(skin, 0.85)); });
+
+    // 3. Cuello, con la sombra de la barbilla
+    const neck = fill(or(rect(19.4, 31, 28.6, 41), poly([[19, 41], [29, 41], [24, 44.5]])));
+    shade(px, neck, neckR, { bias: -0.1, softEdge: true });
+
+    // 4. Orejas y cabeza
+    const ears = fill(or(ell(12.9, 25.8, 2.3, 3.4), ell(35.1, 25.8, 2.3, 3.4)));
+    shade(px, ears, skinR, { softEdge: true });
+    put(px, 13, 26, skinR.deep); put(px, 35, 26, skinR.deep);
+    const headM = fill(head);
+    shade(px, headM, skinR, { softEdge: true, bias: 0.05 });
+    castShadow(px, headM, 0, 2, 0.3);   // barbilla sobre el cuello
+
+    // 5. Cara
+    face(px, a, m, skinR, hairR);
+
+    // 6. Vello facial
+    if (a.facial === 'tresdias') {
+      const zone = fill(and(head, function (x, y) { return y > 27.5; }, not(ell(CX, 27, 7.4, 6.2)), not(rect(21, 29.6, 27.4, 32.6))));
+      for (let i = 0; i < W * H; i++) if (zone[i] && ((i % W) + Math.floor(i / W)) % 2 === 0) px[i] = mix(px[i], hairR.base, 0.45);
+    } else {
+      const fm = facialMask(a.facial);
+      if (fm) {
+        const fmm = fill(fm);
+        shade(px, fmm, hairR, { softEdge: true, texture: function (x, y, t) { return (x * 5 + y * 3) % 7 === 0 ? 'shadow' : null; } });
+        // La boca vuelve a verse encima
+        const lip = mix(skinR.deep, '#7a3a34', 0.5);
+        if (m === 'hurt') { for (let x = 23; x <= 25; x++) put(px, x, 31, '#3a1520'); }
+        else if (m !== 'ko') { for (let x = 22; x <= 26; x++) put(px, x, 31, lip); if (m === 'happy') { put(px, 21, 30, lip); put(px, 27, 30, lip); } }
+      }
     }
-    // 7. Gafas
+
+    // 7. Pelo de delante, con su sombra sobre la frente
+    if (st.scalp) {
+      // Calvo: brillo en la coronilla
+      put(px, 19, 14, skinR.hi); put(px, 20, 14, skinR.hi); put(px, 18, 15, skinR.hi); put(px, 19, 15, skinR.light);
+    }
+    const fmask = fill(st.front);
+    if (st.bangs) {
+      // Flequillo recto: borde inferior algo dentado
+      for (let x = 14; x <= 34; x++) if (x % 3 === 0) fmask[21 * W + x] = 1;
+    }
+    castShadow(px, fmask, 0, 1, 0.32);
+    shade(px, fmask, hairR, hairOpts);
+    if (st.fade) {
+      // Degradado: los lados se aclaran hacia abajo
+      for (let y = 18; y < 30; y++) for (let x = 0; x < W; x++) {
+        if (!fmask[y * W + x] || (x > 14 && x < 34)) continue;
+        if ((x + y) % 2 === 0 || y > 22) px[y * W + x] = mix(px[y * W + x], skinR.shadow, y > 22 ? 0.55 : 0.3);
+      }
+    }
+    if (st.part) {
+      const p = st.part;
+      for (let y = p[0][1]; y <= p[1][1]; y++) {
+        const x = Math.round(p[0][0] + (p[1][0] - p[0][0]) * (y - p[0][1]) / Math.max(1, p[1][1] - p[0][1]));
+        put(px, x, y, hairR.deep);
+      }
+    }
+    if (st.braid) {
+      // Trenza: cada eslabón con una línea oscura en diagonal
+      for (let y = 26; y < 50; y++) for (let x = 0; x < W; x++) {
+        if (fmask[y * W + x] && (y - x * 0.6) % 3.6 < 0.9 && (x < 19 || x > 29)) px[y * W + x] = hairR.deep;
+      }
+    }
+    if (st.tie) {
+      for (let i = 0; i + 1 < st.tie.length; i += 2) {
+        const p0 = st.tie[i], p1 = st.tie[i + 1];
+        const n = Math.max(Math.abs(p1[0] - p0[0]), Math.abs(p1[1] - p0[1]));
+        for (let k = 0; k <= n; k++) put(px, Math.round(p0[0] + (p1[0] - p0[0]) * k / n), Math.round(p0[1] + (p1[1] - p0[1]) * k / n), k % 2 ? '#e0546f' : '#f27a92');
+      }
+    }
+
+    // 8. Gafas
     if (a.glasses) {
-      const g = '#252a38';
-      [[10, 14], [17, 21]].forEach(function (r) {
-        for (let x = r[0]; x <= r[1]; x++) { put(px, x, 12, g); put(px, x, 15, g); }
-        put(px, r[0], 13, g); put(px, r[0], 14, g); put(px, r[1], 13, g); put(px, r[1], 14, g);
+      const g = '#2a2f40';
+      [[15.5, 21.5], [25.5, 31.5]].forEach(function (r) {
+        for (let x = Math.ceil(r[0]); x <= Math.floor(r[1]); x++) { put(px, x, 22, g); put(px, x, 27, g); }
+        for (let y = 23; y <= 26; y++) { put(px, Math.ceil(r[0]), y, g); put(px, Math.floor(r[1]), y, g); }
+        put(px, Math.ceil(r[0]) + 1, 23, '#dff1ff');
       });
-      put(px, 15, 13, g); put(px, 16, 13, g); put(px, 9, 13, g); put(px, 22, 13, g);
-      put(px, 11, 13, '#dff1ff'); put(px, 18, 13, '#dff1ff');   // reflejo
+      put(px, 22, 24, g); put(px, 23, 24, g); put(px, 24, 24, g); put(px, 25, 24, g);
+      put(px, 14, 23, g); put(px, 13, 23, g); put(px, 34, 23, g); put(px, 35, 23, g);
     }
-    // 8. Fonendo, colgado del cuello: el tubo asoma a los dos lados del cuello
-    //    y cae por el pecho; a la izquierda acaba en la campana y a la
-    //    derecha en las olivas, a media altura (no hasta el borde).
-    const darkCloth = a.outfit === 4;
-    const tube = darkCloth ? '#aab1c3' : '#4a5163';
-    const tubeL = darkCloth ? '#c9cfdb' : '#666e82';
-    const metal = '#e3e7ef';
-    const metalD = '#8e96a8';
-    const tubePath = [[12, 22], [12, 23], [11, 24], [11, 25], [11, 26], [19, 22], [19, 23], [20, 24], [20, 25], [20, 26]];
-    tubePath.forEach(function (p, i) { put(px, p[0], p[1], i % 2 ? tube : tubeL); });
-    // Campana: disco metálico con brillo
-    put(px, 11, 27, metalD);
-    put(px, 10, 28, metalD); put(px, 11, 28, '#ffffff'); put(px, 12, 28, metalD);
-    put(px, 10, 29, metalD); put(px, 11, 29, metal); put(px, 12, 29, metalD);
-    put(px, 11, 30, metalD);
-    // Olivas: la «Y» metálica con las puntas oscuras
-    put(px, 20, 27, metal);
-    put(px, 19, 28, metalD); put(px, 21, 28, metalD);
-    put(px, 19, 29, '#2b2f3a'); put(px, 21, 29, '#2b2f3a');
+
+    // 9. Fonendo con volumen: el tubo asoma a los dos lados del cuello y cae
+    //    por el pecho; campana a la izquierda, olivas a la derecha.
+    const tubeR = a.outfit === 4 ? ramp('#aeb6c8') : ramp('#3a4256');
+    const tube = fill(or(capsule([[19.4, 37.2], [18.2, 40.5], [17.5, 44.5]], 1.05), capsule([[28.6, 37.2], [29.8, 40.5], [30.4, 43.2]], 1.05)));
+    shade(px, tube, tubeR, { outline: false });
+    const metalR = ramp('#d8dde8');
+    const bell = fill(ell(17.5, 46.8, 2.4, 2.2));
+    shade(px, bell, metalR, {});
+    put(px, 16, 46, '#ffffff');
+    const yoke = fill(or(capsule([[30.4, 43.2], [29.2, 45.8]], 0.7), capsule([[30.4, 43.2], [31.8, 45.8]], 0.7)));
+    shade(px, yoke, metalR, { outline: false });
+    put(px, 29, 46, '#2b2f3a'); put(px, 32, 46, '#2b2f3a');
 
     return px;
   }
 
   /** Junta píxeles contiguos del mismo color en una fila: menos nodos en el SVG. */
-  function toSvg(px, size, mood) {
+  // Recorte cuadrado de la cabeza: se lee mejor en tamaños pequeños.
+  const HEAD_BOX = [7, 2, 34, 34];
+  function toSvg(px, size, mood, head) {
     const s = size || 64;
-    const h = Math.round(s * H / W);
+    const box = head ? HEAD_BOX : [0, 0, W, H];
+    const h = Math.round(s * box[3] / box[2]);
     const rects = [];
     for (let y = 0; y < H; y++) {
       let x = 0;
       while (x < W) {
-        const c = px[y][x];
+        const c = px[y * W + x];
         if (!c) { x++; continue; }
         let x2 = x;
-        while (x2 + 1 < W && px[y][x2 + 1] === c) x2++;
+        while (x2 + 1 < W && px[y * W + x2 + 1] === c) x2++;
         rects.push('<rect x="' + x + '" y="' + y + '" width="' + (x2 - x + 1) + '" height="1" fill="' + c + '"/>');
         x = x2 + 1;
       }
     }
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + s + '" height="' + h +
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + box.join(' ') + '" width="' + s + '" height="' + h +
       '" shape-rendering="crispEdges" class="avatar avatar--' + (mood || 'happy') + '" aria-hidden="true">' + rects.join('') + '</svg>';
   }
 
-  /** SVG del avatar. mood: 'happy' | 'neutral' | 'hurt' | 'ko'. */
-  Avatar.svg = function (cfg, mood, size) {
-    return toSvg(draw(cfg, mood), size, mood);
+  // Dibujar cuesta unos milisegundos: se guardan los últimos resultados.
+  const cache = {};
+  const cacheKeys = [];
+  Avatar.svg = function (cfg, mood, size, head) {
+    const key = JSON.stringify([normal(cfg), mood || 'happy', size || 64, !!head]);
+    if (cache[key]) return cache[key];
+    const out = toSvg(draw(cfg, mood), size, mood, head);
+    cache[key] = out;
+    cacheKeys.push(key);
+    if (cacheKeys.length > 40) delete cache[cacheKeys.shift()];
+    return out;
   };
 
-  /** Nodo DOM con el avatar. */
-  Avatar.node = function (cfg, mood, size, extraClass) {
+  /** Nodo DOM con el avatar. «head» recorta solo la cabeza. */
+  Avatar.node = function (cfg, mood, size, extraClass, head) {
     const span = U.el('span', { class: 'avatar-wrap' + (extraClass ? ' ' + extraClass : '') });
-    span.innerHTML = Avatar.svg(cfg, mood, size);
+    span.innerHTML = Avatar.svg(cfg, mood, size, head);
     return span;
   };
 
@@ -355,7 +746,7 @@
   /** Editor sencillo con vista previa. Guarda cada cambio al momento. */
   Avatar.editor = function (onChange) {
     // Sin sexo elegido de antemano: lo decide quien lo crea.
-    const cfg = Object.assign({ sex: '', skin: 1, hair: 1, outfit: 0, glasses: false }, Store.data.settings.avatar || {});
+    const cfg = Object.assign({ sex: '', skin: 1, hair: 1, eyes: 0, outfit: 0, glasses: false }, Store.data.settings.avatar || {});
     const wrap = U.el('div', { class: 'avatar-editor' });
     const preview = U.el('div', { class: 'avatar-editor__preview' });
     const rows = U.el('div', { class: 'avatar-editor__rows' });
@@ -363,6 +754,9 @@
     wrap.appendChild(rows);
 
     function save() {
+      // Al cambiar de sexo, el peinado pasa al primero de su lista.
+      if (cfg.sex) cfg.style = normal(cfg).style;
+      if (cfg.sex !== 'm') cfg.facial = 'ninguno';
       Store.setSetting('avatar', Object.assign({}, cfg));
       paintAll();
       if (onChange) onChange(cfg);
@@ -378,6 +772,22 @@
           'aria-pressed': current === o[0] ? 'true' : 'false',
           onclick: function () { cfg[key] = o[0]; save(); }
         }));
+      });
+      return box;
+    }
+    /** Peinados con su miniatura: así se ve cómo queda antes de elegirlo. */
+    function styleChips(list, current) {
+      const box = U.el('div', { class: 'style-picks' });
+      list.forEach(function (o) {
+        const on = current === o[0];
+        const b = U.el('button', {
+          class: 'style-pick' + (on ? ' is-active' : ''), type: 'button', title: o[1], 'aria-label': o[1],
+          'aria-pressed': on ? 'true' : 'false',
+          onclick: function () { cfg.style = o[0]; save(); }
+        });
+        b.innerHTML = Avatar.svg(Object.assign({}, cfg, { style: o[0], facial: 'ninguno', glasses: false }), 'neutral', 44, true);
+        b.appendChild(U.el('span', { text: o[1] }));
+        box.appendChild(b);
       });
       return box;
     }
@@ -407,8 +817,9 @@
       if (!cfg.sex) return;
       const a = normal(cfg);
       swatchRow('Piel', Avatar.SKINS, 'skin', 'Tono');
-      rows.appendChild(row('Peinado', chips(Avatar.STYLES, 'style', a.style)));
+      rows.appendChild(row('Peinado', styleChips(Avatar.stylesFor(cfg.sex), a.style)));
       swatchRow('Pelo', Avatar.HAIRS, 'hair');
+      swatchRow('Ojos', Avatar.EYES, 'eyes');
       if (cfg.sex === 'm') rows.appendChild(row('Vello facial', chips(Avatar.FACIAL, 'facial', a.facial)));
       swatchRow('Ropa', Avatar.OUTFITS, 'outfit');
       rows.appendChild(row('Gafas', chips([[false, 'Sin gafas'], [true, 'Con gafas']], 'glasses', !!cfg.glasses)));
