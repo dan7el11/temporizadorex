@@ -1148,7 +1148,7 @@ dialog.modal.modal--wide{width:min(760px,calc(100vw - 24px))}
 }
 .hud__game .hearts{color:rgba(255,255,255,.75)}
 .hud__avatar{border-radius:50%;background:rgba(255,255,255,.14);overflow:hidden;width:30px;height:30px;justify-content:center;align-items:flex-end}
-.hud__avatar svg{width:30px;height:33px;margin-bottom:-6px}
+.hud__avatar svg{width:30px;height:32px;margin-bottom:-5px}
 .hud__game.is-lose{animation:hudLose .8s ease}
 .hud__game.is-lose .hud__avatar{animation:nudge .5s ease}
 .hud__game.is-gain{animation:hudGain .9s ease}
@@ -1176,7 +1176,7 @@ body > .gameover{position:fixed}
 .game-tile__info{display:flex;flex-direction:column;gap:4px;min-width:0}
 .game-tile__stats{font-size:.8rem;color:var(--text-faint)}
 .hsession__game{display:inline-flex;align-items:center;gap:4px;color:var(--text-faint);font-size:.75rem}
-.peer-avatar svg{width:26px;height:29px}
+.peer-avatar svg{width:26px;height:28px}
 
 .avatar-editor{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center}
 .avatar-editor__preview{
@@ -1203,3 +1203,8 @@ body > .gameover{position:fixed}
 .between-split__row{display:grid;grid-template-columns:minmax(0,1fr) 76px auto;gap:8px;align-items:center;font-size:.88rem}
 .between-split__row input{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:6px 9px;font-variant-numeric:tabular-nums;width:76px}
 .between-split__rest{font-variant-numeric:tabular-nums;grid-column:2 / -1}
+
+/* Pixel art: que el navegador no suavice los bordes al escalar */
+.avatar,.heart{image-rendering:pixelated}
+.avatar-editor__row .chips{gap:6px}
+.avatar-editor__row .chip{padding:5px 10px;font-size:.82rem}

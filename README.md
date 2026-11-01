@@ -280,9 +280,12 @@ anteriores, y en *Historial* cada día tiene un botón «Ver el día» que abre 
 ### Modo juego: avatar y vidas
 Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
 
-- **Avatar**: un médico o una médica con pijama o bata y fonendo. Se elige hombre o mujer, tono de
-  piel, color de pelo, ropa y gafas; nada más. Su cara cambia: contento, con dolor al perder una vida
-  o KO sin vidas.
+- **Avatar** en **pixel art**, al estilo de los retratos de Stardew Valley: un médico o una médica con
+  pijama o bata y el fonendo colgado del cuello. Se elige hombre o mujer, tono de piel, **peinado**
+  (corto, raya al lado, tupé, rizado, rapado, calvo, melena, bob, flequillo, coleta o moño), color de
+  pelo, **vello facial** en el hombre (afeitado, barba de 3 días, bigote, perilla, barba corta o
+  completa), ropa y gafas. Su cara cambia: contento, con dolor al perder una vida o KO sin vidas. Los
+  corazones también son de 8 bits.
 - **Vidas** (5 por sesión; de 1 a 10): se pierde una con **cada pausa**, **cada distracción rápida** y
   **cada distracción que declares** al terminar un bloque. Un bloque terminado **sin ninguna
   distracción** devuelve una (se puede desactivar). Las pausas guiadas y los descansos no cuestan.
@@ -501,7 +504,7 @@ docs/                         Lo que se publica en GitHub Pages
   src/room.js                 Sala compartida: estado del compañero y descansos acordados
   src/cheers.js               Ánimos entre los dos de la sala: mensajes, efectos y notificaciones
   src/push.js                 Notificaciones push: suscripción del dispositivo y avisos al otro
-  src/avatar.js               Avatar en SVG y su editor
+  src/avatar.js               Avatar en pixel art (SVG) y su editor
   src/game.js                 Modo juego: vidas, recompensas y marcador
   src/between.js              Tiempo entre sesiones: ampliación, descanso o distracción
   supabase/functions/mir-push Función de Supabase que envía los avisos push
