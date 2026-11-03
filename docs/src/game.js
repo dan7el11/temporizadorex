@@ -416,7 +416,7 @@
       // y se levanta antes del golpe. Siempre en el centro de la pantalla.
       const unit = !!(cfg && global.Scene && Game.settings().scene !== false);
       const W = Math.min(unit ? 170 : 190, Math.round(window.innerWidth * (unit ? 0.36 : 0.42)));
-      const impact = calm ? 150 : unit ? (o.kind === 'pause' ? 1000 : 1120) : (o.kind === 'pause' ? 260 : 420);
+      const impact = calm ? 150 : unit ? (o.kind === 'pause' ? 1000 : 1120) : (o.kind === 'pause' ? 300 : 420);
       const layer = U.el('div', {
         class: 'hitfx hitfx--' + o.kind + (unit ? ' hitfx--unit' : '') + (calm ? ' hitfx--calm' : ''),
         role: 'status', 'aria-live': 'assertive'
@@ -479,7 +479,9 @@
       at(impact, function () {
         if (o.lost > 0) setTimeout(function () { Sound.heartBreak(); }, 380);
         if (o.kind === 'pause') {
-          frame('sit', 'hurt');
+          // Pausa: se estira, con los ojos cerrados
+          frame(unit ? 'win' : 'win', 'blink');
+          layer.classList.add('is-stretch');
           if (o.lost > 0) Sound.hurt();
         } else {
           frame('hit', 'hurt');
@@ -489,12 +491,17 @@
         }
         layer.classList.add('is-hit');
       });
-      at(impact + (calm ? 100 : o.ko ? 730 : 830), function () {
+      at(impact + (calm ? 100 : o.ko ? 730 : o.kind === 'pause' ? 1100 : 830), function () {
         if (o.ko) {
           frame(unit ? 'ko' : 'idle', 'ko');
           layer.classList.add('is-ko');
           Sound.gameOver();
-        } else if (o.kind !== 'pause') {
+        } else if (o.kind === 'pause') {
+          // ...y se queda de pie, tranquilo, con el café
+          frame('idle', 'happy');
+          layer.classList.remove('is-stretch');
+          layer.classList.add('is-relax');
+        } else {
           frame('idle', 'neutral');
         }
       });
@@ -507,7 +514,7 @@
         setTimeout(function () { layer.remove(); resolve(); }, 260);
       }
       layer.addEventListener('click', end);
-      timers.push(setTimeout(end, calm ? 1400 : impact + (o.ko ? 3000 : 1600)));
+      timers.push(setTimeout(end, calm ? 1400 : impact + (o.ko ? 3000 : o.kind === 'pause' ? 2100 : 1600)));
     });
   };
 

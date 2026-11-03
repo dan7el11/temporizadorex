@@ -148,8 +148,8 @@
     const ms = hit.ko ? 2600 : 1700;
     peerFx = {
       until: Date.now() + ms,
-      mode: hit.ko ? 'ko' : hit.kind === 'pause' ? 'sit' : 'hit',
-      mood: hit.ko ? 'ko' : 'hurt',
+      mode: hit.ko ? 'ko' : hit.kind === 'pause' ? 'win' : 'hit',
+      mood: hit.ko ? 'ko' : hit.kind === 'pause' ? 'blink' : 'hurt',
       badge: (hit.lost ? '−' + Avatar.fmtLives(hit.lost) + ' ' : '') + (hit.ko ? '💫' : hit.kind === 'pause' ? '⏸️' : (hit.icon || '⚡'))
     };
     Sound.peerHit();
@@ -163,11 +163,13 @@
     lastState = state;
     const box = document.getElementById('studyScene');
     if (!box) return;
-    if (!Scene.enabled() || !state || state.finished) {
-      if (!box.hidden) { box.hidden = true; U.clear(box); lastSig = ''; }
+    const b0 = state && state.blocks ? state.blocks[state.index] : null;
+    // En las pausas guiadas la respiración ocupa el centro: sin escena.
+    if (!Scene.enabled() || !state || state.finished || (b0 && b0.pause && !state.gate)) {
+      if (!box.hidden) { box.hidden = true; U.clear(box); lastSig = ''; layout(); }
       return;
     }
-    const b = state.blocks[state.index];
+    const b = b0;
     const t = Game.today();
     const me = {
       session: true, gate: state.gate, paused: !!state.pausedAt, isBreak: !!(b && b.isBreak),
@@ -194,6 +196,7 @@
     if (ps) row.appendChild(station(ps.avatar, fx ? { mode: fx.mode, mood: fx.mood } : modeOf(peerMe), peer.name || 'Pareja', !peerMe.session && !fx, fx));
     box.appendChild(row);
     if (coop) box.appendChild(U.el('div', { class: 'study-scene__coop', text: coop }));
+    layout();
   };
 
   function station(cfg, m, name, away, fx) {
@@ -206,6 +209,77 @@
     el.appendChild(U.el('span', { class: 'study-station__name', text: away ? name + ' · fuera' : name }));
     return el;
   }
+
+  /**
+   * Coloca la escena sin mover el reloj, que se queda siempre en la mitad de
+   * la pantalla: va en el hueco entre el subtítulo y los controles; si no
+   * cabe, más pequeña; si tampoco, en la esquina inferior izquierda junto a
+   * los controles; y si no hay sitio, se esconde. Nunca tapa el reloj.
+   */
+  function layout() {
+    const runner = document.getElementById('runner');
+    const box = document.getElementById('studyScene');
+    const ctrl = document.querySelector('.runner__controls');
+    if (!runner || !box) return;
+    runner.classList.remove('has-scene', 'scene-on');
+    runner.style.removeProperty('--scene-space');
+    box.classList.remove('is-corner', 'is-compact', 'is-off');
+    box.style.removeProperty('bottom');
+    box.style.removeProperty('--station-w');
+    if (box.hidden || !ctrl) return;
+    runner.classList.add('scene-on');
+    const vh = window.innerHeight;
+    const c = ctrl.getBoundingClientRect();
+    // Dónde acaba lo que hay bajo el reloj (subtítulo, pausa en curso…)
+    let contentBottom = 0;
+    document.querySelectorAll('.stage__layer--over .stage__inner > *').forEach(function (el) {
+      if (el.hidden || el.classList.contains('stage__breath')) return;
+      const r = el.getBoundingClientRect();
+      if (r.height) contentBottom = Math.max(contentBottom, r.bottom);
+    });
+    // El reloj NO se mueve: queda siempre en la mitad de la pantalla.
+    const below = function () {
+      const need = box.offsetHeight + 22;
+      const gap = c.top - contentBottom;
+      if (gap >= need) {
+        box.style.bottom = Math.round(vh - c.top + 8 + (gap - need) / 2) + 'px';
+        return true;
+      }
+      return false;
+    };
+    if (below()) return;
+    box.classList.add('is-compact');
+    if (below()) return;
+    // Esquina inferior izquierda, junto a los controles: el reloj no se toca
+    box.classList.remove('is-compact');
+    box.classList.add('is-corner');
+    // Cada puesto tan grande como quepa a la izquierda de los controles
+    const n = box.querySelectorAll('.study-station').length || 1;
+    const w = Math.floor(Math.min(170, (c.left - 24 - 28 * (n - 1)) / n));
+    if (w >= 80) {
+      box.style.setProperty('--station-w', w + 'px');
+      // Por la izquierda no pisa el texto centrado: basta con que no suba más allá del subtítulo
+      if (c.bottom - box.offsetHeight > contentBottom - 60 || box.getBoundingClientRect().right < window.innerWidth * 0.22) return;
+    }
+    box.classList.add('is-off');
+  }
+  Scene.layout = layout;
+  window.addEventListener('resize', function () { layout(); });
+  // Si cambia el tamaño de los controles o de lo que hay bajo el reloj (pausa
+  // en curso, fuentes que terminan de cargar…), se recoloca.
+  let relayout = null;
+  function soon() { if (relayout) return; relayout = requestAnimationFrame(function () { relayout = null; layout(); }); }
+  if (global.ResizeObserver) {
+    const ro = new ResizeObserver(soon);
+    const watch = function () {
+      const a = document.querySelector('.runner__controls');
+      const b = document.querySelector('.stage__layer--over .stage__inner');
+      if (a) ro.observe(a);
+      if (b) ro.observe(b);
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch); else watch();
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(soon);
 
   /** Para forzar el repintado (p. ej. al cambiar el avatar). */
   Scene.invalidate = function () { lastSig = ''; };

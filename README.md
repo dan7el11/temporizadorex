@@ -329,10 +329,15 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
   noche el flexo se enciende. En pausa se levanta (⏸️), en los descansos se estira (☕), entre
   bloques espera de pie (✔️) y en el último minuto aparece 🏁. **Si estáis en la misma sala, tu
   pareja estudia en la mesa de al lado**, con lo que esté haciendo en ese momento. Se desactiva en
-  Ajustes y se oculta en pantallas muy bajas.
+  Ajustes.
+- **El reloj no se mueve**: sigue en la mitad de la pantalla. La escena va en el hueco entre el
+  subtítulo y los controles; si no cabe (pantallas anchas y bajas), pasa a la esquina inferior
+  izquierda, junto a los controles, tan grande como quepa; y si tampoco hay sitio (móvil en
+  horizontal), se oculta. Nunca tapa el reloj. En las pausas guiadas se oculta para dejar la
+  respiración en el centro.
 - **La escena del golpe sale de la mesa**: el avatar está sentado, se levanta y recibe el golpe (o se
-  sienta en el suelo si es una pausa, o cae KO al lado de la mesa), siempre en el centro de la
-  pantalla.
+  estira con los ojos cerrados y se queda tranquilo con un café ☕ si es una pausa, o cae KO al lado de
+  la mesa), siempre en el centro de la pantalla.
 
 - **Causa antes del golpe**: al pulsar *+ Distracción* sale un menú pequeño encima de los controles
   con las causas (📱 Móvil, 🔔 Redes, 🗣️ Ruido, 💭 Pensamientos, 🍔 Hambre, 🚽 Baño, 💤 Sueño, 💢 Otro,
@@ -342,7 +347,7 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
 - **Levantarse de la mesa**: la escena del golpe va por fotogramas: sentado → se incorpora detrás de
   la mesa → dos pasos hacia fuera → de pie en el centro → golpe.
 - **Golpes de tu pareja**: si tu pareja se distrae o pausa, en tu pantalla su avatar lo recibe en su
-  puesto de la escena (tiembla, se sienta o cae KO) con una etiqueta pequeña al lado («−1 📱»). Sin
+  puesto de la escena (tiembla, se estira o cae KO) con una etiqueta pequeña al lado («−1 📱»). Sin
   mensajes ni ventanas. Fuera del temporizador, tiembla su avatar de la tira de la sala.
 
 ### Misiones, racha y logros
