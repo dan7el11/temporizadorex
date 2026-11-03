@@ -64,6 +64,11 @@
       boxes[t[3]].appendChild(settingRow(t[1], t[2], U.el('label', { class: 'switch' }, [input, U.el('i')])));
     });
 
+    // Aviso antes del final del bloque
+    box.appendChild(settingRow('Aviso antes de que acabe el bloque',
+      'Minutos antes del final. Con la app delante, un aviso discreto y un tono; en segundo plano, una notificación (actívalas abajo). 0 lo desactiva.',
+      numberInput('endWarnMin', 0, 15, 1, function () { if (window.Runner && Runner.armWarn) Runner.armWarn(); })));
+
     // Volumen
     const vol = U.el('input', {
       type: 'range', min: '0', max: '1', step: '0.05', value: String(s.volume),

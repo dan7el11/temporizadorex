@@ -11,7 +11,8 @@
   let wakeLock = null;
   let chromeTimer = null;
   let originalTitle = document.title;
-  let pendingFx = null;      // escena del golpe tras declarar distracciones
+  let pendingFx = null;
+  let warnTimer = null;       // aviso «queda 1 minuto»      // escena del golpe tras declarar distracciones
 
   /* ── Acceso al estado ──────────────────────────────────── */
   Runner.isActive = function () { return !!state && !state.finished; };
@@ -106,6 +107,7 @@
     tick();
     if (!state.gate) startLoop();
     else showGate();
+    armWarn();
     UI.toast('Sesión recuperada');
   };
 
@@ -126,7 +128,47 @@
     tick();
     Game.renderHud(state);
     if (global.Lost) Lost.renderToday();
+    armWarn();
   }
+
+  /* ── Aviso antes del final del bloque ──────────────────── */
+  function warnMs() {
+    const m = Store.data.settings.endWarnMin;
+    return (m === undefined ? 1 : Math.max(0, m)) * 60000;
+  }
+  /**
+   * Un temporizador propio a la hora exacta del aviso: los navegadores frenan
+   * los intervalos en segundo plano, pero respetan mejor un temporizador suelto.
+   * El bucle normal también lo comprueba, por si este llega tarde.
+   */
+  function armWarn() {
+    if (warnTimer) { clearTimeout(warnTimer); warnTimer = null; }
+    if (!state || state.gate || state.pausedAt || !warnMs()) return;
+    const delay = remainingMs() - warnMs();
+    if (delay > 0) warnTimer = setTimeout(function () { warnTimer = null; checkWarn(); }, delay + 50);
+  }
+  function checkWarn() {
+    const w = warnMs();
+    if (!state || state.gate || state.pausedAt || !w) return;
+    const b = block();
+    // Sin aviso en las pausas guiadas (van por ciclos) ni en bloques muy cortos
+    if (!b || b.endWarned || b.pause || b.plannedMs < w + 120000) return;
+    const left = remainingMs();
+    if (left > w || left <= 3000) return;
+    b.endWarned = true;
+    persist();
+    const next = state.blocks[state.index + 1];
+    const mins = Math.round(w / 60000);
+    const title = (mins === 1 ? 'Queda 1 minuto' : 'Quedan ' + mins + ' minutos') + ': ' + b.name;
+    const body = next ? 'Después: ' + next.name + ' (' + U.fmtHuman(next.plannedMs) + ')' : 'Es el último bloque de la sesión.';
+    if (document.hidden) {
+      Notify.show(title, body, false, { tag: 'mir2027-warn', renotify: true });
+    } else {
+      UI.toast('⏳ ' + title);
+      Sound.phase();
+    }
+  }
+  Runner.armWarn = armWarn;
 
   /* ── Bucle ─────────────────────────────────────────────── */
   function startLoop() {
@@ -152,6 +194,7 @@
       Sound.tick();
     }
     if (left <= 0) completeBlock();
+    else checkWarn();
     maybePersist();
   }
 
@@ -273,6 +316,7 @@
     Sound.resume();
     persist();
     tick();
+    armWarn();
     if (Store.data.settings.askDistractions && ms > 8000) {
       askReason(entry, 'Distracción de ' + U.fmtHuman(entry.ms),
         '¿Qué ha sido? Puedes marcar varias razones; el temporizador ya está corriendo.');

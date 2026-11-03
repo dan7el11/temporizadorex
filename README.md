@@ -82,6 +82,11 @@ historial también puedes «repetir» un día ya hecho.
   máximo contraste (blanco o casi negro, según el color) y sobre la parte negra una versión aclarada
   del mismo color, así se lee igual de bien a un lado y otro de la línea.
 - **Sonidos** de inicio y de fin de bloque, y cuenta atrás opcional en los últimos 5 segundos.
+- **Aviso antes del final del bloque** (1 minuto por defecto; se cambia o se quita en *Ajustes →
+  Temporizador*): con la app delante, un aviso discreto («⏳ Queda 1 minuto: …») y un tono suave; en
+  segundo plano, una notificación con el bloque siguiente (hay que tener activadas las
+  notificaciones). No sale en las pausas guiadas ni en bloques de menos de 3 minutos. En el móvil, si
+  el sistema ha congelado la app (pantalla apagada mucho rato), puede llegar tarde o no llegar.
 - Los bloques se encadenan solos (o esperan tu confirmación, si lo prefieres).
 - La pantalla no se apaga durante la sesión (Wake Lock, donde el navegador lo permite).
 - Opcionalmente, **aviso del sistema** al terminar un bloque cuando la pestaña está en segundo

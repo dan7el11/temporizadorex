@@ -222,6 +222,7 @@
     sound: true,
     volume: 0.6,
     finalBeeps: true,
+    endWarnMin: 1,           // aviso X minutos antes de que acabe cada bloque (0 = no)
     askDistractions: true,
     autoNext: true,
     wakeLock: true,
