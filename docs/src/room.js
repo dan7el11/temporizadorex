@@ -158,7 +158,7 @@
     // Instante en que termina el bloque: así el otro lo cuenta sin depender del sondeo.
     out.endsAt = st.pausedAt ? null : Date.now() + Runner.remaining();
     out.remainingMs = st.pausedAt ? Runner.remaining() : null;
-    if (st.game && global.Game && Game.enabled()) out.lives = { left: st.game.left, max: st.game.max };
+    if (st.game && global.Game && Game.enabled()) out.lives = Game.publicLives();
     return out;
   }
 
@@ -355,7 +355,7 @@
     if (!st.session) return peer.name + ' · sin sesión';
     if (st.paused) return peer.name + ' · en pausa' + (st.blockName ? ' (' + st.blockName + ')' : '');
     const left = st.endsAt ? Math.max(0, st.endsAt - Date.now()) : 0;
-    const lives = st.lives ? ' · ❤️ ' + st.lives.left + '/' + st.lives.max : '';
+    const lives = st.lives ? ' · ❤️ ' + (global.Avatar ? Avatar.fmtLives(st.lives.left) : st.lives.left) + '/' + st.lives.max : '';
     return peer.name + ' · ' + (st.blockName || 'estudiando') + ' · ' + U.fmt(left) + lives;
   };
 

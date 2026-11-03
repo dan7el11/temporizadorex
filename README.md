@@ -295,16 +295,34 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
   Su cara cambia: contento, con dolor al perder una vida o KO sin vidas. En tamaños pequeños (cabecera
   del temporizador, sala) se muestra solo la cabeza. Los avatares guardados con peinados antiguos se
   pasan solos al equivalente nuevo. Los corazones también son de 8 bits.
-- **Vidas** (5 por sesión; de 1 a 10): se pierde una con **cada pausa**, **cada distracción rápida** y
-  **cada distracción que declares** al terminar un bloque. Un bloque terminado **sin ninguna
-  distracción** devuelve una (se puede desactivar). Las pausas guiadas y los descansos no cuestan.
-- En el temporizador, arriba a la izquierda, el avatar y los corazones; al perder una vida suena un
-  golpe de 8 bits y el marcador tiembla. **Sin vidas, el reloj no se para**: sale un aviso de «¡Sin
-  vidas!» y la forma de recuperarlas es terminar un bloque limpio.
-- Al terminar, el resumen dice con cuántas vidas acabaste, las perdidas, las recuperadas y los
-  bloques perfectos; el historial lo muestra en cada sesión. En la pantalla principal, la tarjeta
-  *Modo juego* lleva la cuenta de bloques perfectos de hoy y de sesiones sin perder vidas.
-- En la sala, tu pareja ve tu avatar y tus vidas («❤️ 3/5»), y tú los suyos.
+- **Vidas por día** (10 por defecto; de 1 a 10). El día de estudio empieza a las 4:00, así que una
+  noche larga no lo corta. **Lo que pierdes en una sesión sigue perdido en la siguiente.** Hay
+  **medios corazones**:
+  - **Pausa**: ½. **La primera pausa del día es gratis.**
+  - **Distracción rápida**: 1.
+  - **Distracciones declaradas** al terminar un bloque: 1 cada una, o ½ si duraron menos de un
+    minuto de media.
+  - Las pausas guiadas, los descansos y el tiempo entre sesiones no cuestan.
+- **Recuperar vidas** (se puede desactivar):
+  - **Pausa guiada completa**: +½. Descansar bien cura.
+  - **Regeneración**: +1 por cada **45 min de estudio efectivo seguidos sin perder vidas**. La
+    tarjeta dice cuánto falta.
+  - **Regalo de tu pareja**: en el diálogo de ánimos, *Regalar una vida* (una al día). Cuenta aunque
+    tengas la app cerrada; la animación sale al abrirla.
+- **Escena del golpe**: al pulsar *Pausar* o *+ Distracción* (y al declarar distracciones), antes del
+  registro el avatar aparece **de cuerpo entero** y recibe el golpe: algo le cae encima según la razón
+  (📱 móvil, 💤 sueño, 🗣️ ruido…), retrocede parpadeando, un corazón sale volando y se rompe en
+  píxeles y aparece el «−1» o «−½». Con la pausa se sienta en el suelo, agotado. Con la última vida
+  cae **KO** al suelo con estrellitas. Se salta con un toque y se puede desactivar en Ajustes. Al
+  recuperar una vida sale un aviso pequeño con el avatar celebrándolo, sin interrumpir.
+- En el temporizador, arriba a la izquierda, el avatar y los corazones del día (en dos filas de 5).
+  **Sin vidas, el reloj no se para.**
+- Al terminar, el resumen dice con cuántas vidas empezaste y con cuántas te quedas para hoy, las
+  perdidas, las recuperadas y los bloques perfectos. La tarjeta *Modo juego* de la pantalla principal
+  enseña las vidas de hoy.
+- Las vidas se guardan como un **registro de pérdidas y ganancias**, no como un contador: si estudias
+  en el móvil y en el ordenador el mismo día, se suman bien al sincronizar.
+- En la sala, tu pareja ve tu avatar y tus vidas («❤️ 6½/10»), y tú los suyos.
 
 ### Tiempo entre sesiones
 Desde que termina una sesión hasta que empieza otra, la tarjeta *Estudio de hoy* va contando

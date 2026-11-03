@@ -244,7 +244,7 @@
     lostTolerance: 5,        // minutos de hueco que no se cuentan como perdidos
     betweenAsk: true,        // preguntar por el tiempo entre sesiones al empezar otra
     betweenMin: 3,           // a partir de cuántos minutos se pregunta
-    game: { enabled: true, lives: 5, regain: true },   // modo juego: vidas por sesión
+    game: { enabled: true, dayLives: 10, regain: true, anim: true },   // modo juego: vidas por día
     avatar: null,            // se crea al elegir hombre o mujer
 
     askReasonQuick: true,    // preguntar la razón en la distracción rápida
@@ -252,7 +252,7 @@
   };
 
   // Colecciones que se fusionan por id al sincronizar.
-  const MERGEABLE = ['sessions', 'presets', 'reasons', 'topics', 'plans', 'pauses', 'lostCauses', 'lostTime', 'exercises'];
+  const MERGEABLE = ['sessions', 'presets', 'reasons', 'topics', 'plans', 'pauses', 'lostCauses', 'lostTime', 'exercises', 'gameLog'];
 
   const DEFAULT_DATA = {
     version: 1,
@@ -267,6 +267,7 @@
     exercises: DEFAULT_EXERCISES,
     lostCauses: DEFAULT_LOST_CAUSES,
     lostTime: [],
+    gameLog: [],    // modo juego: vidas perdidas y recuperadas, por día
     plans: [],      // plantillas de día
     queue: [],      // sesión de hoy en construcción
     sessions: [],   // historial
@@ -380,6 +381,10 @@
         addedPauses++;
       }
       if (!Array.isArray(this.data.lostTime)) this.data.lostTime = [];
+      if (!Array.isArray(this.data.gameLog)) this.data.gameLog = [];
+      // Del registro de vidas solo importa el día en curso: se guardan dos semanas.
+      const oldest = U.dayKey(Date.now() - 14 * 86400000);
+      this.data.gameLog = this.data.gameLog.filter(function (e) { return e && e.day >= oldest; });
       this.data.settings.schedule = Object.assign(deepClone(DEFAULT_SCHEDULE), this.data.settings.schedule || {});
       if (!this.data.settings.schedule.since) this.data.settings.schedule.since = U.dayKey();
       (this.data.settings.schedule.windows || []).forEach(function (w) {
@@ -565,6 +570,15 @@
       this.data.lostTime = this.data.lostTime.filter(function (x) { return x.id !== id; });
       this.tomb('lostTime', id);
       this.save();
+    },
+    /** Una vida perdida o recuperada (en medios corazones: d = −2 es una vida). */
+    addGameLog: function (entry) {
+      entry.id = entry.id || U.uid('gl');
+      if (this.data.gameLog.some(function (x) { return x.id === entry.id; })) return null;
+      entry.touchedAt = Date.now();
+      this.data.gameLog.push(entry);
+      this.save();
+      return entry;
     },
     lostTimeOf: function (dayKey) {
       return this.data.lostTime.filter(function (e) { return e.day === dayKey; });

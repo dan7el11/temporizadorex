@@ -11,6 +11,7 @@
   let wakeLock = null;
   let chromeTimer = null;
   let originalTitle = document.title;
+  let pendingFx = null;      // escena del golpe tras declarar distracciones
 
   /* ── Acceso al estado ──────────────────────────────────── */
   Runner.isActive = function () { return !!state && !state.finished; };
@@ -141,7 +142,8 @@
     render();
     PiP.update(Runner.snapshot());
 
-    if (state.gate || state.pausedAt) { maybePersist(); return; }
+    if (state.gate || state.pausedAt) { Game.tick(state); maybePersist(); return; }
+    Game.tick(state);
 
     const left = remainingMs();
     const secs = Math.ceil(left / 1000);
@@ -250,7 +252,7 @@
     state.runningSince = null;
     state.pausedAt = Date.now();
     Sound.distraction();
-    Game.lose(state, 1, 'pausa');
+    Game.lose(state, 'pausa');
     document.getElementById('stage').classList.add('is-paused');
     document.getElementById('btnPause').textContent = 'Reanudar';
     showChrome(true);
@@ -312,15 +314,17 @@
     const entry = { type: 'quick', at: Date.now(), ms: 0, count: 1, reasons: [], freeText: null };
     b.distractions.push(entry);
     Sound.distraction();
-    Game.lose(state, 1, 'distracción');
     persist();
     tick();
-
-    if (!Store.data.settings.askReasonQuick) {
-      UI.toast('Distracción registrada (sin parar el reloj)');
-      return;
-    }
-    askReason(entry, 'Distracción registrada', 'El reloj no se ha parado. ¿Por qué ha sido? (opcional)');
+    // Primero el golpe al avatar; después, el registro.
+    Game.lose(state, 'distracción', { halves: 2 }).then(function () {
+      if (!state || state.finished || state.gate) return;
+      if (!Store.data.settings.askReasonQuick) {
+        UI.toast('Distracción registrada (sin parar el reloj)');
+        return;
+      }
+      askReason(entry, 'Distracción registrada', 'El reloj no se ha parado. ¿Por qué ha sido? (opcional)');
+    });
   };
 
   /* ── Fin de bloque ─────────────────────────────────────── */
@@ -354,6 +358,9 @@
     PiP.update(Runner.snapshot());
     showChrome(true);
 
+    // Pausa guiada completa: descansar bien cura medio corazón.
+    if (!skipped && b.isBreak && b.pause) Game.restDone(state, b);
+
     // Pausa metida a mitad de un bloque: se vuelve a él en el acto, sin
     // preguntas, con el tiempo que le quedaba.
     if (b.resumes) {
@@ -378,7 +385,14 @@
     const cfg = Store.data.settings;
     const hasNext = state.index + 1 < state.blocks.length;
     const offerPause = cfg.offerPause !== false && hasNext && !b.isBreak && Store.data.pauses.length;
-    if (cfg.askDistractions || offerPause) askAfterBlock(b, offerPause).then(proceed);
+    if (cfg.askDistractions || offerPause) {
+      askAfterBlock(b, offerPause).then(function () {
+        // Si se declararon distracciones, la escena del golpe va antes de seguir.
+        const fx = pendingFx || Promise.resolve();
+        pendingFx = null;
+        return fx;
+      }).then(proceed);
+    }
     else proceed();
   }
 
@@ -505,7 +519,7 @@
                   reasons: chosen.reasons,
                   freeText: chosen.freeText
                 });
-                Game.lose(state, Math.max(count, 1), 'declarada');
+                pendingFx = Game.lose(state, 'declarada', { halves: Game.declaredHalves(count, minutes), cause: chosen.reasons[0] });
                 persist();
               }
               close(true);

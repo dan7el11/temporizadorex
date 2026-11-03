@@ -16,7 +16,9 @@
 
   const Avatar = {};
   const W = 48;
-  const H = 52;
+  const BUST_H = 52;
+  const FULL_H = 84;      // cuerpo entero: misma cabeza, con tronco, brazos y piernas
+  let H = BUST_H;
   const CX = 24;          // centro de la cara
   const CY = 25;
 
@@ -511,7 +513,7 @@
   }
 
   /* ── Dibujo completo ────────────────────────────────────── */
-  function draw(cfg, mood) {
+  function draw(cfg, mood, pose) {
     const a = normal(cfg);
     const m = mood || 'happy';
     const px = canvas();
@@ -534,8 +536,10 @@
     }
 
     // 2. Ropa
-    const body = fill(bodyTest());
-    if (coat) {
+    const body = pose ? null : fill(bodyTest());
+    if (pose) {
+      figure(px, a, pose, skinR, neckR, outfit, 'under');
+    } else if (coat) {
       const coatR = ramp('#eef1f7');
       shade(px, body, coatR, { bias: 0.1 });
       // Pijama azul debajo, en el escote
@@ -569,7 +573,8 @@
     }
 
     // 3. Cuello, con la sombra de la barbilla
-    const neck = fill(or(rect(19.4, 31, 28.6, 41), poly([[19, 41], [29, 41], [24, 44.5]])));
+    const neck = pose ? fill(rect(20.4, 31, 27.6, 41.5))
+      : fill(or(rect(19.4, 31, 28.6, 41), poly([[19, 41], [29, 41], [24, 44.5]])));
     shade(px, neck, neckR, { bias: -0.1, softEdge: true });
 
     // 4. Orejas y cabeza
@@ -651,6 +656,11 @@
       put(px, 14, 23, g); put(px, 13, 23, g); put(px, 34, 23, g); put(px, 35, 23, g);
     }
 
+    if (pose) {
+      figure(px, a, pose, skinR, neckR, outfit, 'over');
+      return px;
+    }
+
     // 9. Fonendo con volumen: el tubo asoma a los dos lados del cuello y cae
     //    por el pecho; campana a la izquierda, olivas a la derecha.
     const tubeR = a.outfit === 4 ? ramp('#aeb6c8') : ramp('#3a4256');
@@ -665,6 +675,78 @@
     put(px, 29, 46, '#2b2f3a'); put(px, 32, 46, '#2b2f3a');
 
     return px;
+  }
+
+  /* ── Cuerpo entero ──────────────────────────────────────── */
+  /**
+   * Articulaciones de cada pose: hombro → codo → mano, cadera → rodilla → pie.
+   * Con formas y ángulos, una pose nueva es solo otra lista de puntos.
+   */
+  const POSES = {
+    idle: { arms: [[[16.2, 44], [14.4, 51], [14, 57.5]], [[31.8, 44], [33.6, 51], [34, 57.5]]],
+      legs: [[[20.6, 58], [20.4, 68], [20.2, 76]], [[27.4, 58], [27.6, 68], [27.8, 76]]] },
+    hit: { arms: [[[16.2, 44], [11.5, 42], [8.5, 36.5]], [[31.8, 44], [36.5, 43], [40, 38]]],
+      legs: [[[20.6, 58], [19, 67], [16.5, 75]], [[27.4, 58], [29.5, 66.5], [29.5, 76]]] },
+    win: { arms: [[[16.2, 44], [11.5, 39], [10.5, 31.5]], [[31.8, 44], [36.5, 39], [37.5, 31.5]]],
+      legs: [[[20.6, 58], [19.8, 68], [18.6, 76]], [[27.4, 58], [28.2, 68], [29.4, 76]]] },
+    sit: { arms: [[[16.2, 44], [14, 51], [16.2, 58.5]], [[31.8, 44], [34, 51], [31.8, 58.5]]],
+      legs: [[[20.6, 58], [15.6, 62.5], [13, 66.5]], [[27.4, 58], [32.4, 62.5], [35, 66.5]]] }
+  };
+
+  function figure(px, a, pose, skinR, neckR, outfit, layer) {
+    const P = POSES[pose] || POSES.idle;
+    const coat = outfit === 'coat';
+    const clothR = ramp(coat ? '#eef1f7' : outfit);
+    const pantsR = coat ? ramp('#3f72e8') : ramp(mix(outfit, '#000000', 0.12));
+    if (layer === 'under') {
+      // Piernas y zapatos
+      P.legs.forEach(function (leg) {
+        shade(px, fill(capsule(leg, 3, 2.6)), pantsR, {});
+        const f = leg[2];
+        shade(px, fill(ell(f[0] + (f[0] < 24 ? -0.6 : 0.6), f[1] + 2, 3.3, 1.9)), ramp(coat ? '#f2f4f8' : '#4a3a44'), {});
+      });
+      // Tronco (y el faldón de la bata)
+      const torso = or(capsule([[16.8, 43.6], [31.2, 43.6]], 2.8), poly([[14.4, 44], [33.6, 44], [32.2, 59.5], [15.8, 59.5]]));
+      const skirt = coat ? poly([[15.6, 56], [32.4, 56], [34.4, 67.5], [13.6, 67.5]]) : null;
+      shade(px, fill(skirt ? or(torso, skirt) : torso), clothR, coat ? { bias: 0.1 } : {});
+      if (!coat) {
+        // Cinturilla del pantalón
+        for (let x = 17; x <= 31; x++) put(px, x, 59, pantsR.deep);
+      } else {
+        // Raja central y bolsillos de la bata
+        for (let y = 47; y <= 67; y++) put(px, 24, y, clothR.shadow);
+        for (let x = 16; x <= 20; x++) put(px, x, 60, clothR.shadow);
+        for (let x = 28; x <= 32; x++) put(px, x, 60, clothR.shadow);
+        put(px, 30, 58, '#e05a72'); put(px, 30, 59, '#e05a72');
+      }
+      // Escote en V
+      const vee = fill(poly([[20.6, 41], [27.4, 41], [24, 47]]));
+      shade(px, vee, coat ? ramp('#3f72e8') : neckR, { outline: false, flat: true });
+      for (let k = 0; k <= 5; k++) {
+        put(px, Math.round(20.6 + k * 0.6), 41 + k, clothR.deep);
+        put(px, Math.round(27.4 - k * 0.6), 41 + k, clothR.deep);
+      }
+      if (coat) {
+        for (let x = 28; x <= 31; x++) { put(px, x, 49, '#3f72e8'); put(px, x, 50, '#ffffff'); }
+      }
+      return;
+    }
+    // Encima: fonendo y brazos
+    const tubeR = a.outfit === 4 ? ramp('#aeb6c8') : ramp('#3a4256');
+    shade(px, fill(or(capsule([[21, 40.6], [19.8, 44], [19.4, 48]], 0.9), capsule([[27, 40.6], [28.2, 44], [28.6, 47]], 0.9))), tubeR, { outline: false });
+    const metalR = ramp('#d8dde8');
+    shade(px, fill(ell(19.4, 49.8, 2, 1.9)), metalR, {});
+    put(px, 18, 49, '#ffffff');
+    shade(px, fill(or(capsule([[28.6, 47], [27.8, 49]], 0.6), capsule([[28.6, 47], [29.6, 49]], 0.6))), metalR, { outline: false });
+    P.arms.forEach(function (arm) {
+      const sh = arm[0], el = arm[1], hd = arm[2];
+      const mid = [el[0] + (hd[0] - el[0]) * 0.55, el[1] + (hd[1] - el[1]) * 0.55];
+      // Antebrazo y mano
+      shade(px, fill(capsule([el, hd], 1.9, 1.7)), skinR, { softEdge: true });
+      shade(px, fill(ell(hd[0], hd[1], 2.1, 2.1)), skinR, { softEdge: true });
+      // Manga: corta en el pijama, larga en la bata
+      shade(px, fill(capsule(coat ? [sh, el, mid] : [sh, el], 2.6, 2.3)), clothR, coat ? { bias: 0.1 } : {});
+    });
   }
 
   /** Junta píxeles contiguos del mismo color en una fila: menos nodos en el SVG. */
@@ -699,7 +781,41 @@
     const out = toSvg(draw(cfg, mood), size, mood, head);
     cache[key] = out;
     cacheKeys.push(key);
-    if (cacheKeys.length > 40) delete cache[cacheKeys.shift()];
+    if (cacheKeys.length > 60) delete cache[cacheKeys.shift()];
+    return out;
+  };
+
+  /**
+   * Avatar de cuerpo entero. pose: idle | hit | win | sit. El SVG se recorta
+   * por abajo hasta los pies, para que se apoye en el suelo.
+   */
+  Avatar.body = function (cfg, pose, mood, size) {
+    const key = JSON.stringify(['body', normal(cfg), pose || 'idle', mood || 'happy', size || 96]);
+    if (cache[key]) return cache[key];
+    H = FULL_H;
+    let px;
+    try { px = draw(cfg, mood, pose || 'idle'); } finally { H = BUST_H; }
+    let bottom = 0;
+    for (let i = 0; i < px.length; i++) if (px[i]) bottom = Math.floor(i / W);
+    const s = size || 96;
+    const rows = bottom + 1;
+    const rects = [];
+    for (let y = 0; y < rows; y++) {
+      let x = 0;
+      while (x < W) {
+        const c = px[y * W + x];
+        if (!c) { x++; continue; }
+        let x2 = x;
+        while (x2 + 1 < W && px[y * W + x2 + 1] === c) x2++;
+        rects.push('<rect x="' + x + '" y="' + y + '" width="' + (x2 - x + 1) + '" height="1" fill="' + c + '"/>');
+        x = x2 + 1;
+      }
+    }
+    const out = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + rows + '" width="' + s + '" height="' + Math.round(s * rows / W) +
+      '" shape-rendering="crispEdges" class="avatar avatar--body avatar--' + (pose || 'idle') + '" aria-hidden="true">' + rects.join('') + '</svg>';
+    cache[key] = out;
+    cacheKeys.push(key);
+    if (cacheKeys.length > 60) delete cache[cacheKeys.shift()];
     return out;
   };
 
@@ -712,32 +828,45 @@
 
   /* ── Corazones de 8 bits ────────────────────────────────── */
   const HEART = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
-  Avatar.heart = function (full, size) {
+  /** Corazón de 8 bits. fill: true (lleno), false (vacío) o 'half' (medio). */
+  Avatar.heart = function (fill, size) {
     const s = size || 18;
+    const half = fill === 'half';
     let r = '';
     HEART.forEach(function (row, y) {
       for (let x = 0; x < row.length; x++) {
         if (row[x] !== '#') continue;
+        const full = fill === true || (half && x <= 3);
         let c;
         if (!full) {
           const edge = y === 0 || x === 0 || x === row.length - 1 || HEART[y - 1][x] !== '#' || row[x - 1] !== '#' || row[x + 1] !== '#' || !HEART[y + 1] || HEART[y + 1][x] !== '#';
           if (!edge) continue;
-          c = 'currentColor';
-        } else {
-          c = (y === 1 && x === 1) ? '#ffd3dc' : (x >= 4 && y >= 2) || y >= 4 ? '#c91f43' : '#ff4d6d';
+          r += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="currentColor" opacity=".55"/>';
+          continue;
         }
-        r += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + c + '"' + (full ? '' : ' opacity=".55"') + '/>';
+        c = (y === 1 && x === 1) ? '#ffd3dc' : (x >= 4 && y >= 2) || y >= 4 ? '#c91f43' : '#ff4d6d';
+        r += '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + c + '"/>';
       }
     });
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7 6" width="' + s + '" height="' + Math.round(s * 6 / 7) +
-      '" shape-rendering="crispEdges" class="heart' + (full ? ' is-full' : ' is-empty') + '" aria-hidden="true">' + r + '</svg>';
+      '" shape-rendering="crispEdges" class="heart' + (fill === true ? ' is-full' : half ? ' is-half' : ' is-empty') + '" aria-hidden="true">' + r + '</svg>';
   };
 
-  /** Fila de corazones: llenos los que quedan, vacíos los perdidos. */
+  /** «7,5» → «7½». */
+  Avatar.fmtLives = function (n) {
+    const whole = Math.floor(n + 1e-9);
+    const half = n - whole >= 0.5 - 1e-9;
+    return (whole || !half ? String(whole) : '') + (half ? '½' : '');
+  };
+
+  /** Fila de corazones: llenos los que quedan (admite medios), vacíos los perdidos. */
   Avatar.hearts = function (left, max, size) {
-    const box = U.el('span', { class: 'hearts', role: 'img', 'aria-label': left + ' de ' + max + ' vidas' });
+    const box = U.el('span', { class: 'hearts', role: 'img', 'aria-label': Avatar.fmtLives(left) + ' de ' + max + ' vidas' });
     let html = '';
-    for (let i = 0; i < max; i++) html += '<span class="hearts__one" data-i="' + i + '">' + Avatar.heart(i < left, size) + '</span>';
+    for (let i = 0; i < max; i++) {
+      const f = left >= i + 1 ? true : left >= i + 0.5 ? 'half' : false;
+      html += '<span class="hearts__one" data-i="' + i + '">' + Avatar.heart(f, size) + '</span>';
+    }
     box.innerHTML = html;
     return box;
   };

@@ -65,7 +65,7 @@
   Cheers.outbox = function () {
     const now = Date.now();
     return read(OUT_KEY, []).filter(function (c) { return now - c.at < KEEP_MS; })
-      .map(function (c) { return { id: c.id, at: c.at, emoji: c.emoji, text: c.text, effect: c.effect, color: c.color }; });
+      .map(function (c) { return { id: c.id, at: c.at, emoji: c.emoji, text: c.text, effect: c.effect, color: c.color, gift: c.gift || undefined }; });
   };
 
   /** Ids de los ánimos que ya he visto: así el otro sabe que llegaron. */
@@ -81,7 +81,9 @@
       emoji: String(c.emoji || '💛').slice(0, 8),
       text: String(c.text || '').trim().slice(0, 80),
       effect: Cheers.EFFECTS.some(function (e) { return e[0] === c.effect; }) ? c.effect : 'destello',
-      color: /^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : '#ffb84d'
+      color: /^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : '#ffb84d',
+      // Modo juego: una vida regalada (una al día).
+      gift: c.gift === 'vida' ? 'vida' : undefined
     };
     const out = read(OUT_KEY, []).filter(function (x) { return now - x.at < KEEP_MS; });
     out.push(cheer);
@@ -122,6 +124,8 @@
       handled[c.id] = now;
       if (c.at < from || now - c.at > KEEP_MS) return;     // de antes de usar esto
       const item = Object.assign({}, c, { from: peer.name || 'Tu pareja', receivedAt: now });
+      // La vida regalada cuenta ya, aunque la animación espere a que abras la app.
+      if (c.gift === 'vida' && global.Game) item.giftApplied = Game.receiveGift(c);
       queue.push(item);
       fresh++;
       if (document.hidden) Notify.cheer(item);
@@ -159,6 +163,10 @@
     playing = true;
     Cheers.play(next, queue.length).then(function () {
       playing = false;
+      if (next.gift === 'vida' && global.Game) {
+        if (next.giftApplied) { Sound.oneUp(); Game.healFx('+1 vida', 'Regalo de ' + (next.from || 'tu pareja')); }
+        else UI.toast((next.from || 'Tu pareja') + ' te regaló una vida, pero ya tenías todas');
+      }
       markSeen(next);
       Cheers.flush();
     });
@@ -293,6 +301,26 @@
         : 'Todavía no hay nadie más en la sala; le llegará cuando entre.',
       build: function (close) {
         const frag = document.createDocumentFragment();
+
+        // Modo juego: regalar una vida, una vez al día.
+        if (global.Game && Game.enabled()) {
+          const can = Game.giftAvailable();
+          const lives = peer && peer.state && peer.state.lives;
+          const gift = U.el('button', {
+            class: 'cheer-gift', type: 'button', disabled: can ? null : true,
+            onclick: function () {
+              const c = { emoji: '❤️', text: 'Te regalo una vida', effect: 'latido', color: '#ff4d6d', gift: 'vida' };
+              if (Cheers.send(c)) { Game.markGiftSent(); close(true); }
+            }
+          });
+          gift.innerHTML = Avatar.heart(true, 26);
+          gift.appendChild(U.el('span', { class: 'cheer-gift__txt' }, [
+            U.el('strong', { text: can ? 'Regalar una vida' : 'Vida regalada hoy' }),
+            U.el('small', { text: (can ? 'Una al día. ' : 'Mañana podrás regalar otra. ') +
+              (lives ? 'Le quedan ' + Avatar.fmtLives(lives.left) + ' de ' + lives.max + '.' : '') })
+          ]));
+          frag.appendChild(gift);
+        }
 
         // Un toque y se envía: lo rápido es lo que anima.
         const grid = U.el('div', { class: 'cheer-presets' });

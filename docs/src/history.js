@@ -529,9 +529,9 @@
         text: U.fmtHuman(study) + ' · ' + U.plural(s.blocks.length, 'bloque', 'bloques') + ' · ' + U.plural(dn, 'distracción', 'distracciones')
       }),
       // Resultado de la partida, si se jugó con vidas.
-      s.game ? U.el('span', { class: 'hsession__game', title: s.game.left + ' de ' + s.game.max + ' vidas al terminar' }, [
+      s.game ? U.el('span', { class: 'hsession__game', title: Avatar.fmtLives(s.game.left) + ' de ' + s.game.max + ' vidas al terminar' }, [
         Avatar.hearts(Math.min(s.game.left, 5), Math.min(s.game.max, 5), 12),
-        s.game.max > 5 ? U.el('small', { text: ' ' + s.game.left + '/' + s.game.max }) : null
+        s.game.max > 5 ? U.el('small', { text: ' ' + Avatar.fmtLives(s.game.left) + '/' + s.game.max }) : null
       ]) : null,
       U.el('span', { class: 'hsession__chevron' }, [U.icon('chevron', 16)])
     ]));
