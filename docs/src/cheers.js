@@ -307,7 +307,7 @@
           const can = Game.giftAvailable();
           const lives = peer && peer.state && peer.state.lives;
           const gift = U.el('button', {
-            class: 'cheer-gift', type: 'button', disabled: can ? null : true,
+            class: 'cheer-gift' + (lives && lives.left <= 0 ? ' is-revive' : ''), type: 'button', disabled: can ? null : true,
             onclick: function () {
               const c = { emoji: '❤️', text: 'Te regalo una vida', effect: 'latido', color: '#ff4d6d', gift: 'vida' };
               if (Cheers.send(c)) { Game.markGiftSent(); close(true); }
@@ -315,7 +315,7 @@
           });
           gift.innerHTML = Avatar.heart(true, 26);
           gift.appendChild(U.el('span', { class: 'cheer-gift__txt' }, [
-            U.el('strong', { text: can ? 'Regalar una vida' : 'Vida regalada hoy' }),
+            U.el('strong', { text: can ? (lives && lives.left <= 0 ? '💔 Revivir a ' + (peer ? peer.name : 'tu pareja') : 'Regalar una vida') : 'Vida regalada hoy' }),
             U.el('small', { text: (can ? 'Una al día. ' : 'Mañana podrás regalar otra. ') +
               (lives ? 'Le quedan ' + Avatar.fmtLives(lives.left) + ' de ' + lives.max + '.' : '') })
           ]));

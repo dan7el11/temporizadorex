@@ -323,6 +323,26 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
 - Las vidas se guardan como un **registro de pérdidas y ganancias**, no como un contador: si estudias
   en el móvil y en el ordenador el mismo día, se suman bien al sincronizar.
 - En la sala, tu pareja ve tu avatar y tus vidas («❤️ 6½/10»), y tú los suyos.
+- **Escena de estudio**: durante el bloque, debajo del reloj, tu avatar estudia sentado a su mesa
+  (flexo, libro abierto que pasa páginas, taza humeante, libros apilados). Respira y parpadea; por la
+  noche el flexo se enciende. En pausa se levanta (⏸️), en los descansos se estira (☕), entre
+  bloques espera de pie (✔️) y en el último minuto aparece 🏁. **Si estáis en la misma sala, tu
+  pareja estudia en la mesa de al lado**, con lo que esté haciendo en ese momento. Se desactiva en
+  Ajustes y se oculta en pantallas muy bajas.
+- **La escena del golpe sale de la mesa**: el avatar está sentado, se levanta y recibe el golpe (o se
+  sienta en el suelo si es una pausa, o cae KO al lado de la mesa), siempre en el centro de la
+  pantalla.
+
+### Modo cooperativo (en la sala)
+- **Meta conjunta**: horas de estudio efectivo entre los dos cada día (12 h por defecto; se cambia en
+  *Ajustes → Avatar y vidas*). En la tira *Estudiar acompañado* hay una barra a dos colores con lo de
+  cada uno, y en el temporizador, una línea («Juntos hoy: 7 h 20 min de 12 h»). Al cumplirla sale una
+  celebración.
+- **Racha conjunta** 🔥: días seguidos con la meta cumplida. Cada uno publica sus minutos de los
+  últimos días y el móvil guarda lo que ha visto del otro, así la racha no se pierde aunque un día no
+  coincidáis conectados.
+- **Revivir**: si tu pareja se queda sin vidas te llega un aviso, y en *Ánimo* el regalo de vida pasa a
+  ser «💔 Revivir a …».
 
 ### Tiempo entre sesiones
 Desde que termina una sesión hasta que empieza otra, la tarjeta *Estudio de hoy* va contando

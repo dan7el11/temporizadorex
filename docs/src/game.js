@@ -21,7 +21,7 @@
   'use strict';
 
   const Game = {};
-  const DEFAULTS = { enabled: true, dayLives: 10, regain: true, anim: true };
+  const DEFAULTS = { enabled: true, dayLives: 10, regain: true, anim: true, scene: true, coopGoalH: 12 };
   const DAY_CUT_H = 4;
   const REGEN_MS = 45 * 60000;
   const REGEN_KEY = 'mir2027.game.regen.v1';
@@ -256,16 +256,30 @@
     return new Promise(function (resolve) {
       const cfg = Avatar.config();
       const calm = reduced();
-      const W = Math.min(190, Math.round(window.innerWidth * 0.42));
-      const layer = U.el('div', { class: 'hitfx hitfx--' + o.kind + (calm ? ' hitfx--calm' : ''), role: 'status', 'aria-live': 'assertive' });
+      // Con la escena de estudio activada, el avatar empieza sentado a su mesa
+      // y se levanta antes del golpe. Siempre en el centro de la pantalla.
+      const unit = !!(cfg && global.Scene && Game.settings().scene !== false);
+      const W = Math.min(unit ? 170 : 190, Math.round(window.innerWidth * (unit ? 0.36 : 0.42)));
+      const impact = calm ? 150 : unit ? (o.kind === 'pause' ? 640 : 760) : (o.kind === 'pause' ? 260 : 420);
+      const layer = U.el('div', {
+        class: 'hitfx hitfx--' + o.kind + (unit ? ' hitfx--unit' : '') + (calm ? ' hitfx--calm' : ''),
+        role: 'status', 'aria-live': 'assertive'
+      });
+      layer.style.setProperty('--impact', (impact / 1000) + 's');
       layer.appendChild(U.el('div', { class: 'hitfx__flash' }));
       const stage = U.el('div', { class: 'hitfx__stage' });
       const sprite = U.el('div', { class: 'hitfx__sprite' });
       const frame = function (pose, m) {
-        if (cfg) sprite.innerHTML = Avatar.body(cfg, pose, m, W);
-        else sprite.innerHTML = '<span class="hitfx__noavatar">' + (m === 'ko' ? '😵' : m === 'hurt' ? '😣' : '🙂') + '</span>';
+        if (unit) {
+          const mode = pose === 'idle' ? 'stand' : pose;
+          sprite.innerHTML = Scene.unit(cfg, { mode: mode, mood: m, size: Math.round(W * 100 / 48) });
+        } else if (cfg) {
+          sprite.innerHTML = Avatar.body(cfg, pose === 'desk' ? 'idle' : pose, m, W);
+        } else {
+          sprite.innerHTML = '<span class="hitfx__noavatar">' + (m === 'ko' ? '😵' : m === 'hurt' ? '😣' : '🙂') + '</span>';
+        }
       };
-      frame('idle', o.kind === 'pause' ? 'neutral' : 'happy');
+      frame(unit ? 'desk' : 'idle', o.kind === 'pause' ? 'neutral' : 'happy');
       stage.appendChild(U.el('div', { class: 'hitfx__shadow' }));
       stage.appendChild(sprite);
       if (o.projectile && !calm) stage.appendChild(U.el('span', { class: 'hitfx__proj', text: o.projectile }));
@@ -297,8 +311,9 @@
       host().appendChild(layer);
 
       const timers = [];
-      const at = function (ms, fn) { timers.push(setTimeout(fn, calm ? Math.min(ms, 150) : ms)); };
-      const impact = o.kind === 'pause' ? 260 : 420;
+      const at = function (ms, fn) { timers.push(setTimeout(fn, ms)); };
+      // Se levanta de la mesa
+      if (unit && !calm) at(Math.round(impact * 0.42), function () { frame('idle', 'neutral'); layer.classList.add('is-up'); });
       at(impact, function () {
         if (o.kind === 'pause') {
           frame('sit', 'hurt');
@@ -310,10 +325,9 @@
         }
         layer.classList.add('is-hit');
       });
-      const settle = o.ko ? 1150 : 1250;
-      at(settle, function () {
+      at(impact + (calm ? 100 : o.ko ? 730 : 830), function () {
         if (o.ko) {
-          frame('idle', 'ko');
+          frame(unit ? 'ko' : 'idle', 'ko');
           layer.classList.add('is-ko');
           Sound.gameOver();
         } else if (o.kind !== 'pause') {
@@ -329,7 +343,7 @@
         setTimeout(function () { layer.remove(); resolve(); }, 260);
       }
       layer.addEventListener('click', end);
-      timers.push(setTimeout(end, calm ? 1400 : o.ko ? 3400 : 2000));
+      timers.push(setTimeout(end, calm ? 1400 : impact + (o.ko ? 3000 : 1600)));
     });
   };
 
@@ -495,11 +509,26 @@
 
     toggle('regain', 'Recuperar vidas', 'Pausa guiada completa: +½. ' + Game.REGEN_MIN + ' min de estudio seguidos sin perder vidas: +1. Tu pareja puede regalarte una al día.');
     toggle('anim', 'Animación de daño', 'Al pausar o distraerte, el avatar recibe el golpe antes de registrarlo. Se salta con un toque.');
+    toggle('scene', 'Escena de estudio', 'Tu avatar estudia en su mesa durante el bloque (y el de tu pareja al lado, si estáis en la sala). Al distraerte, se levanta y recibe el golpe.', function () { if (global.Scene) Scene.invalidate(); });
+
+    const goal = U.el('input', { type: 'number', class: 'num-setting', min: '1', max: '30', step: '0.5', value: String(s.coopGoalH),
+      onchange: function () {
+        const n = U.clamp(parseFloat(goal.value) || 12, 1, 30);
+        goal.value = String(n);
+        Game.set({ coopGoalH: n });
+        if (global.Coop) Coop.invalidate();
+        if (global.App) App.renderRoomStrip();
+      } });
+    box.appendChild(U.el('div', { class: 'setting' }, [
+      U.el('div', { class: 'setting__txt' }, [U.el('span', { text: 'Meta conjunta (horas)' }),
+        U.el('small', { text: 'Horas de estudio efectivo entre los dos cada día, si estáis en la misma sala. Cumplirla suma a la racha.' })]),
+      goal
+    ]));
 
     const ed = document.getElementById('avatarEditor');
     if (ed) {
       U.clear(ed);
-      ed.appendChild(Avatar.editor(function () { Game.renderTile(); if (global.App) App.renderRoomStrip(); }));
+      ed.appendChild(Avatar.editor(function () { Game.renderTile(); if (global.Scene) Scene.invalidate(); if (global.App) App.renderRoomStrip(); }));
     }
   };
 

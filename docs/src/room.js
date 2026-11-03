@@ -146,6 +146,8 @@
     if (global.Cheers) { out.cheers = Cheers.outbox(); out.cheersSeen = Cheers.seenIds(); }
     // Modo juego: el avatar y, con sesión, las vidas que quedan.
     if (global.Avatar && Avatar.config()) out.avatar = Avatar.config();
+    // Cooperativo: mis minutos de estudio de los últimos días.
+    if (global.Coop) out.coop = Coop.myState();
     if (!st || st.finished) { out.session = false; return out; }
 
     const b = st.blocks[st.index];
@@ -280,6 +282,7 @@
     peers.forEach(function (peer) {
       const st = peer.state || {};
       if (global.Cheers) Cheers.receive(peer);
+      if (global.Coop) Coop.receive(peer);
 
       // Una propuesta suya que todavía no he visto.
       const prop = st.proposal;

@@ -1132,6 +1132,8 @@
   function render() {
     const b = block();
     if (!b) return;
+    // Escena de estudio: solo se repinta si algo cambia.
+    if (global.Scene) Scene.render(state);
     const stage = document.getElementById('stage');
     const left = remainingMs();
     let pct = U.clamp((left / b.plannedMs) * 100, 0, 100);

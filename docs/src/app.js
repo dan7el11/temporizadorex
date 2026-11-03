@@ -190,6 +190,12 @@
       });
     }
 
+    // Meta conjunta del día y racha.
+    if (peers.length && window.Coop) {
+      const coop = Coop.node(peers[0].name);
+      if (coop) body.appendChild(coop);
+    }
+
     // El último ánimo recibido, para releerlo.
     const last = Cheers.log().slice(-1)[0];
     if (last && Date.now() - last.at < 12 * 3600000) {
