@@ -289,7 +289,8 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
   - Hombre: corto, raya al lado, tupé, hacia atrás, degradado, pinchos, rizado, afro, rapado, con
     entradas, calvo, media melena y moño.
   - Mujer: melena lisa, melena ondulada, con flequillo, media melena, bob, pixie, coleta alta, moño,
-    dos trenzas, trenza de lado, rizos largos, afro y rapado.
+    dos trenzas, trenza de lado, rizos largos, afro, rapado, ondas largas con raya, ondas cortas,
+    rizos a los hombros y rizos cortos.
   - **Vello facial** en el hombre: afeitado, barba de 3 días, bigote, perilla, candado, barba corta o
     completa.
   Su cara cambia: contento, con dolor al perder una vida o KO sin vidas. En tamaños pequeños (cabecera
@@ -332,6 +333,36 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
 - **La escena del golpe sale de la mesa**: el avatar está sentado, se levanta y recibe el golpe (o se
   sienta en el suelo si es una pausa, o cae KO al lado de la mesa), siempre en el centro de la
   pantalla.
+
+- **Causa antes del golpe**: al pulsar *+ Distracción* sale un menú pequeño encima de los controles
+  con las causas (📱 Móvil, 🔔 Redes, 🗣️ Ruido, 💭 Pensamientos, 🍔 Hambre, 🚽 Baño, 💤 Sueño, 💢 Otro,
+  Sin causa). Un toque y lo elegido es lo que golpea al avatar; no hay más preguntas después. Si no
+  eliges nada en 8 s, se cierra solo y el golpe es genérico (⚡). Se puede desactivar: entonces el
+  golpe va primero y la razón se pregunta después, como antes.
+- **Levantarse de la mesa**: la escena del golpe va por fotogramas: sentado → se incorpora detrás de
+  la mesa → dos pasos hacia fuera → de pie en el centro → golpe.
+- **Golpes de tu pareja**: si tu pareja se distrae o pausa, en tu pantalla su avatar lo recibe en su
+  puesto de la escena (tiembla, se sienta o cae KO) con una etiqueta pequeña al lado («−1 📱»). Sin
+  mensajes ni ventanas. Fuera del temporizador, tiembla su avatar de la tira de la sala.
+
+### Misiones, racha y logros
+- **Misiones del día**: 3 cada día (las mismas en tus dispositivos), por ejemplo «Termina 2 bloques sin
+  distraerte con el móvil», «Haz una pausa guiada completa», «Empieza antes de las 9:00» o «Suma 3 h de
+  estudio efectivo». Cada una cumplida da **+1 vida**, y no se cobra dos veces aunque uses dos
+  dispositivos. Se ven en la tarjeta *Modo juego* con su progreso.
+- **Racha** 🔥: días seguidos con tu objetivo de horas efectivas (5 h por defecto; se cambia en Ajustes).
+  **Un día fallado por semana se perdona** (comodín).
+- **Logros** 🏅: 16 insignias que se desbloquean solas (primer bloque, sesión perfecta, 10/100/500 h,
+  jornada maratón, especialista en una materia, rachas de 7 y 30, al alba, búho, 10 pausas guiadas, 10
+  misiones, meta conjunta, revivir a tu pareja, saber parar). Al conseguir uno suena una fanfarria.
+- **Fin de jornada** 🌙: resumen del día contado línea a línea con sonido (horas efectivas, materias,
+  vidas, misiones, racha, meta conjunta y logros de hoy). Desde la tarjeta, o solo al terminar una
+  sesión pasadas las 21:00 (una vez al día).
+- **Sonidos 8 bits**: golpe, corazón roto, pasos, curación, misión, logro, recuento y golpe de tu
+  pareja (muy suave). Se silencian aparte en Ajustes.
+- **Modo amable** 🌱: si un día te quedas sin vidas dos veces (o pierdes 7), la app no te castiga más:
+  te propone una pausa de recuperación y, el resto del día, las pausas no cuestan y las distracciones
+  cuestan la mitad. También se activa a mano con *Día amable*.
 
 ### Modo cooperativo (en la sala)
 - **Meta conjunta**: horas de estudio efectivo entre los dos cada día (12 h por defecto; se cambia en

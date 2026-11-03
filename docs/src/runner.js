@@ -309,14 +309,24 @@
 
   /** Distracción registrada sin parar el reloj. */
   Runner.quickDistraction = function () {
-    if (!state || state.gate) return;
+    if (!state || state.gate || Game.causeOpen()) return;
     const b = block();
     const entry = { type: 'quick', at: Date.now(), ms: 0, count: 1, reasons: [], freeText: null };
     b.distractions.push(entry);
     Sound.distraction();
     persist();
     tick();
-    // Primero el golpe al avatar; después, el registro.
+    // Con el menú de causas: primero eliges qué fue (un toque) y eso es lo que
+    // golpea al avatar; sin más preguntas después.
+    if (Game.enabled() && Game.settings().causeFirst !== false) {
+      Game.pickCause().then(function (cause) {
+        if (cause) { Reasons.apply(entry, { reasons: [cause], freeText: null }); persist(); tick(); }
+        if (!state || state.finished) return;
+        Game.lose(state, 'distracción', { halves: 2, cause: cause });
+      });
+      return;
+    }
+    // Sin menú: primero el golpe; después, el registro.
     Game.lose(state, 'distracción', { halves: 2 }).then(function () {
       if (!state || state.finished || state.gate) return;
       if (!Store.data.settings.askReasonQuick) {
@@ -1045,7 +1055,7 @@
       actions: function (close) {
         return [U.el('button', { class: 'btn btn--primary', text: 'Cerrar', onclick: function () { close(true); } })];
       }
-    });
+    }).then(function () { if (global.Progress) Progress.afterSession(); });
   }
 
   function statusLabel(s) {

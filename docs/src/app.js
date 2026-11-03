@@ -422,11 +422,14 @@
     setTimeout(Cheers.flush, 1200);
     // El alta push se renueva al abrir: el navegador puede cambiar la suscripción.
     setTimeout(Push.refresh, 4000);
+    // Modo juego: misiones cumplidas y logros nuevos (la primera vez, sin fiesta).
+    setTimeout(function () { if (window.Progress) Progress.check(); }, 2500);
     // Cada minuto: la cuenta atrás del examen y la tarjeta de tiempo perdido,
     // que así sigue lo que vas haciendo sin tener que recargar.
     setInterval(function () {
       App.renderCountdown();
       Lost.renderToday();
+      if (window.Progress) { Progress.check(); if (!Runner.isActive()) Game.renderTile(); }
     }, 60000);
   };
 

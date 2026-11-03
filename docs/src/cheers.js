@@ -310,7 +310,7 @@
             class: 'cheer-gift' + (lives && lives.left <= 0 ? ' is-revive' : ''), type: 'button', disabled: can ? null : true,
             onclick: function () {
               const c = { emoji: '❤️', text: 'Te regalo una vida', effect: 'latido', color: '#ff4d6d', gift: 'vida' };
-              if (Cheers.send(c)) { Game.markGiftSent(); close(true); }
+              if (Cheers.send(c)) { Game.markGiftSent(!!(lives && lives.left <= 0)); close(true); }
             }
           });
           gift.innerHTML = Avatar.heart(true, 26);

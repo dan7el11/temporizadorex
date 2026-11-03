@@ -148,6 +148,8 @@
     if (global.Avatar && Avatar.config()) out.avatar = Avatar.config();
     // Cooperativo: mis minutos de estudio de los últimos días.
     if (global.Coop) out.coop = Coop.myState();
+    // Modo juego: mis golpes recientes, para que su pantalla los anime en mi puesto.
+    if (global.Game && Game.enabled()) out.hits = Game.recentHits();
     if (!st || st.finished) { out.session = false; return out; }
 
     const b = st.blocks[st.index];
@@ -283,6 +285,7 @@
       const st = peer.state || {};
       if (global.Cheers) Cheers.receive(peer);
       if (global.Coop) Coop.receive(peer);
+      if (global.Game) Game.receivePeer(peer);
 
       // Una propuesta suya que todavía no he visto.
       const prop = st.proposal;

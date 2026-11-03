@@ -109,13 +109,57 @@
       this.play(notes, 'square');
     },
 
+    /** Sonidos del modo juego: se pueden silenciar aparte. */
+    gameOn: function () {
+      return !(window.Game && Game.settings && Game.settings().sounds === false);
+    },
+    g: function (notes, type) { if (this.gameOn()) this.play(notes, type); },
+
+    /** Corazón que se rompe: chasquido y caída. */
+    heartBreak: function () {
+      this.g([[880, 0, 0.04, 0.18], [440, 0.04, 0.05, 0.2], [311.13, 0.1, 0.08, 0.2], [207.65, 0.18, 0.16, 0.2]], 'square');
+    },
+    /** Golpe seco (impacto del proyectil). */
+    thud: function () {
+      this.g([[146.83, 0, 0.06, 0.32], [98, 0.04, 0.12, 0.3]], 'square');
+    },
+    /** Levantarse de la silla: dos pasitos. */
+    steps: function () {
+      this.g([[196, 0, 0.04, 0.12], [233.08, 0.12, 0.04, 0.12]], 'triangle');
+    },
+    /** Misión cumplida: moneda doble. */
+    mission: function () {
+      this.g([[987.77, 0, 0.07, 0.22], [1318.5, 0.07, 0.3, 0.22]], 'square');
+    },
+    /** Logro: fanfarria corta. */
+    fanfare: function () {
+      this.g([
+        [523.25, 0, 0.1, 0.22], [659.25, 0.1, 0.1, 0.22], [783.99, 0.2, 0.1, 0.22],
+        [1046.5, 0.3, 0.22, 0.24], [783.99, 0.52, 0.08, 0.2], [1046.5, 0.6, 0.4, 0.26]
+      ], 'square');
+    },
+    /** Recuento del resumen del día: un tic por línea. */
+    tally: function (i) {
+      this.g([[440 * Math.pow(2, (i || 0) / 12), 0, 0.06, 0.16]], 'square');
+    },
+    /** Golpe a tu pareja (en su puesto): muy suave, para no molestar. */
+    peerHit: function () {
+      this.g([[330, 0, 0.05, 0.08], [247, 0.05, 0.08, 0.08]], 'triangle');
+    },
+    /** Modo amable: dos notas suaves. */
+    kind: function () {
+      this.g([[523.25, 0, 0.3, 0.14], [659.25, 0.2, 0.5, 0.14]], 'sine');
+    },
+
     /** Modo juego: pierdes una vida (dos notas que caen, en 8 bits). */
     hurt: function () {
+      if (!this.gameOn()) return;
       this.play([[392, 0, 0.09, 0.28], [261.63, 0.08, 0.16, 0.28]], 'square');
     },
 
     /** Modo juego: vida extra. */
     oneUp: function () {
+      if (!this.gameOn()) return;
       this.play([
         [659.25, 0, 0.08, 0.22], [783.99, 0.08, 0.08, 0.22], [1318.5, 0.16, 0.08, 0.22],
         [1046.5, 0.24, 0.08, 0.22], [1174.66, 0.32, 0.08, 0.22], [1567.98, 0.4, 0.18, 0.22]
@@ -124,6 +168,7 @@
 
     /** Modo juego: sin vidas. */
     gameOver: function () {
+      if (!this.gameOn()) return;
       this.play([
         [523.25, 0, 0.18, 0.26], [392, 0.18, 0.18, 0.26], [329.63, 0.36, 0.18, 0.26], [261.63, 0.54, 0.5, 0.28]
       ], 'square');

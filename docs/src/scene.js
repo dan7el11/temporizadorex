@@ -91,9 +91,18 @@
     const mode = o.mode || 'desk';
     const mood = o.mood || 'happy';
     const lamp = o.lamp !== undefined ? o.lamp : Scene.daypart() !== 'day';
+    let behind = '';
     let body = '';
     let front = '';
-    if (cfg && mode === 'desk') {
+    const sx = o.x !== undefined ? o.x : STAND_X;
+    if (cfg && mode === 'rise') {
+      // Incorporándose: de pie detrás de la mesa, que le tapa las piernas
+      const b = Avatar.bodyInner(cfg, 'idle', mood);
+      behind += '<g class="who who--rise">' + who(cfg, 'idle', mood, SEAT_X, UH - b.h - 4) + '</g>';
+    } else if (cfg && mode === 'step') {
+      const b = Avatar.bodyInner(cfg, 'walk', mood);
+      front += '<g class="who who--step">' + who(cfg, 'walk', mood, sx, UH - b.h) + '</g>';
+    } else if (cfg && mode === 'desk') {
       // Dos versiones de la cara (normal y parpadeo); el CSS alterna.
       body += '<g class="who who--desk">' +
         '<g class="who__open">' + who(cfg, 'desk', mood, SEAT_X, SEAT_Y, 50) + '</g>' +
@@ -104,11 +113,11 @@
     } else if (cfg && mode !== 'empty') {
       const pose = mode === 'stand' ? 'idle' : mode;
       const b = Avatar.bodyInner(cfg, pose, mood);
-      front += '<g class="who who--' + mode + '">' + who(cfg, pose, mood, STAND_X, UH - b.h) + '</g>';
+      front += '<g class="who who--' + mode + '">' + who(cfg, pose, mood, sx, UH - b.h) + '</g>';
     }
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + UW + ' ' + UH + '" width="' + (o.size || 160) +
       '" height="' + Math.round((o.size || 160) * UH / UW) + '" shape-rendering="crispEdges" style="overflow:visible" class="scene-unit scene-unit--' + mode + '" aria-hidden="true">' +
-      desk(lamp) + mug(mode === 'desk') + book() + body + front + '</svg>';
+      behind + desk(lamp) + mug(mode === 'desk') + book() + body + front + '</svg>';
     return svg;
   };
 
@@ -128,7 +137,30 @@
   }
 
   let lastSig = '';
+  let lastState = null;
+  let peerFx = null;   // golpe de la pareja en curso: { until, mode, mood, badge }
+
+  /**
+   * Tu pareja ha tenido una distracción o una pausa: su avatar lo recibe en su
+   * puesto, con una etiqueta pequeña al lado. Sin mensajes en tu pantalla.
+   */
+  Scene.peerHit = function (hit) {
+    const ms = hit.ko ? 2600 : 1700;
+    peerFx = {
+      until: Date.now() + ms,
+      mode: hit.ko ? 'ko' : hit.kind === 'pause' ? 'sit' : 'hit',
+      mood: hit.ko ? 'ko' : 'hurt',
+      badge: (hit.lost ? '−' + Avatar.fmtLives(hit.lost) + ' ' : '') + (hit.ko ? '💫' : hit.kind === 'pause' ? '⏸️' : (hit.icon || '⚡'))
+    };
+    Sound.peerHit();
+    Scene.render(lastState);
+    setTimeout(function () {
+      if (peerFx && Date.now() >= peerFx.until - 50) { peerFx = null; Scene.render(lastState); }
+    }, ms + 30);
+  };
+
   Scene.render = function (state) {
+    lastState = state;
     const box = document.getElementById('studyScene');
     if (!box) return;
     if (!Scene.enabled() || !state || state.finished) {
@@ -150,7 +182,8 @@
     } : null;
     const part = Scene.daypart();
     const coop = global.Coop ? Coop.line() : '';
-    const sig = JSON.stringify([Avatar.config(), modeOf(me), ps ? [ps.avatar, modeOf(peerMe), peer.name] : null, part, coop]);
+    const fx = peerFx && Date.now() < peerFx.until ? peerFx : null;
+    const sig = JSON.stringify([Avatar.config(), modeOf(me), ps ? [ps.avatar, modeOf(peerMe), peer.name] : null, part, coop, fx]);
     if (sig === lastSig) return;
     lastSig = sig;
     box.hidden = false;
@@ -158,17 +191,18 @@
     box.className = 'study-scene study-scene--' + part + (ps ? ' study-scene--duo' : '');
     const row = U.el('div', { class: 'study-scene__row' });
     row.appendChild(station(Avatar.config(), modeOf(me), 'Tú'));
-    if (ps) row.appendChild(station(ps.avatar, modeOf(peerMe), peer.name || 'Pareja', !peerMe.session));
+    if (ps) row.appendChild(station(ps.avatar, fx ? { mode: fx.mode, mood: fx.mood } : modeOf(peerMe), peer.name || 'Pareja', !peerMe.session && !fx, fx));
     box.appendChild(row);
     if (coop) box.appendChild(U.el('div', { class: 'study-scene__coop', text: coop }));
   };
 
-  function station(cfg, m, name, away) {
-    const el = U.el('div', { class: 'study-station' + (away ? ' is-away' : '') + ' is-' + m.mode });
+  function station(cfg, m, name, away, fx) {
+    const el = U.el('div', { class: 'study-station' + (away ? ' is-away' : '') + ' is-' + m.mode + (fx ? ' is-peerhit' : '') });
     const art = U.el('div', { class: 'study-station__art' });
     art.innerHTML = Scene.unit(m.mode === 'empty' ? null : cfg, { mode: m.mode, mood: m.mood, size: 150 });
     el.appendChild(art);
-    if (m.bubble) el.appendChild(U.el('span', { class: 'study-station__bubble', text: m.bubble }));
+    if (fx) el.appendChild(U.el('span', { class: 'study-station__hit', text: fx.badge }));
+    else if (m.bubble) el.appendChild(U.el('span', { class: 'study-station__bubble', text: m.bubble }));
     el.appendChild(U.el('span', { class: 'study-station__name', text: away ? name + ' · fuera' : name }));
     return el;
   }

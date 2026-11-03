@@ -1,0 +1,375 @@
+/*
+ * Progreso del modo juego:
+ *   - Misiones del día (3, distintas cada día): cada una cumplida da +1 vida.
+ *   - Racha personal: días seguidos con tu objetivo de horas, con un comodín
+ *     por semana para un día malo.
+ *   - Logros con insignia, que se desbloquean solos a partir de tus datos.
+ *   - Resumen de fin de jornada: el día contado línea a línea.
+ *
+ * Todo se calcula a partir del historial; las recompensas de las misiones se
+ * apuntan en el registro de vidas con un id fijo por día y misión, así que no
+ * se cobran dos veces aunque uséis dos dispositivos.
+ */
+(function (global) {
+  'use strict';
+
+  const Progress = {};
+  const SEEN_KEY = 'mir2027.progress.badges.v1';     // { id: instante en que se vio }
+  const MISSIONS_KEY = 'mir2027.progress.missions.v1'; // contador de misiones cumplidas
+  const DAYEND_KEY = 'mir2027.progress.dayend.v1';   // día del último resumen automático
+
+  function read(key, fallback) {
+    try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v === null ? fallback : v; } catch (e) { return fallback; }
+  }
+  function write(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* noop */ }
+  }
+  function dayKeyAgo(n, from) { return U.dayKey((from || Date.now()) - n * 86400000); }
+
+  /* ── Datos de un día ────────────────────────────────────── */
+  /** Bloques en bruto de un día (historial y sesión en curso). */
+  function blocksOf(dayKey) {
+    const out = [];
+    const add = function (b) { if (b && b.startedAt && U.dayKey(b.startedAt) === dayKey) out.push(b); };
+    Store.data.sessions.forEach(function (s) { (s.blocks || []).forEach(add); });
+    const run = global.Runner && Runner.getState();
+    if (run && !run.finished) run.blocks.forEach(add);
+    return out;
+  }
+
+  Progress.dayStats = function (dayKey) {
+    const k = dayKey || U.dayKey();
+    const blocks = blocksOf(k);
+    const study = blocks.filter(function (b) { return !b.isBreak; });
+    const done = study.filter(function (b) { return b.status === 'done'; });
+    const hasReason = function (b, id) {
+      return (b.distractions || []).some(function (d) { return (d.reasons || []).indexOf(id) >= 0; });
+    };
+    let eff = 0;
+    try { eff = Math.round(Day.summary(k).totals.eff / 60000); } catch (e) { /* sin datos */ }
+    const first = blocks.reduce(function (a, b) { return Math.min(a, b.startedAt); }, Infinity);
+    const sessions = Store.data.sessions.filter(function (s) { return U.dayKey(s.startedAt) === k; }).length;
+    const t = global.Game ? Game.today() : null;
+    return {
+      eff: eff,
+      perfect: done.filter(function (b) { return !(b.distractions || []).length && (b.actualMs || b.elapsedBefore || 0) >= 10 * 60000; }).length,
+      nophone: done.filter(function (b) { return !hasReason(b, 'r_movil') && !hasReason(b, 'r_redes'); }).length,
+      guided: blocks.filter(function (b) { return b.isBreak && b.pause && b.status === 'done'; }).length,
+      early: first !== Infinity && new Date(first).getHours() < 9 ? 1 : 0,
+      long50: done.filter(function (b) {
+        return (b.actualMs || b.elapsedBefore || 0) >= 50 * 60000 && !(b.distractions || []).some(function (d) { return d.type === 'pause'; });
+      }).length,
+      sessions: sessions,
+      regen: t && k === Game.studyDay() ? t.regens : 0
+    };
+  };
+
+  /* ── Misiones ───────────────────────────────────────────── */
+  const MISSIONS = [
+    { id: 'perfect2', icon: '✨', title: 'Termina 2 bloques sin ninguna distracción', key: 'perfect', target: 2 },
+    { id: 'nophone2', icon: '📵', title: 'Termina 2 bloques sin distraerte con el móvil', key: 'nophone', target: 2 },
+    { id: 'guided1', icon: '🫁', title: 'Haz una pausa guiada completa', key: 'guided', target: 1 },
+    { id: 'early', icon: '🌅', title: 'Empieza a estudiar antes de las 9:00', key: 'early', target: 1 },
+    { id: 'eff3', icon: '⏱️', title: 'Suma 3 h de estudio efectivo', key: 'eff', target: 180, unit: 'min', group: 'eff' },
+    { id: 'eff5', icon: '🏔️', title: 'Suma 5 h de estudio efectivo', key: 'eff', target: 300, unit: 'min', group: 'eff' },
+    { id: 'regen1', icon: '💗', title: 'Encadena 45 min seguidos sin perder vidas', key: 'regen', target: 1 },
+    { id: 'long50', icon: '🧱', title: 'Un bloque de 50 min o más sin pausas', key: 'long50', target: 1 },
+    { id: 'sessions2', icon: '🔁', title: 'Completa 2 sesiones', key: 'sessions', target: 2 }
+  ];
+
+  function hash(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+
+  /** Las 3 misiones de un día: siempre las mismas para ese día. */
+  Progress.missionsOf = function (dayKey) {
+    const k = dayKey || U.dayKey();
+    const pool = MISSIONS.slice();
+    const out = [];
+    let seed = hash('mir' + k);
+    while (out.length < 3 && pool.length) {
+      seed = Math.imul(seed ^ (seed >>> 15), 2246822507) >>> 0;
+      const m = pool.splice(seed % pool.length, 1)[0];
+      if (m.group && out.some(function (x) { return x.group === m.group; })) continue;
+      out.push(m);
+    }
+    const st = Progress.dayStats(k);
+    return out.map(function (m) {
+      const value = st[m.key] || 0;
+      const claimed = (Store.data.gameLog || []).some(function (e) { return e.id === claimId(k, m.id); });
+      return Object.assign({}, m, { value: value, done: value >= m.target, claimed: claimed });
+    });
+  };
+  function claimId(day, id) { return 'mis_' + day + '_' + id; }
+
+  /** Revisa misiones y logros: cobra lo cumplido y avisa de lo nuevo. */
+  let checking = false;
+  Progress.check = function () {
+    if (checking || !global.Game || !Game.enabled()) return;
+    checking = true;
+    try {
+      const k = U.dayKey();
+      Progress.missionsOf(k).forEach(function (m) {
+        if (!m.done || m.claimed) return;
+        const e = Store.addGameLog({ id: claimId(k, m.id), day: Game.studyDay(), at: Date.now(), d: 2, why: 'mision' });
+        if (!e) return;
+        write(MISSIONS_KEY, (read(MISSIONS_KEY, 0) || 0) + 1);
+        Sound.mission();
+        Game.healFx('🎯 Misión cumplida', m.title + ' · +1 vida');
+        Game.renderTile();
+        Game.renderHud(global.Runner && Runner.getState());
+      });
+      Progress.checkBadges(false);
+    } finally { checking = false; }
+  };
+
+  /* ── Racha personal (con comodín semanal) ───────────────── */
+  Progress.goalMin = function () { return U.clamp(parseFloat(Game.settings().streakGoalH) || 5, 0.5, 16) * 60; };
+  function effOf(k) { try { return Math.round(Day.summary(k).totals.eff / 60000); } catch (e) { return 0; } }
+  function weekOf(ts) { return U.dayKey(U.startOfWeek(ts)); }
+
+  let streakCache = null, streakAt = 0;
+  /** { days, wildcardUsed, today } — los días fallados se perdonan uno por semana. */
+  Progress.streak = function () {
+    if (streakCache && Date.now() - streakAt < 30000) return streakCache;
+    const goal = Progress.goalMin();
+    const firstEver = Store.data.sessions.reduce(function (a, s) { return Math.min(a, s.startedAt || Infinity); }, Infinity);
+    const todayOk = effOf(U.dayKey()) >= goal;
+    let days = todayOk ? 1 : 0;
+    const usedWeeks = {};
+    let wildcardUsed = false;
+    for (let i = 1; i < 400; i++) {
+      const ts = Date.now() - i * 86400000;
+      if (ts < firstEver - 86400000) break;
+      if (effOf(U.dayKey(ts)) >= goal) { days++; continue; }
+      const w = weekOf(ts);
+      if (!usedWeeks[w]) { usedWeeks[w] = true; if (i < 8) wildcardUsed = true; continue; }   // comodín de esa semana
+      break;
+    }
+    streakCache = { days: days, wildcardUsed: wildcardUsed, today: todayOk, goal: goal };
+    streakAt = Date.now();
+    return streakCache;
+  };
+
+  /* ── Logros ─────────────────────────────────────────────── */
+  let aggCache = null, aggAt = 0;
+  function aggregate() {
+    if (aggCache && Date.now() - aggAt < 60000) return aggCache;
+    const days = {};
+    Store.data.sessions.forEach(function (s) { (s.blocks || []).forEach(function (b) { if (b.startedAt) days[U.dayKey(b.startedAt)] = true; }); });
+    let total = 0, maxDay = 0, guided = 0, early = false, night = false, firstBlock = false, perfect = false;
+    const topics = {};
+    Object.keys(days).forEach(function (k) {
+      let sum;
+      try { sum = Day.summary(k); } catch (e) { return; }
+      total += sum.totals.eff;
+      maxDay = Math.max(maxDay, sum.totals.eff);
+      sum.topics.forEach(function (t) { if (t.id) topics[t.id] = (topics[t.id] || 0) + t.ms; });
+    });
+    Store.data.sessions.forEach(function (s) {
+      const study = (s.blocks || []).filter(function (b) { return !b.isBreak && b.status === 'done'; });
+      if (study.length) firstBlock = true;
+      if (s.game && s.game.day && !s.game.lost && study.length >= 2) perfect = true;
+      (s.blocks || []).forEach(function (b) {
+        if (b.isBreak && b.pause && b.status === 'done') guided++;
+        if (!b.isBreak && b.startedAt && new Date(b.startedAt).getHours() < 7 && new Date(b.startedAt).getHours() >= 4) early = true;
+        if (!b.isBreak && b.endedAt && new Date(b.endedAt).getHours() >= 23) night = true;
+      });
+    });
+    aggCache = {
+      totalH: total / 3600000, maxDayH: maxDay / 3600000, guided: guided, early: early, night: night, firstBlock: firstBlock, perfect: perfect,
+      topicH: Object.keys(topics).reduce(function (a, k) { return Math.max(a, topics[k] / 3600000); }, 0)
+    };
+    aggAt = Date.now();
+    return aggCache;
+  }
+
+  const BADGES = [
+    { id: 'primera', icon: '🌱', name: 'Primer bloque', hint: 'Termina tu primer bloque de estudio', ok: function (a) { return a.firstBlock; } },
+    { id: 'perfecta', icon: '💎', name: 'Sesión perfecta', hint: 'Una sesión de 2 bloques o más sin perder vidas', ok: function (a) { return a.perfect; } },
+    { id: 'h10', icon: '📘', name: '10 horas', hint: '10 h de estudio efectivo en total', ok: function (a) { return a.totalH >= 10; } },
+    { id: 'h100', icon: '📚', name: '100 horas', hint: '100 h de estudio efectivo en total', ok: function (a) { return a.totalH >= 100; } },
+    { id: 'h500', icon: '🏛️', name: '500 horas', hint: '500 h de estudio efectivo en total', ok: function (a) { return a.totalH >= 500; } },
+    { id: 'maraton', icon: '🏃', name: 'Jornada maratón', hint: '8 h de estudio efectivo en un día', ok: function (a) { return a.maxDayH >= 8; } },
+    { id: 'tema50', icon: '🩺', name: 'Especialista', hint: '50 h de una misma materia', ok: function (a) { return a.topicH >= 50; } },
+    { id: 'racha7', icon: '🔥', name: 'Racha de 7', hint: '7 días seguidos cumpliendo tu objetivo', ok: function () { return Progress.streak().days >= 7; } },
+    { id: 'racha30', icon: '☄️', name: 'Racha de 30', hint: '30 días seguidos cumpliendo tu objetivo', ok: function () { return Progress.streak().days >= 30; } },
+    { id: 'alba', icon: '🌄', name: 'Al alba', hint: 'Empieza un bloque antes de las 7:00', ok: function (a) { return a.early; } },
+    { id: 'buho', icon: '🦉', name: 'Búho', hint: 'Termina un bloque pasadas las 23:00', ok: function (a) { return a.night; } },
+    { id: 'zen10', icon: '🧘', name: 'Respira hondo', hint: '10 pausas guiadas completas', ok: function (a) { return a.guided >= 10; } },
+    { id: 'mision10', icon: '🎯', name: 'Cumplidor/a', hint: '10 misiones del día cumplidas', ok: function () { return (read(MISSIONS_KEY, 0) || 0) >= 10; } },
+    { id: 'equipo', icon: '🤝', name: 'Equipo', hint: 'Cumplid la meta conjunta en pareja', ok: function () { return !!read('mir2027.coop.goal.v1', ''); } },
+    { id: 'rescate', icon: '💞', name: 'Al rescate', hint: 'Revive a tu pareja cuando se quede sin vidas', ok: function () { return !!read('mir2027.game.revived.v1', 0); } },
+    { id: 'parar', icon: '🍃', name: 'Saber parar', hint: 'En un día duro, acepta la pausa de recuperación', ok: function () { return !!read('mir2027.game.kindpause.v1', ''); } }
+  ];
+  Progress.BADGES = BADGES;
+
+  Progress.badges = function () {
+    const a = aggregate();
+    const seen = read(SEEN_KEY, null) || {};
+    return BADGES.map(function (b) {
+      let ok = false;
+      try { ok = !!b.ok(a); } catch (e) { ok = false; }
+      return Object.assign({}, b, { unlocked: ok, at: seen[b.id] || null });
+    });
+  };
+
+  /** Avisa de los logros nuevos. La primera vez solo los apunta, sin fiesta. */
+  Progress.checkBadges = function (silent) {
+    aggCache = null;
+    const first = read(SEEN_KEY, null) === null;
+    const seen = read(SEEN_KEY, null) || {};
+    const fresh = Progress.badges().filter(function (b) { return b.unlocked && !seen[b.id]; });
+    if (!fresh.length) { if (first) write(SEEN_KEY, seen); return; }
+    fresh.forEach(function (b) { seen[b.id] = Date.now(); });
+    write(SEEN_KEY, seen);
+    if (first || silent) return;
+    fresh.forEach(function (b, i) {
+      setTimeout(function () {
+        Sound.fanfare();
+        Game.healFx('🏅 Logro: ' + b.name, b.hint, b.icon);
+      }, i * 3200);
+    });
+  };
+
+  /** Rejilla de insignias. */
+  Progress.openBadges = function () {
+    const list = Progress.badges();
+    const got = list.filter(function (b) { return b.unlocked; }).length;
+    UI.modal({
+      title: '🏅 Logros',
+      sub: got + ' de ' + list.length + ' desbloqueados',
+      build: function () {
+        const grid = U.el('div', { class: 'badges' });
+        list.forEach(function (b) {
+          grid.appendChild(U.el('div', { class: 'badge-card' + (b.unlocked ? ' is-on' : ''), title: b.hint }, [
+            U.el('span', { class: 'badge-card__icon', text: b.unlocked ? b.icon : '?' }),
+            U.el('strong', { text: b.unlocked ? b.name : '???' }),
+            U.el('small', { text: b.hint })
+          ]));
+        });
+        return grid;
+      },
+      actions: function (close) { return [U.el('button', { class: 'btn btn--primary', text: 'Cerrar', onclick: function () { close(true); } })]; }
+    });
+  };
+
+  /* ── En la tarjeta del modo juego ───────────────────────── */
+  Progress.tileNode = function () {
+    const box = U.el('div', { class: 'progress-tile' });
+    const st = Progress.streak();
+    const t = Game.today();
+    box.appendChild(U.el('div', { class: 'progress-tile__row' }, [
+      U.el('span', { class: 'streak-pill' + (st.today ? ' is-on' : ''), title: 'Días seguidos con ' + U.fmtHuman(st.goal * 60000) + ' o más de estudio efectivo. Un día fallado por semana se perdona.',
+        text: '🔥 ' + U.plural(st.days, 'día', 'días') + (st.wildcardUsed ? ' · comodín usado' : '') }),
+      t.kind ? U.el('span', { class: 'kind-pill', text: '🌱 Modo amable' }) : null
+    ]));
+    const ul = U.el('ul', { class: 'missions' });
+    Progress.missionsOf().forEach(function (m) {
+      const shown = m.unit === 'min' ? U.fmtHuman(Math.min(m.value, m.target) * 60000) + ' / ' + U.fmtHuman(m.target * 60000) : Math.min(m.value, m.target) + '/' + m.target;
+      ul.appendChild(U.el('li', { class: 'mission' + (m.done ? ' is-done' : '') }, [
+        U.el('span', { class: 'mission__icon', text: m.done ? '✅' : m.icon }),
+        U.el('span', { class: 'mission__title', text: m.title }),
+        U.el('span', { class: 'mission__val', text: m.done ? '+1 ❤' : shown })
+      ]));
+    });
+    box.appendChild(U.el('div', { class: 'missions__head', text: 'Misiones de hoy' }));
+    box.appendChild(ul);
+    return box;
+  };
+  Progress.tileActions = function () {
+    const t = Game.today();
+    const got = Progress.badges().filter(function (b) { return b.unlocked; }).length;
+    return [
+      U.el('button', { class: 'btn btn--ghost btn--sm', type: 'button', text: '🏅 Logros ' + got + '/' + BADGES.length, onclick: Progress.openBadges }),
+      U.el('button', { class: 'btn btn--ghost btn--sm', type: 'button', text: '🌙 Cerrar el día', onclick: function () { Progress.openDayEnd(); } }),
+      t.kind ? null : U.el('button', { class: 'btn btn--ghost btn--sm', type: 'button', text: '🌱 Día amable', title: 'Hoy todo cuesta la mitad', onclick: Game.setKind })
+    ];
+  };
+
+  /* ── Resumen de fin de jornada ──────────────────────────── */
+  Progress.openDayEnd = function (dayKey) {
+    const k = dayKey || U.dayKey();
+    let sum;
+    try { sum = Day.summary(k); } catch (e) { sum = null; }
+    const t = Game.today();
+    const missions = Progress.missionsOf(k);
+    const st = Progress.streak();
+    const seen = read(SEEN_KEY, {}) || {};
+    const todayBadges = BADGES.filter(function (b) { return seen[b.id] && U.dayKey(seen[b.id]) === k; });
+    const timers = [];
+    UI.modal({
+      title: '🌙 Fin de jornada',
+      sub: new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }),
+      build: function () {
+        const box = U.el('div', { class: 'dayend' });
+        const lines = [];
+        const total = U.el('strong', { class: 'dayend__total', text: '0 min' });
+        lines.push(U.el('div', { class: 'dayend__hero' }, [U.el('span', { text: 'Estudio efectivo' }), total]));
+        const effMs = sum ? sum.totals.eff : 0;
+        const topics = sum ? sum.topics.filter(function (x) { return x.ms > 0; }) : [];
+        const maxT = topics.reduce(function (a, x) { return Math.max(a, x.ms); }, 1);
+        topics.forEach(function (tp) {
+          const bar = U.el('span', { class: 'dayend__bar' });
+          const fillEl = U.el('span', { class: 'dayend__fill' });
+          fillEl.dataset.w = (tp.ms / maxT * 100).toFixed(1) + '%';
+          bar.appendChild(fillEl);
+          lines.push(U.el('div', { class: 'dayend__topic' }, [
+            U.el('span', { class: 'dayend__name', text: tp.label }), bar,
+            U.el('span', { class: 'dayend__val', text: U.fmtHuman(tp.ms) })
+          ]));
+        });
+        const hearts = Avatar.hearts(t.left, t.max, 16);
+        lines.push(U.el('div', { class: 'dayend__row' }, [U.el('span', { text: 'Vidas que te quedan' }), hearts]));
+        lines.push(U.el('div', { class: 'dayend__row' }, [U.el('span', { text: 'Misiones' }),
+          U.el('strong', { text: missions.filter(function (m) { return m.done; }).length + ' de 3 ' + missions.map(function (m) { return m.done ? '✅' : '▫️'; }).join('') })]));
+        lines.push(U.el('div', { class: 'dayend__row' }, [U.el('span', { text: 'Racha' }),
+          U.el('strong', { text: '🔥 ' + U.plural(st.days, 'día', 'días') + (st.today ? '' : ' (hoy no llegaste a ' + U.fmtHuman(st.goal * 60000) + ')') })]));
+        if (global.Coop && Coop.active()) {
+          const c = Coop.today();
+          lines.push(U.el('div', { class: 'dayend__row' }, [U.el('span', { text: 'Meta conjunta' }),
+            U.el('strong', { text: (c.done ? '✅ ' : '') + U.fmtHuman(c.total * 60000) + ' de ' + Coop.goalH() + ' h' })]));
+        }
+        if (todayBadges.length) {
+          lines.push(U.el('div', { class: 'dayend__row' }, [U.el('span', { text: 'Logros de hoy' }),
+            U.el('strong', { text: todayBadges.map(function (b) { return b.icon + ' ' + b.name; }).join(' · ') })]));
+        }
+        lines.push(U.el('p', { class: 'dayend__note', text: 'Tus vidas se rellenan a las 4:00. Descansa: mañana sigue la racha.' }));
+        lines.forEach(function (el) { el.classList.add('dayend__line'); box.appendChild(el); });
+
+        // Se cuenta línea a línea, con un tic de 8 bits en cada una
+        const calm = global.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const steps = 24;
+        for (let i = 1; i <= steps; i++) {
+          timers.push(setTimeout(function () { total.textContent = U.fmtHuman(effMs * i / steps); }, calm ? 0 : i * 35));
+        }
+        lines.forEach(function (el, i) {
+          timers.push(setTimeout(function () {
+            el.classList.add('is-in');
+            const f = el.querySelector('.dayend__fill');
+            if (f) f.style.width = f.dataset.w;
+            if (i) Sound.tally(i);
+          }, calm ? 0 : 300 + i * 320));
+        });
+        timers.push(setTimeout(function () { Sound.fanfare(); }, calm ? 0 : 400 + lines.length * 320));
+        return box;
+      },
+      actions: function (close) { return [U.el('button', { class: 'btn btn--primary', text: 'Buenas noches', onclick: function () { close(true); } })]; }
+    }).then(function () { timers.forEach(clearTimeout); });
+  };
+
+  /** Al cerrar el resumen de una sesión: misiones, logros y, de noche, el fin de jornada. */
+  Progress.afterSession = function () {
+    if (!global.Game || !Game.enabled()) return;
+    Progress.check();
+    const k = U.dayKey();
+    if (new Date().getHours() >= 21 && read(DAYEND_KEY, '') !== k) {
+      write(DAYEND_KEY, k);
+      setTimeout(function () { Progress.openDayEnd(k); }, 400);
+    }
+  };
+
+  global.Progress = Progress;
+})(window);

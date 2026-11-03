@@ -21,7 +21,7 @@
   'use strict';
 
   const Game = {};
-  const DEFAULTS = { enabled: true, dayLives: 10, regain: true, anim: true, scene: true, coopGoalH: 12 };
+  const DEFAULTS = { enabled: true, dayLives: 10, regain: true, anim: true, scene: true, coopGoalH: 12, sounds: true, causeFirst: true, streakGoalH: 5 };
   const DAY_CUT_H = 4;
   const REGEN_MS = 45 * 60000;
   const REGEN_KEY = 'mir2027.game.regen.v1';
@@ -32,6 +32,11 @@
     r_bano: '🚽', r_cansancio: '💤', r_otro: '💢'
   };
   let hurtUntil = 0;
+  const HITS_KEY = 'mir2027.game.hits.v1';
+  const PEER_HITS_KEY = 'mir2027.game.peerhits.v1';
+
+  /** Icono de una razón de distracción (lo que golpea al avatar). */
+  Game.causeIcon = function (id) { return PROJECTILES[id] || '💢'; };
 
   function read(key, fallback) {
     try { const v = JSON.parse(localStorage.getItem(key) || 'null'); return v === null ? fallback : v; } catch (e) { return fallback; }
@@ -58,17 +63,20 @@
     const max2 = max * 2;
     const entries = (Store.data.gameLog || []).filter(function (e) { return e.day === day; })
       .sort(function (a, b) { return a.at - b.at; });
-    let left = max2, lost = 0, gained = 0, pauses = 0, rests = 0, gifts = 0, regens = 0;
+    let left = max2, lost = 0, gained = 0, pauses = 0, rests = 0, gifts = 0, regens = 0, kos = 0, kind = false, missions = 0;
     entries.forEach(function (e) {
       const before = left;
       left = U.clamp(left + (e.d || 0), 0, max2);
+      if (before > 0 && left === 0) kos++;
+      if (e.why === 'amable') kind = true;
+      if (e.why === 'mision') missions++;
       if (e.d < 0) lost += before - left; else gained += left - before;
       if (e.why === 'pausa') pauses++;
       if (e.why === 'descanso') rests++;
       if (e.why === 'pareja') gifts++;
       if (e.why === 'regen') regens++;
     });
-    return { day: day, left: left / 2, max: max, lost: lost / 2, gained: gained / 2, pauses: pauses, rests: rests, gifts: gifts, regens: regens };
+    return { day: day, left: left / 2, max: max, lost: lost / 2, gained: gained / 2, pauses: pauses, rests: rests, gifts: gifts, regens: regens, kos: kos, kind: kind, missions: missions };
   };
 
   /** Lo que ve tu pareja en la sala. */
@@ -128,7 +136,11 @@
         saveRegen();
         if (Game.settings().regain && Game.today().left < Game.maxLives()) {
           gain(state, 2, 'regen', '+1 vida', Game.REGEN_MIN + ' min de estudio sin perder vidas');
+        } else {
+          // Con todas las vidas también cuenta (para misiones y logros)
+          Store.addGameLog({ day: Game.studyDay(), at: Date.now(), d: 0, why: 'regen' });
         }
+        if (global.Progress) Progress.check();
       } else if (now - lastRegenSave > 10000) saveRegen();
     }
     lastTickAt = now;
@@ -148,6 +160,8 @@
     let halves = why === 'pausa' ? 1 : (o.halves || 2);
     let free = false;
     if (why === 'pausa' && before.pauses === 0) { halves = 0; free = true; }
+    // Modo amable: todo cuesta la mitad (y las pausas, nada)
+    if (before.kind) halves = why === 'pausa' ? 0 : Math.max(1, Math.ceil(halves / 2));
     Store.addGameLog({ day: before.day, at: Date.now(), d: -halves, why: why, free: free || undefined });
     const after = Game.today();
     state.game.lost += before.left - after.left;
@@ -161,18 +175,155 @@
 
     const ko = before.left > 0 && after.left <= 0;
     const kind = why === 'pausa' ? 'pause' : 'hit';
+    const icon = kind === 'hit' ? (PROJECTILES[o.cause] || (why === 'declarada' ? '💢' : '⚡')) : null;
+    pushHit({ kind: kind, lost: before.left - after.left, ko: ko, icon: icon });
+    // Día duro: a la segunda vez sin vidas (o tras perder 7), se ofrece el modo amable
+    const kindNow = !after.kind && (after.kos >= 2 || after.lost >= 7);
+    if (kindNow) Store.addGameLog({ day: after.day, at: Date.now() + 1, d: 0, why: 'amable' });
+    const done = function (p) { return kindNow ? p.then(Game.offerKind) : p; };
     if (!Game.settings().anim) {
       if (ko) Sound.gameOver(); else if (halves) Sound.hurt();
       pulse('lose');
       if (free) UI.toast('Primera pausa del día: no cuesta vida');
       else if (ko) UI.toast('¡Sin vidas! El reloj sigue');
-      return Promise.resolve();
+      return done(Promise.resolve());
     }
     pulse('lose');
-    return Game.scene({
-      kind: kind, ko: ko, free: free, lost: (before.left - after.left), left: after.left, max: after.max,
-      projectile: kind === 'hit' ? (PROJECTILES[o.cause] || (why === 'declarada' ? '💢' : '⚡')) : null,
-      title: free ? 'Pausa' : kind === 'pause' ? 'Pausa' : '¡Distracción!'
+    return done(Game.scene({
+      kind: kind, ko: ko, free: free || (before.kind && !halves), kindMode: before.kind, lost: (before.left - after.left), left: after.left, max: after.max,
+      projectile: icon,
+      title: kind === 'pause' ? 'Pausa' : '¡Distracción!'
+    }));
+  };
+
+  /* ── Menú de causas ─────────────────────────────────────── */
+  let causeOpen = null;
+  Game.causeOpen = function () { return !!causeOpen; };
+  /**
+   * Menú pequeño con las causas, justo encima de los controles. Un toque y
+   * listo: lo elegido es lo que golpea al avatar. Se cierra solo a los 8 s.
+   * Devuelve una promesa con el id de la razón (o null).
+   */
+  Game.pickCause = function () {
+    if (causeOpen) causeOpen(null);
+    return new Promise(function (resolve) {
+      const host = document.fullscreenElement || document.body;
+      const pop = U.el('div', { class: 'causepop', role: 'dialog', 'aria-label': '¿Qué te ha distraído?' });
+      pop.appendChild(U.el('div', { class: 'causepop__title', text: '¿Qué te ha distraído?' }));
+      const grid = U.el('div', { class: 'causepop__grid' });
+      Store.data.reasons.forEach(function (r) {
+        grid.appendChild(U.el('button', { class: 'causepop__btn', type: 'button', onclick: function () { finish(r.id); } }, [
+          U.el('span', { class: 'causepop__icon', text: Game.causeIcon(r.id) }),
+          U.el('span', { text: r.label })
+        ]));
+      });
+      grid.appendChild(U.el('button', { class: 'causepop__btn causepop__btn--none', type: 'button', onclick: function () { finish(null); } }, [
+        U.el('span', { class: 'causepop__icon', text: '·' }), U.el('span', { text: 'Sin causa' })
+      ]));
+      pop.appendChild(grid);
+      pop.appendChild(U.el('span', { class: 'causepop__timer' }));
+      const veil = U.el('div', { class: 'causepop-veil', onclick: function () { finish(null); } });
+      host.appendChild(veil);
+      host.appendChild(pop);
+      const t = setTimeout(function () { finish(null); }, 8000);
+      const onKey = function (e) { if (e.key === 'Escape') { e.stopPropagation(); finish(null); } };
+      document.addEventListener('keydown', onKey, true);
+      function finish(id) {
+        if (!causeOpen) return;
+        causeOpen = null;
+        clearTimeout(t);
+        document.removeEventListener('keydown', onKey, true);
+        pop.classList.add('is-leaving');
+        veil.remove();
+        setTimeout(function () { pop.remove(); }, 180);
+        resolve(id);
+      }
+      causeOpen = finish;
+      const first = grid.querySelector('button');
+      if (first) first.focus({ preventScroll: true });
+    });
+  };
+
+  /* ── Golpes visibles para la pareja ─────────────────────── */
+  function pushHit(h) {
+    const now = Date.now();
+    const list = read(HITS_KEY, []).filter(function (x) { return now - x.at < 10 * 60000; });
+    list.push(Object.assign({ id: U.uid('hit'), at: now }, h));
+    write(HITS_KEY, list.slice(-6));
+  }
+  /** Lo que publico en la sala: mis golpes de los últimos minutos. */
+  Game.recentHits = function () {
+    const now = Date.now();
+    return read(HITS_KEY, []).filter(function (x) { return now - x.at < 10 * 60000; });
+  };
+  /** Golpes nuevos de la pareja: su avatar los recibe en su puesto, sin avisos. */
+  Game.receivePeer = function (peer) {
+    const st = (peer && peer.state) || {};
+    if (!Game.enabled() || !Array.isArray(st.hits) || !st.hits.length) return;
+    const seen = read(PEER_HITS_KEY, {});
+    const now = Date.now();
+    let fresh = null;
+    st.hits.forEach(function (h) {
+      if (!h || !h.id || seen[h.id]) return;
+      seen[h.id] = now;
+      if (now - h.at < 90000) fresh = h;   // los viejos no se reproducen
+    });
+    Object.keys(seen).forEach(function (k) { if (now - seen[k] > 3600000) delete seen[k]; });
+    write(PEER_HITS_KEY, seen);
+    if (!fresh) return;
+    const runner = global.Runner && Runner.isActive();
+    if (runner && global.Scene && Scene.enabled()) Scene.peerHit(fresh);
+    else flashPeer(fresh);
+  };
+  /** Fuera del temporizador: su avatar de la tira de la sala tiembla con una etiqueta. */
+  function flashPeer(h) {
+    const el = document.querySelector('#roomStrip .peer-avatar');
+    if (!el) return;
+    el.classList.remove('is-hit');
+    void el.offsetWidth;
+    el.classList.add('is-hit');
+    const tag = U.el('span', { class: 'peer-hit-tag', text: (h.lost ? '−' + Avatar.fmtLives(h.lost) + ' ' : '') + (h.ko ? '💫' : h.kind === 'pause' ? '⏸️' : (h.icon || '⚡')) });
+    el.appendChild(tag);
+    Sound.peerHit();
+    setTimeout(function () { tag.remove(); el.classList.remove('is-hit'); }, 2200);
+  }
+
+  /* ── Modo amable ────────────────────────────────────────── */
+  /** Activarlo a mano («hoy necesito un día amable»). */
+  Game.setKind = function () {
+    const t = Game.today();
+    if (t.kind) return;
+    Store.addGameLog({ day: t.day, at: Date.now(), d: 0, why: 'amable' });
+    Sound.kind();
+    Game.renderTile();
+    Game.renderHud(global.Runner && Runner.getState());
+    UI.toast('🌱 Modo amable: hoy todo cuesta la mitad');
+  };
+  /** Sin culpas: se ofrece parar y recuperarse. */
+  Game.offerKind = function () {
+    Sound.kind();
+    Game.renderHud(global.Runner && Runner.getState());
+    Game.renderTile();
+    const run = global.Runner && Runner.isActive();
+    return UI.modal({
+      title: '🌱 Hoy está siendo un día duro',
+      sub: 'No pasa nada: el cansancio también es información. Activamos el modo amable para el resto del día.',
+      build: function () {
+        return U.el('div', { class: 'kind-box' }, [
+          U.el('p', { text: 'Desde ahora las pausas no cuestan vidas y las distracciones cuestan la mitad.' }),
+          U.el('p', { text: 'Si puedes, haz una pausa de recuperación (respiración, escaneo corporal, autocompasión…). Volver con la cabeza despejada rinde más que forzar.' })
+        ]);
+      },
+      actions: function (close) {
+        return [
+          U.el('button', { class: 'btn btn--ghost', text: 'Seguir estudiando', onclick: function () { close(false); } }),
+          run ? U.el('button', { class: 'btn btn--primary', text: 'Pausa de recuperación', onclick: function () {
+            write('mir2027.game.kindpause.v1', Game.studyDay());
+            close(true);
+            setTimeout(function () { Runner.openPauseNow(); }, 50);
+          } }) : null
+        ];
+      }
     });
   };
 
@@ -204,6 +355,7 @@
   Game.restDone = function (state, b) {
     if (!Game.enabled() || !Game.settings().regain || !b || !b.pause || b.status !== 'done') return;
     gain(state, 1, 'descanso', '+½ vida', 'Pausa guiada completa');
+    if (global.Progress) setTimeout(Progress.check, 3200);
   };
 
   /** Al terminar un bloque: los bloques sin distracciones se cuentan (ya no curan). */
@@ -215,11 +367,15 @@
     if (!clean) return;
     state.game.perfect++;
     UI.toast('Bloque perfecto, sin distracciones');
+    if (global.Progress) setTimeout(Progress.check, 200);
   };
 
   /* ── Corazón de la pareja ───────────────────────────────── */
   Game.giftAvailable = function () { return Game.enabled() && read(GIFT_KEY, '') !== Game.studyDay(); };
-  Game.markGiftSent = function () { write(GIFT_KEY, Game.studyDay()); };
+  Game.markGiftSent = function (revive) {
+    write(GIFT_KEY, Game.studyDay());
+    if (revive) write('mir2027.game.revived.v1', Date.now());
+  };
   /** Llega una vida regalada: se apunta en el acto (aunque la animación espere). */
   Game.receiveGift = function (cheer) {
     if (!Game.enabled() || !cheer || !cheer.id) return false;
@@ -260,7 +416,7 @@
       // y se levanta antes del golpe. Siempre en el centro de la pantalla.
       const unit = !!(cfg && global.Scene && Game.settings().scene !== false);
       const W = Math.min(unit ? 170 : 190, Math.round(window.innerWidth * (unit ? 0.36 : 0.42)));
-      const impact = calm ? 150 : unit ? (o.kind === 'pause' ? 640 : 760) : (o.kind === 'pause' ? 260 : 420);
+      const impact = calm ? 150 : unit ? (o.kind === 'pause' ? 1000 : 1120) : (o.kind === 'pause' ? 260 : 420);
       const layer = U.el('div', {
         class: 'hitfx hitfx--' + o.kind + (unit ? ' hitfx--unit' : '') + (calm ? ' hitfx--calm' : ''),
         role: 'status', 'aria-live': 'assertive'
@@ -269,10 +425,10 @@
       layer.appendChild(U.el('div', { class: 'hitfx__flash' }));
       const stage = U.el('div', { class: 'hitfx__stage' });
       const sprite = U.el('div', { class: 'hitfx__sprite' });
-      const frame = function (pose, m) {
+      const frame = function (pose, m, x) {
         if (unit) {
           const mode = pose === 'idle' ? 'stand' : pose;
-          sprite.innerHTML = Scene.unit(cfg, { mode: mode, mood: m, size: Math.round(W * 100 / 48) });
+          sprite.innerHTML = Scene.unit(cfg, { mode: mode, mood: m, x: x, size: Math.round(W * 100 / 48) });
         } else if (cfg) {
           sprite.innerHTML = Avatar.body(cfg, pose === 'desk' ? 'idle' : pose, m, W);
         } else {
@@ -301,7 +457,7 @@
       const caption = U.el('div', { class: 'hitfx__caption' }, [
         U.el('strong', { text: o.ko ? '¡Sin vidas!' : o.title }),
         U.el('span', {
-          text: o.free ? 'La primera pausa del día no cuesta vida.'
+          text: o.free ? (o.kindMode ? '🌱 Modo amable: la pausa no cuesta vida.' : 'La primera pausa del día no cuesta vida.')
             : o.ko ? 'El reloj sigue. Descansa con una pausa guiada o estudia ' + Game.REGEN_MIN + ' min seguidos para recuperar.'
               : 'Te ' + (o.left === 1 ? 'queda ' : 'quedan ') + Avatar.fmtLives(o.left) + ' de ' + o.max + (o.max === 1 ? ' vida' : ' vidas') + ' hoy'
         }),
@@ -312,14 +468,22 @@
 
       const timers = [];
       const at = function (ms, fn) { timers.push(setTimeout(fn, ms)); };
-      // Se levanta de la mesa
-      if (unit && !calm) at(Math.round(impact * 0.42), function () { frame('idle', 'neutral'); layer.classList.add('is-up'); });
+      // Se levanta de la mesa por fotogramas: se incorpora detrás de la mesa,
+      // da dos pasos hacia fuera y se queda de pie, ya en el centro.
+      if (unit && !calm) {
+        at(Math.round(impact * 0.18), function () { frame('rise', 'neutral'); });
+        at(Math.round(impact * 0.36), function () { frame('step', 'neutral', 22); Sound.steps(); });
+        at(Math.round(impact * 0.52), function () { frame('step', 'neutral', 34); });
+        at(Math.round(impact * 0.68), function () { frame('idle', 'neutral'); layer.classList.add('is-up'); });
+      }
       at(impact, function () {
+        if (o.lost > 0) setTimeout(function () { Sound.heartBreak(); }, 380);
         if (o.kind === 'pause') {
           frame('sit', 'hurt');
           if (o.lost > 0) Sound.hurt();
         } else {
           frame('hit', 'hurt');
+          Sound.thud();
           Sound.hurt();
           if (navigator.vibrate) { try { navigator.vibrate([40, 30, 80]); } catch (e) { /* noop */ } }
         }
@@ -348,7 +512,7 @@
   };
 
   /** Vida recuperada: aviso pequeño que no interrumpe. */
-  Game.healFx = function (title, text) {
+  Game.healFx = function (title, text, icon) {
     const cfg = Avatar.config();
     const card = U.el('div', { class: 'healfx' + (reduced() ? ' healfx--calm' : ''), role: 'status', 'aria-live': 'polite' });
     if (cfg) {
@@ -357,7 +521,7 @@
       card.appendChild(s);
     }
     const heart = U.el('span', { class: 'healfx__heart' });
-    heart.innerHTML = Avatar.heart(true, 22);
+    if (icon) heart.textContent = icon; else heart.innerHTML = Avatar.heart(true, 22);
     card.appendChild(heart);
     card.appendChild(U.el('span', { class: 'healfx__txt' }, [
       U.el('strong', { text: title }),
@@ -382,7 +546,8 @@
     if (t.max > 5) hearts.classList.add('hearts--rows');
     box.appendChild(hearts);
     box.classList.toggle('is-ko', t.left === 0);
-    box.title = Avatar.fmtLives(t.left) + ' de ' + t.max + ' vidas hoy · pausa ½ · distracción 1';
+    if (t.kind) box.appendChild(U.el('span', { class: 'hud__kind', text: '🌱', title: 'Modo amable' }));
+    box.title = Avatar.fmtLives(t.left) + ' de ' + t.max + ' vidas hoy · ' + (t.kind ? 'modo amable: pausa gratis · distracción ½' : 'pausa ½ · distracción 1');
   };
 
   function pulse(kind) {
@@ -466,13 +631,14 @@
       body.appendChild(U.el('span', { class: 'tile__line', text: 'Crea tu avatar: tienes ' + t.max + ' vidas al día; pierdes ½ por pausa y 1 por distracción, y las recuperas descansando bien y estudiando seguido.' }));
     }
     box.appendChild(body);
+    if (cfg && global.Progress) box.appendChild(Progress.tileNode());
     box.appendChild(U.el('div', { class: 'tile__actions' }, [
       U.el('button', {
         class: 'btn ' + (cfg ? 'btn--ghost' : 'btn--primary') + ' btn--sm', type: 'button',
         text: cfg ? 'Personalizar' : 'Crear avatar',
         onclick: function () { App.showView('settings', 'game'); }
       })
-    ]));
+    ].concat(cfg && global.Progress ? Progress.tileActions() : [])));
     App.hydrateIcons(box);
   };
 
@@ -509,6 +675,8 @@
 
     toggle('regain', 'Recuperar vidas', 'Pausa guiada completa: +½. ' + Game.REGEN_MIN + ' min de estudio seguidos sin perder vidas: +1. Tu pareja puede regalarte una al día.');
     toggle('anim', 'Animación de daño', 'Al pausar o distraerte, el avatar recibe el golpe antes de registrarlo. Se salta con un toque.');
+    toggle('causeFirst', 'Elegir la causa al distraerte', 'Al pulsar «+ Distracción» sale un menú pequeño con las causas; lo que elijas es lo que golpea al avatar.');
+    toggle('sounds', 'Sonidos 8 bits', 'Golpes, corazones, misiones y logros con sonidos de videojuego.');
     toggle('scene', 'Escena de estudio', 'Tu avatar estudia en su mesa durante el bloque (y el de tu pareja al lado, si estáis en la sala). Al distraerte, se levanta y recibe el golpe.', function () { if (global.Scene) Scene.invalidate(); });
 
     const goal = U.el('input', { type: 'number', class: 'num-setting', min: '1', max: '30', step: '0.5', value: String(s.coopGoalH),
@@ -519,6 +687,18 @@
         if (global.Coop) Coop.invalidate();
         if (global.App) App.renderRoomStrip();
       } });
+    const sg = U.el('input', { type: 'number', class: 'num-setting', min: '0.5', max: '16', step: '0.5', value: String(s.streakGoalH),
+      onchange: function () {
+        const n = U.clamp(parseFloat(sg.value) || 5, 0.5, 16);
+        sg.value = String(n);
+        Game.set({ streakGoalH: n });
+        Game.renderTile();
+      } });
+    box.appendChild(U.el('div', { class: 'setting' }, [
+      U.el('div', { class: 'setting__txt' }, [U.el('span', { text: 'Objetivo diario de la racha (horas)' }),
+        U.el('small', { text: 'Horas de estudio efectivo para que el día cuente en tu racha. Un día fallado por semana se perdona.' })]),
+      sg
+    ]));
     box.appendChild(U.el('div', { class: 'setting' }, [
       U.el('div', { class: 'setting__txt' }, [U.el('span', { text: 'Meta conjunta (horas)' }),
         U.el('small', { text: 'Horas de estudio efectivo entre los dos cada día, si estáis en la misma sala. Cumplirla suma a la racha.' })]),

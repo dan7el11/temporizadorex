@@ -38,7 +38,8 @@
   Avatar.STYLES_F = [
     ['melena', 'Melena lisa'], ['ondas', 'Melena ondulada'], ['flequillo', 'Con flequillo'], ['media', 'Media melena'],
     ['bob', 'Bob'], ['pixie', 'Pixie'], ['coleta', 'Coleta alta'], ['monof', 'Moño'], ['trenzas', 'Dos trenzas'],
-    ['trenza', 'Trenza de lado'], ['rizos', 'Rizos largos'], ['afrof', 'Afro'], ['rapadof', 'Rapado']
+    ['trenza', 'Trenza de lado'], ['rizos', 'Rizos largos'], ['afrof', 'Afro'], ['rapadof', 'Rapado'],
+    ['ondaslargas', 'Ondas largas con raya'], ['ondascortas', 'Ondas cortas'], ['rizosmedios', 'Rizos a los hombros'], ['rizoscortos', 'Rizos cortos']
   ];
   Avatar.FACIAL = [
     ['ninguno', 'Afeitado'], ['tresdias', 'Barba de 3 días'], ['bigote', 'Bigote'], ['perilla', 'Perilla'],
@@ -387,6 +388,51 @@
         s.back = or(ell(CX, 19, 13.6, 13), rect(11, 18, 37, 30));
         s.braid = true; s.tie = [[17.4, 48.8], [20.4, 48.8]]; s.flow = 'down'; break;
       }
+      case 'ondaslargas': {
+        // Muy larga, ondas amplias, raya al lado y un mechón que cruza la frente
+        const wave = function (x, y) { return Math.sin(y / 2.6 + 0.8) * 1.7; };
+        s.back = function (x, y) { const w = wave(x, y); return (x > 9.6 - w && x < 38.4 + w && y > 18 && y < 51) || ell(CX, 19, 14, 13.2)(x, y); };
+        s.front = or(cap(1.8, under(16.4, 2.4, 1.6), 26), poly([[13.4, 16.5], [29, 12], [23, 19.5], [15.2, 23]]),
+          function (x, y) { const w = wave(x, y); return y > 17 && y < 49 && ((x > 10.8 + w && x < 16 + w) || (x > 32 - w && x < 37.2 - w)); });
+        s.part = [[28, 10], [29, 14]]; s.flow = 'wave'; s.waveAmp = 1.7; break;
+      }
+      case 'ondascortas': {
+        // Media melena corta ondulada, por la barbilla, con el borde en ondas
+        const wave = function (x, y) { return Math.sin(y / 2 + 0.4) * 1.2; };
+        const edge = function (x) { return 33.5 + Math.sin(x / 1.7) * 1.1; };
+        s.back = function (x, y) { const w = wave(x, y); return (x > 10.2 - w && x < 37.8 + w && y > 18 && y < edge(x)) || ell(CX, 19, 13.9, 13)(x, y); };
+        s.front = or(cap(1.9, under(17, 2, -1.4), 26), poly([[34.6, 16.4], [20.5, 12.4], [26, 19.6], [33.4, 22]]),
+          function (x, y) { const w = wave(x, y); return y > 17 && y < edge(x) - 0.5 && ((x > 11 + w && x < 16.4 + w) || (x > 31.6 - w && x < 37 - w)); });
+        s.flow = 'wave'; s.waveAmp = 1.2; break;
+      }
+      case 'rizosmedios': {
+        const blobs = [];
+        for (let k = 0; k < 6; k++) {
+          blobs.push(ell(10.4 - (k % 2) * 0.6, 20 + k * 3.5, 3, 2.6));
+          blobs.push(ell(37.6 + (k % 2) * 0.6, 20 + k * 3.5, 3, 2.6));
+          if (k > 1) { blobs.push(ell(13.6, 21.6 + k * 3.5, 2.4, 2.2)); blobs.push(ell(34.4, 21.6 + k * 3.5, 2.4, 2.2)); }
+        }
+        for (let a = 0; a <= 11; a++) {
+          const t = Math.PI * (1.0 + a / 11);
+          blobs.push(ell(CX + Math.cos(t) * 13.6, CY - 2 + Math.sin(t) * 14.6, 3.1, 2.8));
+        }
+        s.back = or(rect(10.6, 18, 37.4, 40), ell(CX, 19, 14.4, 13.8), or.apply(null, blobs));
+        s.front = or(cap(2, under(16.8, 2, 0.8), 26), capsule([[14, 17], [13.6, 36]], 2.6), capsule([[34, 17], [34.4, 36]], 2.6),
+          ell(19, 16.4, 3, 2.4), ell(24.5, 15.2, 3, 2.4));
+        s.curly = true; break;
+      }
+      case 'rizoscortos': {
+        const blobs = [];
+        for (let a = 0; a <= 16; a++) {
+          const t = Math.PI * (0.82 + a / 16 * 1.36);
+          blobs.push(ell(CX + Math.cos(t) * 13.4, CY - 1 + Math.sin(t) * 13.8, 3, 2.7));
+        }
+        // Bajan por los lados hasta la mandíbula
+        blobs.push(ell(11.4, 28.5, 2.8, 2.6), ell(36.6, 28.5, 2.8, 2.6), ell(12, 32, 2.4, 2.2), ell(36, 32, 2.4, 2.2));
+        s.back = or(ell(CX, 20, 14.6, 13.8), or.apply(null, blobs));
+        s.front = or(cap(1.9, under(17.2, 1.6), 25), ell(17.6, 17, 2.8, 2.4), ell(22.6, 15.8, 2.8, 2.4), ell(27.8, 16, 2.8, 2.4), ell(31.4, 17.6, 2.4, 2.2));
+        s.curly = true; break;
+      }
       case 'rizos': {
         const blobs = [];
         for (let k = 0; k < 9; k++) { blobs.push(ell(10.6, 20 + k * 3.4, 2.8, 2.4)); blobs.push(ell(37.4, 20 + k * 3.4, 2.8, 2.4)); }
@@ -423,7 +469,7 @@
         if (r > 7 && r < 9.2 && x < CX + 3 && tone !== 'deep' && tone !== 'shadow') return 'hi';
         if (s.shine && r > 9.2 && r < 10.4 && x < CX && tone === 'base') return 'light';
       } else {
-        const w = s.flow === 'wave' ? Math.sin(y / 2.3) * 1.3 : 0;
+        const w = s.flow === 'wave' ? Math.sin(y / 2.3) * (s.waveAmp || 1.3) : 0;
         streak = (Math.round(x + w) % 3 === 0) && y > 15;
         if (y > 12 && y < 16 && x < CX - 1 && x > 15 && tone !== 'deep') return 'hi';
       }
@@ -698,6 +744,9 @@
       legs: [[[20.6, 55], [19.8, 65], [18.6, 73]], [[27.4, 55], [28.2, 65], [29.4, 73]]] },
     sit: { arms: [[[16.2, 41], [14, 48], [16.2, 55.5]], [[31.8, 41], [34, 48], [31.8, 55.5]]],
       legs: [[[20.6, 55], [15.6, 59.5], [13, 63.5]], [[27.4, 55], [32.4, 59.5], [35, 63.5]]] },
+    // Andando: un paso, brazos que acompañan
+    walk: { arms: [[[16.2, 41], [14.6, 47.5], [16, 54]], [[31.8, 41], [34.2, 47.6], [34.8, 54.2]]],
+      legs: [[[20.6, 55], [19.6, 64.5], [18.8, 72.5]], [[27.4, 55], [28.6, 62.5], [28.4, 70.5]]] },
     // Sentado a la mesa: las manos sobre el libro; la mesa tapa las piernas.
     desk: { arms: [[[16.2, 41], [13.2, 46.5], [19.6, 48.6]], [[31.8, 41], [34.8, 46.5], [28.4, 48.6]]],
       legs: [[[20.6, 55], [20.4, 65], [20.2, 73]], [[27.4, 55], [27.6, 65], [27.8, 73]]] }

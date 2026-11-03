@@ -1314,7 +1314,6 @@ body > .gameover{position:fixed}
 .hitfx--unit .who{transform-box:fill-box;transform-origin:50% 100%}
 .hitfx--unit.is-hit .who--hit{animation:hitBack .5s cubic-bezier(.2,.8,.3,1), hitBlink .6s steps(1) .1s}
 .hitfx--unit.is-hit .who--sit{animation:hitBlink .5s steps(1)}
-.hitfx--unit.is-up .who--stand{animation:standUp .3s ease-out}
 @keyframes standUp{0%{transform:translateY(8px) scaleY(.92)}100%{transform:none}}
 .hitfx--unit.is-ko .hitfx__sprite > svg{animation:none}
 .hitfx--unit.is-ko .hitfx__sprite::after{left:auto;right:-14%;bottom:30%}
@@ -1386,3 +1385,89 @@ body > .gameover{position:fixed}
 @keyframes revivePulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,109,.0)}50%{box-shadow:0 0 0 4px rgba(255,77,109,.25)}}
 /* El tumbado se coloca con su propio transform: sin origen CSS */
 .scene-unit .who--ko,.hitfx--unit .who--ko{transform-box:view-box;transform-origin:0 0}
+
+/* Escena del golpe con mesa: la sombra aparece cuando ya está de pie */
+.hitfx--unit .hitfx__shadow{opacity:0;transition:opacity .15s}
+.hitfx--unit.is-up .hitfx__shadow{opacity:1}
+
+/* Golpe de la pareja en su puesto: tiembla y sale una etiqueta pequeña */
+.study-station.is-peerhit .study-station__art{animation:peerShake .45s ease}
+@keyframes peerShake{0%,100%{transform:none}20%{transform:translateX(-4px)}45%{transform:translateX(3px)}70%{transform:translateX(-2px)}}
+.study-station__hit{
+  position:absolute;top:8%;left:50%;font:800 13px/1 var(--font, system-ui);color:#fff;white-space:nowrap;z-index:2;
+  background:#e0365a;padding:3px 7px;border-radius:999px;box-shadow:0 2px 0 rgba(0,0,0,.25);
+  animation:peerTag 1.7s ease forwards;
+}
+@keyframes peerTag{0%{opacity:0;transform:translateY(6px) scale(.7)}15%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
+.peer-avatar{position:relative}
+.peer-avatar.is-hit svg{animation:peerShake .45s ease}
+.peer-hit-tag{position:absolute;left:70%;top:-10px;font:800 10px/1 var(--font, system-ui);color:#fff;background:#e0365a;padding:2px 5px;border-radius:999px;white-space:nowrap;animation:peerTag 2.2s ease forwards;pointer-events:none}
+
+.hud__kind{font-size:14px;line-height:1;margin-left:2px}
+
+/* Menú de causas */
+.causepop-veil{position:fixed;inset:0;z-index:454;background:rgba(0,0,0,.18)}
+.causepop{
+  position:fixed;left:50%;bottom:calc(112px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:455;
+  width:min(440px,calc(100vw - 24px));padding:12px 12px 14px;border-radius:18px;overflow:hidden;
+  background:rgba(14,18,30,.97);border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 40px rgba(0,0,0,.45);
+  animation:causeIn .18s cubic-bezier(.2,.9,.3,1.2);
+}
+.causepop.is-leaving{animation:cheerOut .18s ease forwards}
+@keyframes causeIn{from{opacity:0;transform:translate(-50%,12px) scale(.96)}to{opacity:1;transform:translateX(-50%)}}
+.causepop__title{font-weight:700;font-size:.92rem;color:#fff;margin:0 2px 10px}
+.causepop__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.causepop__btn{
+  display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border-radius:12px;cursor:pointer;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#e9ecf5;font:inherit;font-size:.76rem;line-height:1.15;text-align:center;
+}
+.causepop__btn:hover,.causepop__btn:focus-visible{background:rgba(255,77,109,.18);border-color:rgba(255,77,109,.6);outline:none}
+.causepop__icon{font-size:22px;line-height:1}
+.causepop__btn--none{color:rgba(255,255,255,.6)}
+.causepop__timer{position:absolute;left:0;bottom:0;height:3px;width:100%;background:#ff4d6d;transform-origin:left;animation:causeTimer 8s linear forwards}
+@keyframes causeTimer{to{transform:scaleX(0)}}
+@media (max-width:600px){ .causepop{bottom:calc(200px + env(safe-area-inset-bottom))} }
+
+/* Racha, misiones y logros en la tarjeta */
+.progress-tile{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.progress-tile__row{display:flex;flex-wrap:wrap;gap:6px}
+.streak-pill,.kind-pill{font-size:.78rem;font-weight:650;padding:3px 10px;border-radius:999px;background:var(--bg-soft);border:1px solid var(--line);color:var(--text-dim)}
+.streak-pill.is-on{color:#ffb84d;border-color:rgba(255,184,77,.5);background:rgba(255,184,77,.1)}
+.kind-pill{color:#5ce0a8;border-color:rgba(92,224,168,.45);background:rgba(92,224,168,.08)}
+.missions__head{font-size:.74rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint)}
+.missions{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.mission{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:.84rem;padding:6px 8px;border-radius:10px;background:var(--bg-soft);border:1px solid var(--line)}
+.mission__icon{font-size:15px;text-align:center}
+.mission__val{font-size:.76rem;color:var(--text-faint);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mission.is-done{border-color:rgba(92,224,168,.45)}
+.mission.is-done .mission__title{color:var(--text-dim);text-decoration:line-through;text-decoration-color:rgba(92,224,168,.6)}
+.mission.is-done .mission__val{color:#5ce0a8;font-weight:650}
+
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.badge-card{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:12px 8px;border-radius:14px;background:var(--bg-soft);border:1px dashed var(--line);opacity:.6}
+.badge-card.is-on{opacity:1;border-style:solid;border-color:rgba(255,184,77,.5);background:linear-gradient(160deg,rgba(255,184,77,.12),transparent)}
+.badge-card__icon{
+  width:46px;height:46px;display:grid;place-items:center;font-size:24px;
+  background:#262b3d;box-shadow:0 0 0 3px #11141f, 0 0 0 5px #3a4256, 3px 3px 0 5px #0b0d14;
+  image-rendering:pixelated;color:var(--text-faint);font-weight:800;margin-bottom:6px;
+}
+.badge-card.is-on .badge-card__icon{background:#ffcf66;box-shadow:0 0 0 3px #6e4426, 0 0 0 5px #c48a55, 3px 3px 0 5px #3a2412}
+.badge-card strong{font-size:.82rem}
+.badge-card small{font-size:.7rem;color:var(--text-faint);line-height:1.25}
+
+/* Fin de jornada */
+.dayend{display:flex;flex-direction:column;gap:10px}
+.dayend__line{opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s}
+.dayend__line.is-in{opacity:1;transform:none}
+.dayend__hero{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,rgba(91,140,255,.18),rgba(124,92,255,.1));border:1px solid var(--line)}
+.dayend__total{font-size:1.6rem;font-variant-numeric:tabular-nums}
+.dayend__topic{display:grid;grid-template-columns:minmax(80px,30%) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:.85rem}
+.dayend__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dayend__bar{height:10px;border-radius:3px;background:var(--bg-soft);overflow:hidden;border:1px solid var(--line)}
+.dayend__fill{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,var(--accent) 0 6px,#7ea5ff 6px 8px);transition:width .5s steps(8)}
+.dayend__val{font-variant-numeric:tabular-nums;color:var(--text-dim);font-size:.8rem}
+.dayend__row{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:.88rem;padding:6px 0;border-top:1px solid var(--line)}
+.dayend__row .hearts{flex-wrap:wrap;justify-content:flex-end}
+.dayend__note{font-size:.8rem;color:var(--text-faint);margin:4px 0 0}
+.kind-box p{margin:0 0 10px;color:var(--text-dim);line-height:1.45}
+.healfx__heart{font-size:22px}
