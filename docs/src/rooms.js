@@ -227,8 +227,10 @@
     r += '<ellipse cx="54" cy="98" rx="46" ry="3" fill="#000" opacity=".12"/>';
     r += Scene.unit(cfg, Object.assign({ part: part }, unit, { nest: { x: 10, y: 14, w: 100 } }));
     // De noche, el cuarto se oscurece un poco (salvo la luz de las lámparas)
-    if (part === 'night') r += px(0, 0, RW, RH, '#0b1030', ' opacity=".22"');
-    if (part === 'evening') r += px(0, 0, RW, RH, '#3b2c6e', ' opacity=".1"');
+    // (más oscuro si la luz aún está apagada: alguien está entrando)
+    const off = unit && unit.lamp === false;
+    if (part === 'night') r += px(0, 0, RW, RH, '#0b1030', ' opacity="' + (off ? '.5' : '.22') + '"');
+    if (part === 'evening') r += px(0, 0, RW, RH, '#3b2c6e', ' opacity="' + (off ? '.35' : '.1') + '"');
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + RW + ' ' + RH + '" width="' + (size || 360) + '" height="' + Math.round((size || 360) * RH / RW) +
       '" shape-rendering="crispEdges" class="room-art room-art--' + part + '" aria-hidden="true">' + r + '</svg>';
   };
@@ -239,12 +241,16 @@
    * El primero va a la izquierda; el segundo, a la derecha y en espejo.
    */
   Rooms.render = function (box, list) {
+    // La aparición con zoom, solo la primera vez (no en cada fotograma)
+    const had = {};
+    box.querySelectorAll('.room').forEach(function (r) { had[r.dataset.i] = true; });
     U.clear(box);
     list.forEach(function (it, i) {
-      const el = U.el('div', { class: 'room room--' + (i ? 'right' : 'left') + (it.away ? ' is-away' : '') + (it.fx ? ' is-peerhit' : ''), title: 'Toca para volver a la vista pequeña' });
+      const el = U.el('div', { class: 'room room--' + (i ? 'right' : 'left') + (had[i] ? '' : ' room--in') + (it.away ? ' is-away' : '') + (it.fx ? ' is-peerhit' : ''), title: 'Toca para volver a la vista pequeña' });
+      el.dataset.i = i;
       const frame = U.el('div', { class: 'room__frame' });
       const art = U.el('div', { class: 'room__art' + (i ? ' is-mirror' : '') });
-      art.innerHTML = Rooms.svg(it.mode === 'empty' ? null : it.cfg, it.deco, { mode: it.mode, mood: it.mood }, 400);
+      art.innerHTML = Rooms.svg(it.mode === 'empty' ? null : it.cfg, it.deco, { mode: it.mode, mood: it.mood, x: it.x, lamp: it.lamp, noProps: it.noProps, placing: it.placing }, 400);
       frame.appendChild(art);
       el.appendChild(frame);
       if (it.fx) el.appendChild(U.el('span', { class: 'room__tag room__tag--hit', text: it.fx.badge }));

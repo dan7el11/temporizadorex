@@ -152,6 +152,12 @@
     return '<g class="scene-pet scene-pet--' + p.cls + '">' + r + '</g>';
   }
 
+  /** Lo de la mesa, salvo que aún no haya llegado nadie (o esté dejándolo ahora mismo). */
+  function propsOf(part, o) {
+    if (o.noProps) return '';
+    return o.placing ? '<g class="scene-placed">' + props(part) + '</g>' : props(part);
+  }
+
   /** Libro abierto centrado delante del avatar; una página pasa de vez en cuando. */
   function book(reading) {
     let r = '';
@@ -226,7 +232,7 @@
     const svg = open +
       behind + desk(lamp, part) +
       // Sentado: el libro, las manos y lo de la mesa van por delante del cuerpo
-      (mode === 'desk' && cfg ? body + book(true) + hands(cfg) + props(part) : book(false) + props(part) + body) +
+      (mode === 'desk' && cfg ? body + book(true) + hands(cfg) + propsOf(part, o) : book(false) + propsOf(part, o) + body) +
       pet(cfg) + front + '</svg>';
     return svg;
   };
@@ -245,6 +251,38 @@
     if (s.isBreak) return { mode: 'win', mood: 'happy', bubble: '☕' };
     return { mode: 'desk', mood: s.happy ? 'happy' : 'neutral', bubble: s.ending ? '🏁' : '' };
   }
+
+  /* ── Entrar en la sesión ─────────────────────────────────── */
+  /*
+   * Al empezar una sesión (la tuya, o la de tu pareja en tu pantalla): el
+   * cuarto está vacío —y a oscuras si es de noche—, el avatar entra andando,
+   * enciende el flexo, deja su bebida en la mesa y se sienta a estudiar.
+   */
+  const ENTER_MS = 3000;
+  const enter = { me: 0, peer: 0 };
+  let enteredSession = null;
+  let lastPeerSession;
+  function enterFrame(start, part) {
+    if (!start) return null;
+    const t = Date.now() - start;
+    if (t < 0 || t > ENTER_MS) return null;
+    const dark = part === 'evening' || part === 'night';
+    if (t < 1300) {
+      // Entra andando desde la derecha, con pasos
+      const k = t / 1300;
+      const x = Math.round(104 - (104 - 46) * k);
+      return { mode: Math.floor(t / 170) % 2 ? 'stand' : 'step', mood: 'happy', x: x, lamp: dark ? false : undefined, noProps: true };
+    }
+    if (t < 1750) {
+      // Se para junto a la mesa y enciende la luz
+      const on = !dark || t > 1450;
+      return { mode: 'stand', mood: 'happy', lamp: dark ? on : undefined, noProps: true, bubble: dark && on && t < 1700 ? '💡' : '' };
+    }
+    if (t < 2350) return { mode: 'stand', mood: 'happy', placing: true };   // deja la bebida
+    if (t < 2750) return { mode: 'rise', mood: 'happy' };                    // se sienta
+    return { mode: 'desk', mood: 'happy' };
+  }
+  Scene.enter = function (who) { enter[who === 'peer' ? 'peer' : 'me'] = Date.now(); Scene.render(lastState); };
 
   let lastSig = '';
   let lastState = null;
@@ -295,8 +333,23 @@
     const part = Scene.daypart();
     const coop = global.Coop ? Coop.line() : '';
     const fx = peerFx && Date.now() < peerFx.until ? peerFx : null;
+    // ¿Alguien acaba de empezar? Animación de entrada
+    if (state.startedAt && state.startedAt !== enteredSession) {
+      enteredSession = state.startedAt;
+      if (Date.now() - state.startedAt < 4000) enter.me = Date.now();
+    }
+    if (ps) {
+      const on = !!peerMe.session;
+      if (lastPeerSession === false && on) enter.peer = Date.now();
+      lastPeerSession = on;
+    }
+    const meEnter = enterFrame(enter.me, part);
+    const peerEnter = fx ? null : enterFrame(enter.peer, part);
+    if (meEnter || peerEnter) setTimeout(function () { Scene.render(lastState); }, 130);
+    const myMode = meEnter || modeOf(me);
+    const peerMode = ps ? (fx ? { mode: fx.mode, mood: fx.mood } : peerEnter || modeOf(peerMe)) : null;
     const roomView = Game.settings().roomView && global.Rooms;
-    const sig = JSON.stringify([Avatar.config(), modeOf(me), ps ? [ps.avatar, modeOf(peerMe), peer.name, ps.roomDeco] : null, part, coop, fx,
+    const sig = JSON.stringify([Avatar.config(), myMode, ps ? [ps.avatar, peerMode, peer.name, ps.roomDeco] : null, part, coop, fx,
       roomView ? Rooms.config() : 0]);
     if (sig === lastSig) return;
     lastSig = sig;
@@ -304,8 +357,8 @@
     U.clear(box);
     box.className = 'study-scene study-scene--' + part + (ps ? ' study-scene--duo' : '');
     const row = U.el('div', { class: 'study-scene__row' });
-    row.appendChild(station(Avatar.config(), modeOf(me), 'Tú'));
-    if (ps) row.appendChild(station(ps.avatar, fx ? { mode: fx.mode, mood: fx.mood } : modeOf(peerMe), peer.name || 'Pareja', !peerMe.session && !fx, fx));
+    row.appendChild(station(Avatar.config(), myMode, 'Tú'));
+    if (ps) row.appendChild(station(ps.avatar, peerMode, peer.name || 'Pareja', !peerMe.session && !fx && !peerEnter, fx));
     box.appendChild(row);
     if (coop) box.appendChild(U.el('div', { class: 'study-scene__coop', text: coop }));
     box.title = 'Toca para ver los cuartos en grande, a cada lado del reloj';
@@ -314,12 +367,8 @@
     const rooms = document.getElementById('studyRooms');
     if (rooms) {
       if (roomView) {
-        const mm = modeOf(me);
-        const list = [{ cfg: Avatar.config(), deco: Rooms.config(), mode: mm.mode, mood: mm.mood, name: 'Tú', bubble: mm.bubble }];
-        if (ps) {
-          const pm = fx ? { mode: fx.mode, mood: fx.mood } : modeOf(peerMe);
-          list.push({ cfg: ps.avatar, deco: ps.roomDeco, mode: pm.mode, mood: pm.mood, name: peer.name || 'Pareja', away: !peerMe.session && !fx, fx: fx, bubble: pm.bubble });
-        }
+        const list = [Object.assign({ cfg: Avatar.config(), deco: Rooms.config(), name: 'Tú' }, myMode)];
+        if (ps) list.push(Object.assign({ cfg: ps.avatar, deco: ps.roomDeco, name: peer.name || 'Pareja', away: !peerMe.session && !fx && !peerEnter, fx: fx }, peerMode));
         Rooms.render(rooms, list);
         if (coop) rooms.appendChild(U.el('div', { class: 'study-rooms__coop', text: coop }));
       } else U.clear(rooms);
@@ -330,7 +379,7 @@
   function station(cfg, m, name, away, fx) {
     const el = U.el('div', { class: 'study-station' + (away ? ' is-away' : '') + ' is-' + m.mode + (fx ? ' is-peerhit' : '') });
     const art = U.el('div', { class: 'study-station__art' });
-    art.innerHTML = Scene.unit(m.mode === 'empty' ? null : cfg, { mode: m.mode, mood: m.mood, size: 150 });
+    art.innerHTML = Scene.unit(m.mode === 'empty' ? null : cfg, { mode: m.mode, mood: m.mood, x: m.x, lamp: m.lamp, noProps: m.noProps, placing: m.placing, size: 150 });
     el.appendChild(art);
     if (fx) el.appendChild(U.el('span', { class: 'study-station__hit', text: fx.badge }));
     else if (m.bubble) el.appendChild(U.el('span', { class: 'study-station__bubble', text: m.bubble }));

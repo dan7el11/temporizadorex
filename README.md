@@ -393,6 +393,10 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
   verdad) desde el principio; y desbloqueables: póster de anatomía (nivel 3), diploma (8), alfombra
   (11), lámpara de pie (15, se enciende de noche), pizarra con apuntes (16), guirnalda de luces (20),
   pecera con pez (22) y foto de los dos (logro «Equipo»). Tu pareja ve tu cuarto tal como lo decores.
+- **Entrada en la sesión**: al empezar una sesión, el cuarto está vacío (y en penumbra si es de noche),
+  tu avatar entra andando, enciende el flexo, deja su bebida en la mesa y se sienta a estudiar
+  (unos 3 s). Cuando tu pareja empieza la suya, en tu pantalla ves lo mismo en su cuarto. También en la
+  vista pequeña. Al recuperar una sesión tras recargar no se repite.
 
 ### Experiencia, niveles y desbloqueables
 - **Experiencia (XP)**, calculada a partir de tu historial (igual en todos tus dispositivos): **1 XP por

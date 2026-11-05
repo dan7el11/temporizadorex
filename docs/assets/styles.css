@@ -1566,8 +1566,8 @@ body > .gameover{position:fixed}
 .room{
   position:absolute;top:50%;width:var(--room-w,320px);transform:translateY(-50%);
   display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:auto;cursor:zoom-out;
-  animation:roomIn .35s cubic-bezier(.2,.9,.3,1.1);
 }
+.room--in{animation:roomIn .35s cubic-bezier(.2,.9,.3,1.1)}
 .room--left{left:calc((var(--side,360px) - var(--room-w,320px)) / 2 + 10px)}
 .room--right{right:calc((var(--side,360px) - var(--room-w,320px)) / 2 + 10px)}
 @keyframes roomIn{from{opacity:0;transform:translateY(-50%) scale(.94)}to{opacity:1;transform:translateY(-50%)}}
@@ -1618,3 +1618,6 @@ body > .gameover{position:fixed}
 .room-editor__preview{line-height:0;border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
 .room-editor__preview > svg{width:300px;height:auto;display:block}
 @media (max-width:640px){ .room-editor__body{grid-template-columns:1fr} .room-editor__preview > svg{width:100%} }
+/* Al entrar: la bebida «cae» en la mesa con un rebote */
+.scene-placed{animation:scenePlace .45s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes scenePlace{0%{transform:translateY(-6px);opacity:0}60%{opacity:1}100%{transform:none}}
