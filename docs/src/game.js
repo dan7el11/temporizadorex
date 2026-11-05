@@ -21,7 +21,7 @@
   'use strict';
 
   const Game = {};
-  const DEFAULTS = { enabled: true, dayLives: 10, regain: true, anim: true, scene: true, coopGoalH: 12, sounds: true, causeFirst: true, streakGoalH: 5 };
+  const DEFAULTS = { enabled: true, dayLives: 10, regain: true, anim: true, scene: true, coopGoalH: 12, sounds: true, causeFirst: true, streakGoalH: 5, roomView: false };
   const DAY_CUT_H = 4;
   const REGEN_MS = 45 * 60000;
   const REGEN_KEY = 'mir2027.game.regen.v1';
@@ -720,6 +720,7 @@
     if (ed) {
       U.clear(ed);
       ed.appendChild(Avatar.editor(function () { Game.renderTile(); if (global.Scene) Scene.invalidate(); if (global.App) App.renderRoomStrip(); }));
+      if (global.Rooms) ed.appendChild(Rooms.editor());
     }
   };
 

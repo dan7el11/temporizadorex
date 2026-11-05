@@ -1112,6 +1112,8 @@
     if (!b) return;
     const stage = document.getElementById('stage');
     stage.style.setProperty('--c', b.color);
+    // También en el temporizador entero: los marcos de los cuartos toman el color del bloque
+    document.getElementById('runner').style.setProperty('--c', b.color);
     stage.style.setProperty('--on', U.onColor(b.color));
     stage.style.setProperty('--glow', U.glowColor(b.color));
     const meta = document.querySelector('meta[name=theme-color]');

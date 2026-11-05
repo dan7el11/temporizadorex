@@ -218,8 +218,12 @@
       const b = Avatar.bodyInner(cfg, pose, mood);
       front += '<g class="who who--' + mode + '">' + who(cfg, pose, mood, sx, UH - b.h) + '</g>';
     }
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + UW + ' ' + UH + '" width="' + (o.size || 160) +
-      '" height="' + Math.round((o.size || 160) * UH / UW) + '" shape-rendering="crispEdges" style="overflow:visible" class="scene-unit scene-unit--' + mode + '" aria-hidden="true">' +
+    // Dentro de otro dibujo (el cuarto): svg anidado en su sitio
+    const open = o.nest
+      ? '<svg x="' + o.nest.x + '" y="' + o.nest.y + '" width="' + o.nest.w + '" height="' + (o.nest.w * UH / UW) + '" viewBox="0 0 ' + UW + ' ' + UH + '" overflow="visible" class="scene-unit scene-unit--' + mode + '">'
+      : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + UW + ' ' + UH + '" width="' + (o.size || 160) +
+        '" height="' + Math.round((o.size || 160) * UH / UW) + '" shape-rendering="crispEdges" style="overflow:visible" class="scene-unit scene-unit--' + mode + '" aria-hidden="true">';
+    const svg = open +
       behind + desk(lamp, part) +
       // Sentado: el libro, las manos y lo de la mesa van por delante del cuerpo
       (mode === 'desk' && cfg ? body + book(true) + hands(cfg) + props(part) : book(false) + props(part) + body) +
@@ -291,7 +295,9 @@
     const part = Scene.daypart();
     const coop = global.Coop ? Coop.line() : '';
     const fx = peerFx && Date.now() < peerFx.until ? peerFx : null;
-    const sig = JSON.stringify([Avatar.config(), modeOf(me), ps ? [ps.avatar, modeOf(peerMe), peer.name] : null, part, coop, fx]);
+    const roomView = Game.settings().roomView && global.Rooms;
+    const sig = JSON.stringify([Avatar.config(), modeOf(me), ps ? [ps.avatar, modeOf(peerMe), peer.name, ps.roomDeco] : null, part, coop, fx,
+      roomView ? Rooms.config() : 0]);
     if (sig === lastSig) return;
     lastSig = sig;
     box.hidden = false;
@@ -302,6 +308,22 @@
     if (ps) row.appendChild(station(ps.avatar, fx ? { mode: fx.mode, mood: fx.mood } : modeOf(peerMe), peer.name || 'Pareja', !peerMe.session && !fx, fx));
     box.appendChild(row);
     if (coop) box.appendChild(U.el('div', { class: 'study-scene__coop', text: coop }));
+    box.title = 'Toca para ver los cuartos en grande, a cada lado del reloj';
+
+    // Modo habitación: los mismos puestos, dentro de sus cuartos
+    const rooms = document.getElementById('studyRooms');
+    if (rooms) {
+      if (roomView) {
+        const mm = modeOf(me);
+        const list = [{ cfg: Avatar.config(), deco: Rooms.config(), mode: mm.mode, mood: mm.mood, name: 'Tú', bubble: mm.bubble }];
+        if (ps) {
+          const pm = fx ? { mode: fx.mode, mood: fx.mood } : modeOf(peerMe);
+          list.push({ cfg: ps.avatar, deco: ps.roomDeco, mode: pm.mode, mood: pm.mood, name: peer.name || 'Pareja', away: !peerMe.session && !fx, fx: fx, bubble: pm.bubble });
+        }
+        Rooms.render(rooms, list);
+        if (coop) rooms.appendChild(U.el('div', { class: 'study-rooms__coop', text: coop }));
+      } else U.clear(rooms);
+    }
     layout();
   };
 
@@ -332,10 +354,37 @@
     box.classList.remove('is-corner', 'is-compact', 'is-off');
     box.style.removeProperty('bottom');
     box.style.removeProperty('--station-w');
+    const rooms = document.getElementById('studyRooms');
+    runner.classList.remove('rooms-on');
+    if (rooms) rooms.hidden = true;
     if (box.hidden || !ctrl) return;
     runner.classList.add('scene-on');
     const vh = window.innerHeight;
     const c = ctrl.getBoundingClientRect();
+
+    // Modo habitación: un cuarto a cada lado del reloj, si hay sitio
+    if (rooms && rooms.childElementCount && Game.settings().roomView) {
+      runner.classList.add('rooms-on');      // el reloj, algo más contenido
+      const t = document.querySelector('.stage__layer--over .js-time');
+      const range = document.createRange();
+      range.selectNodeContents(t);
+      const textW = range.getBoundingClientRect().width;
+      const vw = window.innerWidth;
+      const side = (vw - textW) / 2 - 20;
+      const top = 84;                        // la barra de arriba
+      const bottom = c.top - 10;             // los controles
+      const half = Math.min(vh / 2 - top, bottom - vh / 2);
+      const maxH = half * 2 - 30;            // y el nombre debajo
+      const w = Math.floor(Math.min(440, side - 20, maxH * 120 / 100));
+      if (w >= 200) {
+        rooms.hidden = false;
+        rooms.style.setProperty('--room-w', w + 'px');
+        rooms.style.setProperty('--side', side + 'px');
+        box.classList.add('is-off');
+        return;
+      }
+      runner.classList.remove('rooms-on');   // no cabe: vista pequeña
+    }
     // Dónde acaba lo que hay bajo el reloj (subtítulo, pausa en curso…)
     let contentBottom = 0;
     document.querySelectorAll('.stage__layer--over .stage__inner > *').forEach(function (el) {
@@ -370,6 +419,19 @@
     box.classList.add('is-off');
   }
   Scene.layout = layout;
+
+  // Tocar la escena la pone en grande (modo habitación); tocar un cuarto, la vuelve pequeña
+  function toggleRooms(on) {
+    Game.set({ roomView: on });
+    Scene.invalidate();
+    Scene.render(lastState);
+    if (on && document.getElementById('studyRooms').hidden) UI.toast('No hay sitio a los lados del reloj en esta pantalla');
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest) return;
+    if (e.target.closest('#studyScene')) toggleRooms(true);
+    else if (e.target.closest('#studyRooms .room')) toggleRooms(false);
+  });
   window.addEventListener('resize', function () { layout(); });
   // Si cambia el tamaño de los controles o de lo que hay bajo el reloj (pausa
   // en curso, fuentes que terminan de cargar…), se recoloca.

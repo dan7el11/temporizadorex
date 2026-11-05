@@ -146,6 +146,7 @@
     if (global.Cheers) { out.cheers = Cheers.outbox(); out.cheersSeen = Cheers.seenIds(); }
     // Modo juego: el avatar y, con sesión, las vidas que quedan.
     if (global.Avatar && Avatar.config()) out.avatar = Avatar.config();
+    if (global.Rooms) out.roomDeco = Rooms.config();
     // Cooperativo: mis minutos de estudio de los últimos días.
     if (global.Coop) out.coop = Coop.myState();
     // Modo juego: mis golpes recientes, para que su pantalla los anime en mi puesto.

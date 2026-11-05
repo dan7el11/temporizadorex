@@ -190,6 +190,14 @@
     { id: 'bg:habitacion', level: 18, name: 'Fondo: habitación', icon: '🪟' },
     { id: 'out:dorado', level: 25, name: 'Pijama dorado', icon: '✨' },
     { id: 'acc:fonendo', level: 30, name: 'Fonendo dorado', icon: '🩺' },
+    { id: 'room:poster', level: 3, name: 'Cuarto: póster de anatomía', icon: '🦴' },
+    { id: 'room:diploma', level: 8, name: 'Cuarto: diploma', icon: '🎓' },
+    { id: 'room:alfombra', level: 11, name: 'Cuarto: alfombra', icon: '🟫' },
+    { id: 'room:lampara', level: 15, name: 'Cuarto: lámpara de pie', icon: '💡' },
+    { id: 'room:pizarra', level: 16, name: 'Cuarto: pizarra con apuntes', icon: '📝' },
+    { id: 'room:luces', level: 20, name: 'Cuarto: guirnalda de luces', icon: '✨' },
+    { id: 'room:pecera', level: 22, name: 'Cuarto: pecera', icon: '🐠' },
+    { id: 'room:foto', badge: 'equipo', name: 'Cuarto: foto de los dos', icon: '💞' },
     { id: 'pet:buho', badge: 'buho', name: 'Mascota: búho', icon: '🦉' },
     { id: 'acc:pin', badge: 'equipo', name: 'Pin de corazón', icon: '💗' }
   ];

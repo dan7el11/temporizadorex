@@ -1558,3 +1558,63 @@ body > .gameover{position:fixed}
 @keyframes petBreath{0%,100%{transform:none}50%{transform:scaleY(1.08)}}
 @keyframes petBob{0%,100%{transform:none}50%{transform:translateY(-1px)}}
 @media (prefers-reduced-motion:reduce){ .scene-pet{animation:none!important} }
+
+/* ── Modo habitación ───────────────────────────────────── */
+.study-scene .study-station{pointer-events:auto;cursor:zoom-in}
+.study-rooms{position:absolute;inset:0;z-index:3;pointer-events:none}
+.runner.rooms-on .stage:not(.is-guided) .stage__time{font-size:clamp(3rem,min(13vw,32vh),12rem)}
+.room{
+  position:absolute;top:50%;width:var(--room-w,320px);transform:translateY(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:auto;cursor:zoom-out;
+  animation:roomIn .35s cubic-bezier(.2,.9,.3,1.1);
+}
+.room--left{left:calc((var(--side,360px) - var(--room-w,320px)) / 2 + 10px)}
+.room--right{right:calc((var(--side,360px) - var(--room-w,320px)) / 2 + 10px)}
+@keyframes roomIn{from{opacity:0;transform:translateY(-50%) scale(.94)}to{opacity:1;transform:translateY(-50%)}}
+/* El marco: cristal que deja pasar el color del bloque, para que no choque con el reloj */
+.room__frame{
+  width:100%;padding:7px;border-radius:20px;
+  background:linear-gradient(160deg,rgba(255,255,255,.22),rgba(255,255,255,.06));
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  box-shadow:0 14px 36px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.28), inset 0 -1px 0 rgba(0,0,0,.12);
+}
+.room__art{position:relative;line-height:0;border-radius:14px;overflow:hidden}
+.room__art > svg{display:block;width:100%;height:auto}
+/* Viñeta del color del bloque sobre los bordes del cuarto: el cuarto «se funde» con el temporizador */
+.room__art::after{
+  content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  box-shadow:inset 0 0 26px 6px color-mix(in srgb, var(--c, #3f72e8) 55%, transparent), inset 0 0 0 2px color-mix(in srgb, var(--c, #3f72e8) 40%, #000 0%);
+}
+.room__art.is-mirror > svg{transform:scaleX(-1)}
+.room.is-away .room__art > svg{filter:saturate(.4) brightness(.8)}
+.room__name{font-size:.8rem;font-weight:700;color:rgba(255,255,255,.88);text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.room__tag{
+  position:absolute;top:10%;left:52%;font-size:20px;line-height:1;padding:5px 8px;border-radius:12px;
+  background:rgba(255,255,255,.94);box-shadow:0 2px 0 rgba(0,0,0,.2);animation:bubbleBob 2.4s ease-in-out infinite;
+}
+.room--right .room__tag{left:auto;right:52%}
+.room__tag--hit{font:800 15px/1 var(--font, system-ui);color:#fff;background:#e0365a;animation:peerTag 1.7s ease forwards}
+.room.is-peerhit .room__art{animation:peerShake .45s ease}
+.study-rooms__coop{
+  position:absolute;left:50%;bottom:calc(100% - 50% - var(--room-w,320px) * .45 - 34px);transform:translateX(-50%);
+  font-size:.74rem;color:rgba(255,255,255,.85);background:rgba(0,0,0,.22);padding:3px 10px;border-radius:999px;white-space:nowrap;display:none;
+}
+/* Detalles animados del cuarto */
+.room-star{animation:roomTwinkle 2.4s ease-in-out infinite}
+@keyframes roomTwinkle{0%,100%{opacity:.35}50%{opacity:1}}
+.room-bulb{animation:roomBulb 1.8s steps(2) infinite}
+@keyframes roomBulb{0%,100%{opacity:1}50%{opacity:.35}}
+.room-fish{animation:roomFish 6s ease-in-out infinite}
+@keyframes roomFish{0%,100%{transform:translateX(0)}50%{transform:translateX(7px)}}
+.room-plant{transform-box:fill-box;transform-origin:50% 100%;animation:roomPlant 5s ease-in-out infinite}
+@keyframes roomPlant{0%,100%{transform:none}50%{transform:skewX(-2deg)}}
+@media (prefers-reduced-motion:reduce){ .room-star,.room-bulb,.room-fish,.room-plant,.room{animation:none!important} }
+
+/* Editor del cuarto */
+.room-editor{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+.room-editor__title{margin:0 0 4px;font-size:1rem}
+.room-editor__hint{margin:0 0 12px;font-size:.8rem;color:var(--text-faint)}
+.room-editor__body{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:start}
+.room-editor__preview{line-height:0;border-radius:14px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.room-editor__preview > svg{width:300px;height:auto;display:block}
+@media (max-width:640px){ .room-editor__body{grid-template-columns:1fr} .room-editor__preview > svg{width:100%} }

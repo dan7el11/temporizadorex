@@ -378,6 +378,22 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
   te propone una pausa de recuperación y, el resto del día, las pausas no cuestan y las distracciones
   cuestan la mitad. También se activa a mano con *Día amable*.
 
+### Modo habitación
+- **Toca la escena** del temporizador y los puestos pasan a ser **cuartos en grande a cada lado del
+  reloj**: el tuyo a la izquierda y el de tu pareja a la derecha, **en espejo**. Toca un cuarto para
+  volver a la vista pequeña. El reloj sigue centrado (algo más contenido para dejar sitio). Si la
+  pantalla no tiene sitio a los lados (móvil), se queda la vista pequeña.
+- Cada cuarto va en su **ventana-marco de cristal**: deja pasar el color del bloque y los bordes del
+  cuarto se funden con él, para que no choque con el temporizador ni quede «flotando» sobre el color.
+- Dentro: pared con friso y rodapié, suelo, **ventana con el cielo de la hora** (sol por la mañana,
+  nubes a mediodía, atardecer naranja, cielo morado por la noche, luna y estrellas de madrugada, y la
+  ciudad con luces encendidas), tu mesa con todo lo de la escena y tu mascota.
+- **Personalizable** en *Ajustes → Avatar y vidas → Tu cuarto*: color de pared (6), suelo (madera,
+  baldosa, moqueta), cortinas (5) y decoración: estantería, planta y reloj de pared (con la hora de
+  verdad) desde el principio; y desbloqueables: póster de anatomía (nivel 3), diploma (8), alfombra
+  (11), lámpara de pie (15, se enciende de noche), pizarra con apuntes (16), guirnalda de luces (20),
+  pecera con pez (22) y foto de los dos (logro «Equipo»). Tu pareja ve tu cuarto tal como lo decores.
+
 ### Experiencia, niveles y desbloqueables
 - **Experiencia (XP)**, calculada a partir de tu historial (igual en todos tus dispositivos): **1 XP por
   minuto de estudio efectivo**, +20 por bloque sin distracciones, +15 por pausa guiada completa, +100
