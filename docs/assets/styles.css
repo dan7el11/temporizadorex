@@ -1356,15 +1356,22 @@ body > .gameover{position:fixed}
 .scene-unit .who__open{animation:sceneOpen 4.6s steps(1) infinite}
 @keyframes sceneBlink{0%,93%{opacity:0}94%,97%{opacity:1}98%{opacity:0}}
 @keyframes sceneOpen{0%,93%{opacity:1}94%,97%{opacity:0}98%{opacity:1}}
-.scene-unit .scene-page{transform-box:fill-box;transform-origin:0% 50%;animation:scenePage 9s ease-in-out infinite}
-@keyframes scenePage{0%,86%{transform:scaleX(1)}92%{transform:scaleX(-1)}93%,100%{transform:scaleX(-1);opacity:0}}
+.scene-unit .scene-page{transform-box:fill-box;transform-origin:0% 50%;opacity:0;animation:scenePage 8s ease-in-out infinite}
+@keyframes scenePage{0%,79%{opacity:0;transform:scaleX(1)}80%{opacity:1;transform:scaleX(1)}86%{opacity:1;transform:scaleX(.08) translateY(-1px)}92%{opacity:1;transform:scaleX(-1)}94%,100%{opacity:0;transform:scaleX(-1)}}
+/* La mano derecha coge la esquina de la página y la acompaña al otro lado */
+.scene-unit .scene-hand--r{animation:sceneHand 8s ease-in-out infinite}
+@keyframes sceneHand{0%,74%{transform:none}79%{transform:translate(2px,-2px)}86%{transform:translate(-4px,-3px)}92%{transform:translate(-9px,-1px)}96%{transform:translate(-9px,0)}100%{transform:none}}
+.scene-unit .scene-hand--l{animation:sceneHandL 8s ease-in-out infinite}
+@keyframes sceneHandL{0%,90%,100%{transform:none}93%{transform:translateY(1px)}}
+.scene-sun{animation:sceneGlow 6s ease-in-out infinite}
 .scene-unit .scene-steam{animation:sceneSteam 2.6s ease-in-out infinite}
 @keyframes sceneSteam{0%{transform:translateY(2px);opacity:0}40%{opacity:1}100%{transform:translateY(-4px);opacity:0}}
 .scene-unit--win .who{animation:sceneStretch 2.2s ease-in-out infinite}
 @keyframes sceneStretch{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
 .scene-glow{animation:sceneGlow 4s ease-in-out infinite}
 @keyframes sceneGlow{0%,100%{opacity:.18}50%{opacity:.26}}
-.hitfx .scene-unit .who--desk,.hitfx .scene-unit .who__blink,.hitfx .scene-unit .who__open{animation:none}
+.hitfx .scene-unit .who--desk,.hitfx .scene-unit .who__blink,.hitfx .scene-unit .who__open,.hitfx .scene-unit .scene-hand,.hitfx .scene-unit .scene-page{animation:none}
+.hitfx .scene-unit .scene-page{opacity:0}
 .hitfx .scene-unit .who__blink{opacity:0}
 @media (prefers-reduced-motion:reduce){
   .scene-unit *,.study-station__bubble{animation:none!important}
@@ -1492,3 +1499,8 @@ body > .gameover{position:fixed}
 .runner,.stage{overflow:clip}
 .study-scene.is-corner .study-station__art > svg{width:var(--station-w,120px)}
 .study-scene.is-corner .study-scene__row{gap:28px}
+
+/* Bandanas en el editor */
+.swatch--none{border:2px dashed var(--line);background:transparent;position:relative}
+.swatch--none::after{content:'';position:absolute;left:50%;top:15%;bottom:15%;width:2px;margin-left:-1px;background:var(--text-faint);transform:rotate(45deg)}
+.swatch--dots{background:radial-gradient(circle,#fff3f0 22%,transparent 24%) 0 0/8px 8px,#d8343f}

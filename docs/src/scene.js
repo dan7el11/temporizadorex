@@ -23,18 +23,29 @@
     return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + c + '"' + (extra || '') + '/>';
   }
 
-  /** Hora del día: cambia la luz del flexo. */
+  /**
+   * Momento del día: cambia lo que hay en la mesa y la luz.
+   *   morning (7–12)  zumo de naranja y luz de sol
+   *   midday (12–16)  manzana y vaso de agua
+   *   afternoon (16–20) café humeante
+   *   evening (20–23) flexo encendido e infusión humeante
+   *   night (23–7)    flexo encendido, vaso de agua y despertador
+   */
   Scene.daypart = function (d) {
     const h = (d || new Date()).getHours();
-    if (h >= 21 || h < 7) return 'night';
-    if (h >= 18) return 'evening';
-    return 'day';
+    if (h >= 23 || h < 7) return 'night';
+    if (h >= 20) return 'evening';
+    if (h >= 16) return 'afternoon';
+    if (h >= 12) return 'midday';
+    return 'morning';
   };
+  function lampOnAt(part) { return part === 'evening' || part === 'night'; }
 
-  function desk(lampOn) {
+  function desk(lampOn, part) {
     let r = '';
-    // Luz del flexo (por debajo de todo lo de la mesa)
-    if (lampOn) r += '<polygon points="7,55 19,55 34,67 -4,67" fill="#ffd27a" opacity=".22" class="scene-glow"/>';
+    // Luz del flexo o del sol (por debajo de todo lo de la mesa)
+    if (lampOn) r += '<polygon points="4,55 16,55 30,67 -8,67" fill="#ffd27a" opacity=".22" class="scene-glow"/>';
+    if (part === 'morning') r += '<polygon points="-6,30 6,30 40,67 14,67" fill="#fff3b0" opacity=".16" class="scene-sun"/>';
     // Tablero y frente
     r += px(2, 66, 62, 1, '#c48a55') + px(2, 67, 62, 2, '#a96f40') + px(2, 69, 62, 1, '#6e4426');
     r += px(4, 70, 58, 16, '#8a5a34') + px(4, 70, 58, 1, '#6e4426');
@@ -50,28 +61,68 @@
     r += px(50, 56, 11, 2, '#c4592c') + px(50, 57, 11, 1, '#8e3e1d');
     r += px(50, 64, 12, 2, '#e9e3d4') + px(50, 65, 12, 1, '#bdb4a0');
     // Flexo: base, brazo y pantalla
-    r += px(7, 64, 8, 2, '#3a4256') + px(8, 63, 6, 1, '#4f5a74');
-    r += px(10, 57, 2, 6, '#4f5a74') + px(11, 57, 1, 6, '#3a4256');
-    r += px(8, 52, 9, 2, '#e05a72') + px(7, 54, 11, 2, '#c4405a') + px(7, 55, 11, 1, '#9a2f45');
-    if (lampOn) r += px(9, 56, 7, 1, '#fff2c4');
+    r += px(4, 64, 8, 2, '#3a4256') + px(5, 63, 6, 1, '#4f5a74');
+    r += px(7, 57, 2, 6, '#4f5a74') + px(8, 57, 1, 6, '#3a4256');
+    r += px(5, 52, 9, 2, '#e05a72') + px(4, 54, 11, 2, '#c4405a') + px(4, 55, 11, 1, '#9a2f45');
+    if (lampOn) r += px(6, 56, 7, 1, '#fff2c4');
     return r;
   }
 
-  function book() {
+  /** Lo que hay para picar o beber, según la hora. */
+  function props(part) {
+    // Móvil boca abajo (¡lejos!) y subrayador
+    let r = px(45, 63, 5, 2, '#2b2f3a') + px(46, 63, 3, 1, '#4a5064');
+    r += px(45, 65, 5, 1, '#f5d23a') + px(49, 65, 1, 1, '#3a3a3a');
+    const steam = function (x) {
+      return '<g class="scene-steam">' + px(x, 57, 1, 2, '#ffffff', ' opacity=".65"') + px(x + 2, 55, 1, 2, '#ffffff', ' opacity=".5"') + '</g>';
+    };
+    if (part === 'morning') {
+      // Vaso de zumo con pajita
+      r += px(15, 60, 4, 6, '#fff4dc', ' opacity=".9"') + px(15, 62, 4, 4, '#ff9f1c') + px(15, 65, 4, 1, '#e07b00');
+      r += px(18, 57, 1, 4, '#ff5c8a') + px(17, 57, 1, 1, '#ff5c8a');
+    } else if (part === 'midday') {
+      // Manzana y vaso de agua
+      r += px(14, 63, 4, 3, '#d8343f') + px(15, 62, 2, 1, '#e8545e') + px(14, 63, 1, 1, '#ff8a8f') + px(16, 61, 1, 1, '#5a3a1e') + px(17, 61, 1, 1, '#4caf50');
+      r += px(19, 61, 2, 5, '#cfe9ff', ' opacity=".85"') + px(19, 63, 2, 3, '#9fd3ff');
+    } else if (part === 'afternoon') {
+      // Taza de café humeante
+      r += px(14, 61, 5, 5, '#f2f4f8') + px(14, 65, 5, 1, '#c9d1e0') + px(19, 62, 1, 2, '#c9d1e0') + px(15, 61, 3, 1, '#6b4128');
+      r += px(13, 66, 7, 0.6, '#c9d1e0') + steam(15);
+    } else if (part === 'evening') {
+      // Infusión con su etiqueta
+      r += px(14, 61, 5, 5, '#e0f2e9') + px(14, 65, 5, 1, '#b8d8c6') + px(19, 62, 1, 2, '#b8d8c6') + px(15, 61, 3, 1, '#c9a227');
+      r += px(18, 60, 1, 3, '#d9d2c0') + px(18, 63, 2, 2, '#7ab55c') + steam(15);
+    } else {
+      // De noche: vaso de agua y despertador
+      r += px(14, 61, 2, 5, '#cfe9ff', ' opacity=".85"') + px(14, 63, 2, 3, '#9fd3ff');
+      r += px(17, 61, 5, 5, '#e05a72') + px(18, 62, 3, 3, '#fff4e0') + px(19, 63, 1, 1, '#2b2f3a') + px(17, 66, 1, 1, '#2b2f3a') + px(21, 66, 1, 1, '#2b2f3a');
+      r += px(17, 60, 1, 1, '#f5d23a') + px(21, 60, 1, 1, '#f5d23a');
+    }
+    return r;
+  }
+
+  /** Libro abierto centrado delante del avatar; una página pasa de vez en cuando. */
+  function book(reading) {
     let r = '';
-    // Libro abierto delante del avatar, con líneas de texto y una página que pasa
-    r += px(25, 63, 22, 3, '#7a4d2c');
-    r += px(26, 62, 10, 3, '#f6f1e4') + px(36, 62, 10, 3, '#efe8d6');
-    r += px(35, 62, 1, 3, '#cfc5ad') + px(36, 62, 1, 3, '#e0d6bf');
-    r += px(27, 63, 7, 1, '#b9b09c') + px(38, 63, 6, 1, '#b9b09c');
-    r += '<g class="scene-page">' + px(36, 61, 9, 3, '#fffaf0') + px(37, 62, 6, 1, '#cfc5ad') + '</g>';
+    r += px(20, 62, 24, 5, '#7a4d2c') + px(20, 66, 24, 1, '#5c3820');
+    r += px(21, 61, 11, 5, '#f6f1e4') + px(32, 61, 11, 5, '#efe8d6');
+    r += px(31, 61, 1, 5, '#d8cdb4') + px(32, 61, 1, 5, '#e3d9c3');
+    // Renglones
+    r += px(22, 62, 8, 1, '#b9b09c') + px(22, 64, 6, 1, '#b9b09c') + px(34, 62, 7, 1, '#b9b09c') + px(34, 64, 8, 1, '#b9b09c');
+    if (reading) {
+      // Página que pasa: gira sobre el lomo
+      r += '<g class="scene-page">' + px(32, 60, 11, 5, '#fffaf0') + px(34, 61, 7, 1, '#cfc5ad') + px(34, 63, 6, 1, '#cfc5ad') + '</g>';
+    }
     return r;
   }
 
-  function mug(hot) {
-    let r = px(19, 61, 5, 5, '#f2f4f8') + px(19, 65, 5, 1, '#c9d1e0') + px(24, 62, 1, 2, '#c9d1e0') + px(20, 61, 3, 1, '#6b4128');
-    if (hot) r += '<g class="scene-steam">' + px(20, 57, 1, 2, '#ffffff', ' opacity=".6"') + px(22, 55, 1, 2, '#ffffff', ' opacity=".5"') + '</g>';
-    return r;
+  /** Manos sobre el libro (por encima de él); la derecha acompaña a la página. */
+  function hands(cfg) {
+    const c = Avatar.palette(cfg);
+    const hand = function (x) {
+      return px(x, 64, 3, 2, c.skin) + px(x, 66, 3, 1, c.shadow) + px(x - 1, 64, 1, 2, c.shadow) + px(x + 3, 64, 1, 2, c.line);
+    };
+    return '<g class="scene-hand scene-hand--l">' + hand(26) + '</g><g class="scene-hand scene-hand--r">' + hand(36) + '</g>';
   }
 
   function who(cfg, pose, mood, x, y, clipH, extraClass) {
@@ -90,7 +141,8 @@
     const o = opts || {};
     const mode = o.mode || 'desk';
     const mood = o.mood || 'happy';
-    const lamp = o.lamp !== undefined ? o.lamp : Scene.daypart() !== 'day';
+    const part = o.part || Scene.daypart();
+    const lamp = o.lamp !== undefined ? o.lamp : lampOnAt(part);
     let behind = '';
     let body = '';
     let front = '';
@@ -117,7 +169,9 @@
     }
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + UW + ' ' + UH + '" width="' + (o.size || 160) +
       '" height="' + Math.round((o.size || 160) * UH / UW) + '" shape-rendering="crispEdges" style="overflow:visible" class="scene-unit scene-unit--' + mode + '" aria-hidden="true">' +
-      behind + desk(lamp) + mug(mode === 'desk') + book() + body + front + '</svg>';
+      behind + desk(lamp, part) +
+      // Sentado: el libro, las manos y lo de la mesa van por delante del cuerpo
+      (mode === 'desk' && cfg ? body + book(true) + hands(cfg) + props(part) : book(false) + props(part) + body) + front + '</svg>';
     return svg;
   };
 

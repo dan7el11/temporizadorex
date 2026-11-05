@@ -27,8 +27,11 @@
   Avatar.EYES = [['#5a3a24', 'Marrones'], ['#3f7a4a', 'Verdes'], ['#3d6fb6', 'Azules'], ['#6f7884', 'Grises']];
   Avatar.OUTFITS = [
     ['#3f72e8', 'Pijama azul'], ['#2a9a73', 'Pijama verde'], ['#9a3256', 'Pijama granate'],
-    ['coat', 'Bata blanca'], ['#363b4a', 'Negro']
+    ['coat', 'Bata blanca'], ['#363b4a', 'Negro'], ['#6a4fc4', 'Pijama morado']
   ];
+  // Bandanas para recoger el pelo (melenas onduladas y rizadas)
+  Avatar.BANDANAS = [['', 'Sin bandana'], ['#d8343f', 'Roja'], ['#e0a526', 'Mostaza'], ['#1fa3a0', 'Turquesa'], ['#9b6bd6', 'Lila'], ['dots', 'Roja de lunares']];
+  Avatar.WAVY = ['ondas', 'ondaslargas', 'ondascortas', 'ondasmedias', 'rizos', 'rizosmedios', 'rizoscortos', 'rizosvolumen', 'afrof'];
   // Peinados por género. [clave, nombre]
   Avatar.STYLES_M = [
     ['corto', 'Corto'], ['raya', 'Raya al lado'], ['tupe', 'Tupé'], ['atras', 'Hacia atrás'], ['degradado', 'Degradado'],
@@ -39,7 +42,8 @@
     ['melena', 'Melena lisa'], ['ondas', 'Melena ondulada'], ['flequillo', 'Con flequillo'], ['media', 'Media melena'],
     ['bob', 'Bob'], ['pixie', 'Pixie'], ['coleta', 'Coleta alta'], ['monof', 'Moño'], ['trenzas', 'Dos trenzas'],
     ['trenza', 'Trenza de lado'], ['rizos', 'Rizos largos'], ['afrof', 'Afro'], ['rapadof', 'Rapado'],
-    ['ondaslargas', 'Ondas largas con raya'], ['ondascortas', 'Ondas cortas'], ['rizosmedios', 'Rizos a los hombros'], ['rizoscortos', 'Rizos cortos']
+    ['ondaslargas', 'Ondas largas con raya'], ['ondascortas', 'Ondas cortas'], ['rizosmedios', 'Rizos a los hombros'], ['rizoscortos', 'Rizos cortos'],
+    ['ondasmedias', 'Ondas medias con volumen'], ['rizosvolumen', 'Rizos con volumen']
   ];
   Avatar.FACIAL = [
     ['ninguno', 'Afeitado'], ['tresdias', 'Barba de 3 días'], ['bigote', 'Bigote'], ['perilla', 'Perilla'],
@@ -66,6 +70,7 @@
       a.style = list.some(function (s) { return s[0] === mapped; }) ? mapped : list[0][0];
     }
     if (a.sex !== 'm' || !Avatar.FACIAL.some(function (s) { return s[0] === a.facial; })) a.facial = 'ninguno';
+    if (a.sex !== 'f' || Avatar.WAVY.indexOf(a.style) < 0 || !Avatar.BANDANAS.some(function (b) { return b[0] === a.bandana; })) a.bandana = '';
     return a;
   }
   Avatar.normal = normal;
@@ -396,6 +401,36 @@
           function (x, y) { const w = wave(x, y); return y > 17 && y < 49 && ((x > 10.8 + w && x < 16 + w) || (x > 32 - w && x < 37.2 - w)); });
         s.part = [[28, 10], [29, 14]]; s.flow = 'wave'; s.waveAmp = 1.7; break;
       }
+      case 'ondasmedias': {
+        // Melena media con mucho volumen y ondas marcadas, raya al medio (como la referencia)
+        const wave = function (x, y) { return Math.sin(y / 2.4 + 0.3) * 2; };
+        const hw = function (y) { return 14 + Math.max(0, y - 20) * 0.13; };
+        const bottom = function (x) { return 44 + Math.sin(x / 1.6) * 1.3; };
+        s.back = function (x, y) {
+          const w = wave(x, y);
+          return (y > 18 && y < bottom(x) && Math.abs(x - CX) < hw(y) + w) || ell(CX, 19, 14.6, 13.8)(x, y);
+        };
+        s.front = or(cap(2.2, under(16.4, 2.8), 26),
+          function (x, y) { const w = wave(x, y); return y > 15 && y < bottom(x) - 2 && ((x > 10.6 + w && x < 16.4 + w) || (x > 31.6 - w && x < 37.4 - w)); });
+        s.part = [[CX, 10], [CX, 15]]; s.flow = 'wave'; s.waveAmp = 2; break;
+      }
+      case 'rizosvolumen': {
+        // Rizos grandes por los hombros, con mucho volumen a los lados
+        const blobs = [];
+        for (let k = 0; k < 7; k++) {
+          const y = 19 + k * 3.3, out = 2 + Math.min(k, 4) * 0.5;
+          blobs.push(ell(CX - 12.4 - out, y, 3.2, 2.8), ell(CX + 12.4 + out, y, 3.2, 2.8));
+          if (k > 0) blobs.push(ell(CX - 10.8, y + 1.6, 2.6, 2.4), ell(CX + 10.8, y + 1.6, 2.6, 2.4));
+        }
+        for (let a2 = 0; a2 <= 12; a2++) {
+          const t = Math.PI * (1.0 + a2 / 12);
+          blobs.push(ell(CX + Math.cos(t) * 14.2, CY - 2.4 + Math.sin(t) * 15, 3.3, 3));
+        }
+        s.back = or(ell(CX, 20, 15.4, 14.4), rect(9.6, 20, 38.4, 40), or.apply(null, blobs));
+        s.front = or(cap(2.2, under(16.6, 2.2, -0.8), 26), ell(17.4, 16.6, 3, 2.6), ell(29.6, 15.8, 3.2, 2.6), ell(33.4, 18, 2.6, 2.4),
+          capsule([[13.8, 17], [13.2, 34]], 2.8), capsule([[34.2, 17], [34.8, 34]], 2.8));
+        s.curly = true; break;
+      }
       case 'ondascortas': {
         // Media melena corta ondulada, por la barbilla, con el borde en ondas
         const wave = function (x, y) { return Math.sin(y / 2 + 0.4) * 1.2; };
@@ -697,6 +732,23 @@
       }
     }
 
+    // 7b. Bandana: una cinta por encima de la frente con el nudo a un lado
+    if (a.bandana) {
+      const dots = a.bandana === 'dots';
+      const bR = ramp(dots ? '#d8343f' : a.bandana);
+      bR.dot = '#fff3f0';
+      const band = fill(and(vol(2.6), function (x, y) {
+        const t = (x - CX) / 11.5, yc = 11.6 + 2.8 * t * t;
+        return y > yc - 0.3 && y < yc + 3.4 && Math.abs(x - CX) < 14.8;
+      }));
+      const knot = fill(or(ell(34.2, 10.6, 2.1, 1.6), ell(36.6, 9, 1.8, 1.4), ell(36.4, 12.2, 1.6, 1.3),
+        capsule([[35.4, 12.4], [37.6, 16.4]], 0.8), capsule([[35, 12.6], [36, 17]], 0.75)));
+      castShadow(px, band, 0, 1, 0.25);
+      const tex = dots ? function (x, y, t) { return (x * 3 + y * 5) % 7 === 0 && t !== 'line' ? 'dot' : null; } : null;
+      shade(px, band, bR, { texture: tex });
+      shade(px, knot, bR, { texture: tex });
+    }
+
     // 8. Gafas
     if (a.glasses) {
       const g = '#2a2f40';
@@ -729,6 +781,13 @@
 
     return px;
   }
+
+  /** Colores de piel ya sombreados: para dibujar manos en las escenas. */
+  Avatar.palette = function (cfg) {
+    const a = normal(cfg);
+    const r = ramp(Avatar.SKINS[a.skin] || Avatar.SKINS[1], true);
+    return { skin: r.base, shadow: r.shadow, line: r.deep };
+  };
 
   /* ── Cuerpo entero ──────────────────────────────────────── */
   /**
@@ -1016,6 +1075,18 @@
       swatchRow('Pelo', Avatar.HAIRS, 'hair');
       swatchRow('Ojos', Avatar.EYES, 'eyes');
       if (cfg.sex === 'm') rows.appendChild(row('Vello facial', chips(Avatar.FACIAL, 'facial', a.facial)));
+      if (cfg.sex === 'f' && Avatar.WAVY.indexOf(a.style) >= 0) {
+        const bw = U.el('div', { class: 'swatches' });
+        Avatar.BANDANAS.forEach(function (b) {
+          const on = (a.bandana || '') === b[0];
+          bw.appendChild(U.el('button', {
+            class: 'swatch' + (on ? ' is-active' : '') + (!b[0] ? ' swatch--none' : '') + (b[0] === 'dots' ? ' swatch--dots' : ''), type: 'button',
+            style: { background: !b[0] ? 'transparent' : b[0] === 'dots' ? '' : b[0] }, title: b[1], 'aria-label': b[1],
+            onclick: function () { cfg.bandana = b[0]; save(); }
+          }));
+        });
+        rows.appendChild(row('Bandana', bw));
+      }
       swatchRow('Ropa', Avatar.OUTFITS, 'outfit');
       rows.appendChild(row('Gafas', chips([[false, 'Sin gafas'], [true, 'Con gafas']], 'glasses', !!cfg.glasses)));
     }

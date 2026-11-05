@@ -295,7 +295,10 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
     entradas, calvo, media melena y moño.
   - Mujer: melena lisa, melena ondulada, con flequillo, media melena, bob, pixie, coleta alta, moño,
     dos trenzas, trenza de lado, rizos largos, afro, rapado, ondas largas con raya, ondas cortas,
-    rizos a los hombros y rizos cortos.
+    rizos a los hombros, rizos cortos, ondas medias con volumen y rizos con volumen.
+  - **Bandana** para los peinados ondulados y rizados de mujer: roja, mostaza, turquesa, lila o roja
+    de lunares, anudada a un lado.
+  - Ropa: pijama azul, verde, granate o **morado**, bata blanca o negro.
   - **Vello facial** en el hombre: afeitado, barba de 3 días, bigote, perilla, candado, barba corta o
     completa.
   Su cara cambia: contento, con dolor al perder una vida o KO sin vidas. En tamaños pequeños (cabecera
@@ -329,9 +332,12 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
 - Las vidas se guardan como un **registro de pérdidas y ganancias**, no como un contador: si estudias
   en el móvil y en el ordenador el mismo día, se suman bien al sincronizar.
 - En la sala, tu pareja ve tu avatar y tus vidas («❤️ 6½/10»), y tú los suyos.
-- **Escena de estudio**: durante el bloque, debajo del reloj, tu avatar estudia sentado a su mesa
-  (flexo, libro abierto que pasa páginas, taza humeante, libros apilados). Respira y parpadea; por la
-  noche el flexo se enciende. En pausa se levanta (⏸️), en los descansos se estira (☕), entre
+- **Escena de estudio**: durante el bloque, debajo del reloj, tu avatar estudia sentado a su mesa con
+  el libro abierto delante y las manos encima: cada pocos segundos la mano derecha coge la esquina y
+  **pasa la página**. Respira y parpadea, con el móvil boca abajo y un subrayador al lado. **Lo que hay
+  en la mesa cambia con la hora**: por la mañana, zumo de naranja y un rayo de sol; a mediodía, una
+  manzana y agua; **por la tarde, un café humeante**; por la noche, el flexo encendido y una infusión
+  caliente; de madrugada, agua y un despertador. En pausa se levanta (⏸️), en los descansos se estira (☕), entre
   bloques espera de pie (✔️) y en el último minuto aparece 🏁. **Si estáis en la misma sala, tu
   pareja estudia en la mesa de al lado**, con lo que esté haciendo en ese momento. Se desactiva en
   Ajustes.
