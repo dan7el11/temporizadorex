@@ -101,6 +101,57 @@
     return r;
   }
 
+  /* ── Mascotas (desbloqueables) ──────────────────────────── */
+  const PETS = {
+    // Gato durmiendo hecho una bola encima de los libros
+    gato: { x: 48, y: 49, cls: 'cat', rows: [
+      '...........d.d',
+      '...........opo',
+      'd.........oeoe',
+      'd.ddoddoddoopo',
+      '.ooooooooooooo',
+      '.wwwwwwwwwwoo.',
+      '..dd......dd..'
+    ], pal: { o: '#e8913a', d: '#b9652a', e: '#3a2418', p: '#f4b6a6', w: '#fff2e2' } },
+    // Perro sentado en el suelo, delante de la mesa
+    perro: { x: 37, y: 75, cls: 'dog', rows: [
+      '..ccccccc..',
+      '.ccccccccc.',
+      'bbcecccecbb',
+      'bbccckcccbb',
+      'b.cccmccc.b',
+      '...ccccc...',
+      '..cLLLLLc..',
+      '..cLLLLLc.t',
+      '..ccccccctt',
+      '..cc...cc..',
+      '..kk...kk..'
+    ], pal: { c: '#d9a066', b: '#8a5a34', e: '#1d1410', k: '#5a3a22', m: '#e05a72', L: '#f4dcb4', t: '#c48a55' } },
+    // Búho posado en el flexo
+    buho: { x: 5, y: 44, cls: 'owl', rows: [
+      'b.....b',
+      'bbbbbbb',
+      'bwwbwwb',
+      'bwkbkwb',
+      'bbbybbb',
+      '.bLLLb.',
+      '.bLLLb.',
+      '..y.y..'
+    ], pal: { b: '#8a5a34', w: '#fff8e0', k: '#1d1410', y: '#f2b233', L: '#d9b48a' } }
+  };
+  function pet(cfg) {
+    const p = cfg && PETS[cfg.pet];
+    if (!p) return '';
+    let r = '';
+    p.rows.forEach(function (row, y) {
+      for (let x = 0; x < row.length; x++) {
+        const c = p.pal[row[x]];
+        if (c) r += px(p.x + x, p.y + y, 1, 1, c);
+      }
+    });
+    return '<g class="scene-pet scene-pet--' + p.cls + '">' + r + '</g>';
+  }
+
   /** Libro abierto centrado delante del avatar; una página pasa de vez en cuando. */
   function book(reading) {
     let r = '';
@@ -171,7 +222,8 @@
       '" height="' + Math.round((o.size || 160) * UH / UW) + '" shape-rendering="crispEdges" style="overflow:visible" class="scene-unit scene-unit--' + mode + '" aria-hidden="true">' +
       behind + desk(lamp, part) +
       // Sentado: el libro, las manos y lo de la mesa van por delante del cuerpo
-      (mode === 'desk' && cfg ? body + book(true) + hands(cfg) + props(part) : book(false) + props(part) + body) + front + '</svg>';
+      (mode === 'desk' && cfg ? body + book(true) + hands(cfg) + props(part) : book(false) + props(part) + body) +
+      pet(cfg) + front + '</svg>';
     return svg;
   };
 

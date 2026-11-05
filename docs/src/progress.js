@@ -122,7 +122,111 @@
         Game.renderHud(global.Runner && Runner.getState());
       });
       Progress.checkBadges(false);
+      Progress.checkLevel();
     } finally { checking = false; }
+  };
+
+  /* ── Experiencia y niveles ──────────────────────────────── */
+  /*
+   * La experiencia sale del historial (así es la misma en todos tus
+   * dispositivos): 1 XP por minuto de estudio efectivo, +20 por bloque sin
+   * distracciones, +15 por pausa guiada completa, +100 por logro y +25 por
+   * misión cumplida (estas se cuentan en cada dispositivo).
+   */
+  Progress.XP = { min: 1, perfect: 20, guided: 15, badge: 100, mission: 25 };
+  const LEVEL_KEY = 'mir2027.progress.level.v1';
+  /** XP total necesaria para llegar a un nivel. */
+  function xpFor(level) { return level <= 1 ? 0 : Math.round(150 * Math.pow(level - 1, 1.75)); }
+  Progress.xpFor = xpFor;
+
+  Progress.xp = function () {
+    const a = aggregate();
+    const badges = BADGES.filter(function (b) { try { return b.ok(a); } catch (e) { return false; } }).length;
+    return a.totalMin * Progress.XP.min + a.perfectBlocks * Progress.XP.perfect + a.guided * Progress.XP.guided +
+      badges * Progress.XP.badge + (read(MISSIONS_KEY, 0) || 0) * Progress.XP.mission;
+  };
+  /** XP ganada hoy (sin logros). */
+  Progress.xpToday = function () {
+    const st = Progress.dayStats(U.dayKey());
+    const done = Progress.missionsOf().filter(function (m) { return m.claimed; }).length;
+    return st.eff * Progress.XP.min + st.perfect * Progress.XP.perfect + st.guided * Progress.XP.guided + done * Progress.XP.mission;
+  };
+
+  // Títulos por nivel, con forma femenina y masculina según el avatar
+  const TITLES = [
+    [1, 'Estudiante de 6º', 'Estudiante de 6º'], [3, 'Aspirante MIR', 'Aspirante MIR'], [5, 'Opositor', 'Opositora'],
+    [8, 'Opositor de hierro', 'Opositora de hierro'], [12, 'Repasador incansable', 'Repasadora incansable'],
+    [16, 'Máquina de test', 'Máquina de test'], [20, 'Residente en potencia', 'Residente en potencia'],
+    [25, 'Futuro R1', 'Futura R1'], [30, 'Top 1000', 'Top 1000'], [36, 'Top 500', 'Top 500'],
+    [42, 'Top 100', 'Top 100'], [50, 'Número 1 del MIR', 'Número 1 del MIR']
+  ];
+  Progress.title = function (level) {
+    const cfg = global.Avatar && Avatar.config();
+    const f = cfg && cfg.sex === 'f';
+    let t = TITLES[0];
+    TITLES.forEach(function (x) { if (level >= x[0]) t = x; });
+    return f ? t[2] : t[1];
+  };
+
+  Progress.levelInfo = function () {
+    const xp = Progress.xp();
+    let level = 1;
+    while (xpFor(level + 1) <= xp && level < 99) level++;
+    const cur = xpFor(level), next = xpFor(level + 1);
+    return { xp: xp, level: level, cur: cur, next: next, pct: Math.min(100, (xp - cur) / Math.max(1, next - cur) * 100), title: Progress.title(level) };
+  };
+
+  /* ── Desbloqueables ─────────────────────────────────────── */
+  const UNLOCKS = [
+    { id: 'acc:gorro', level: 2, name: 'Gorro de quirófano', icon: '🧢' },
+    { id: 'bg:biblioteca', level: 4, name: 'Fondo: biblioteca', icon: '📚' },
+    { id: 'acc:mascarilla', level: 5, name: 'Mascarilla al cuello', icon: '😷' },
+    { id: 'pet:gato', level: 6, name: 'Mascota: gato', icon: '🐈' },
+    { id: 'out:turquesa', level: 7, name: 'Pijama turquesa', icon: '👕' },
+    { id: 'bg:hospital', level: 9, name: 'Fondo: hospital de noche', icon: '🏥' },
+    { id: 'out:bordada', level: 10, name: 'Bata con nombre bordado', icon: '🥼' },
+    { id: 'out:corazones', level: 12, name: 'Pijama de corazones', icon: '💗' },
+    { id: 'pet:perro', level: 14, name: 'Mascota: perro', icon: '🐕' },
+    { id: 'bg:habitacion', level: 18, name: 'Fondo: habitación', icon: '🪟' },
+    { id: 'out:dorado', level: 25, name: 'Pijama dorado', icon: '✨' },
+    { id: 'acc:fonendo', level: 30, name: 'Fonendo dorado', icon: '🩺' },
+    { id: 'pet:buho', badge: 'buho', name: 'Mascota: búho', icon: '🦉' },
+    { id: 'acc:pin', badge: 'equipo', name: 'Pin de corazón', icon: '💗' }
+  ];
+  Progress.UNLOCKS = UNLOCKS;
+  Progress.unlocked = function (id) {
+    const u = UNLOCKS.filter(function (x) { return x.id === id; })[0];
+    if (!u) return true;
+    if (u.level) return Progress.levelInfo().level >= u.level;
+    const b = Progress.badges().filter(function (x) { return x.id === u.badge; })[0];
+    return !!(b && b.unlocked);
+  };
+  Progress.unlockLabel = function (id) {
+    const u = UNLOCKS.filter(function (x) { return x.id === id; })[0];
+    if (!u) return '';
+    if (u.level) return 'el nivel ' + u.level;
+    const b = BADGES.filter(function (x) { return x.id === u.badge; })[0];
+    return 'el logro «' + (b ? b.name : u.badge) + '»';
+  };
+  /** Lo que se desbloquea justo en ese nivel. */
+  function unlocksAt(level) { return UNLOCKS.filter(function (u) { return u.level === level; }); }
+  Progress.nextUnlock = function (level) {
+    return UNLOCKS.filter(function (u) { return u.level && u.level > level; }).sort(function (a, b) { return a.level - b.level; })[0] || null;
+  };
+
+  /** ¿Has subido de nivel? Fanfarria y lo que desbloqueas. La primera vez, sin fiesta. */
+  Progress.checkLevel = function () {
+    const info = Progress.levelInfo();
+    const prev = read(LEVEL_KEY, 0);
+    if (!prev) { write(LEVEL_KEY, info.level); return; }
+    if (info.level <= prev) return;
+    write(LEVEL_KEY, info.level);
+    let news = [];
+    for (let l = prev + 1; l <= info.level; l++) news = news.concat(unlocksAt(l));
+    Sound.fanfare();
+    Game.healFx('⬆️ ¡Nivel ' + info.level + '!', info.title + (news.length ? ' · Nuevo: ' + news.map(function (u) { return u.icon + ' ' + u.name; }).join(', ') : ''), '⭐');
+    Game.renderTile();
+    Game.renderHud(global.Runner && Runner.getState());
   };
 
   /* ── Racha personal (con comodín semanal) ───────────────── */
@@ -159,7 +263,8 @@
     if (aggCache && Date.now() - aggAt < 60000) return aggCache;
     const days = {};
     Store.data.sessions.forEach(function (s) { (s.blocks || []).forEach(function (b) { if (b.startedAt) days[U.dayKey(b.startedAt)] = true; }); });
-    let total = 0, maxDay = 0, guided = 0, early = false, night = false, firstBlock = false, perfect = false;
+    days[U.dayKey()] = true;   // hoy, con la sesión en curso
+    let total = 0, maxDay = 0, guided = 0, early = false, night = false, firstBlock = false, perfect = false, perfectBlocks = 0;
     const topics = {};
     Object.keys(days).forEach(function (k) {
       let sum;
@@ -174,11 +279,13 @@
       if (s.game && s.game.day && !s.game.lost && study.length >= 2) perfect = true;
       (s.blocks || []).forEach(function (b) {
         if (b.isBreak && b.pause && b.status === 'done') guided++;
+        if (!b.isBreak && b.status === 'done' && !(b.distractions || []).length && (b.actualMs || 0) >= 10 * 60000) perfectBlocks++;
         if (!b.isBreak && b.startedAt && new Date(b.startedAt).getHours() < 7 && new Date(b.startedAt).getHours() >= 4) early = true;
         if (!b.isBreak && b.endedAt && new Date(b.endedAt).getHours() >= 23) night = true;
       });
     });
     aggCache = {
+      totalMin: Math.floor(total / 60000), perfectBlocks: perfectBlocks,
       totalH: total / 3600000, maxDayH: maxDay / 3600000, guided: guided, early: early, night: night, firstBlock: firstBlock, perfect: perfect,
       topicH: Object.keys(topics).reduce(function (a, k) { return Math.max(a, topics[k] / 3600000); }, 0)
     };
@@ -250,15 +357,49 @@
             U.el('small', { text: b.hint })
           ]));
         });
-        return grid;
+        const wrap = document.createDocumentFragment();
+        wrap.appendChild(grid);
+        // Desbloqueables: lo que ya tienes y lo que falta
+        wrap.appendChild(U.el('h4', { class: 'unlocks__title', text: 'Desbloqueables' }));
+        const ul = U.el('div', { class: 'unlocks' });
+        UNLOCKS.forEach(function (u) {
+          const on = Progress.unlocked(u.id);
+          ul.appendChild(U.el('div', { class: 'unlock' + (on ? ' is-on' : '') }, [
+            U.el('span', { class: 'unlock__icon', text: on ? u.icon : '🔒' }),
+            U.el('span', { class: 'unlock__name', text: u.name }),
+            U.el('small', { text: on ? 'Desbloqueado' : Progress.unlockLabel(u.id).replace(/^el /, '') })
+          ]));
+        });
+        wrap.appendChild(ul);
+        return wrap;
       },
       actions: function (close) { return [U.el('button', { class: 'btn btn--primary', text: 'Cerrar', onclick: function () { close(true); } })]; }
     });
   };
 
   /* ── En la tarjeta del modo juego ───────────────────────── */
+  /** Nivel, título y barra de experiencia. */
+  Progress.levelNode = function () {
+    const info = Progress.levelInfo();
+    const nx = Progress.nextUnlock(info.level);
+    const bar = U.el('span', { class: 'xp-bar' }, [U.el('span', { class: 'xp-bar__fill' })]);
+    bar.firstChild.style.width = info.pct.toFixed(1) + '%';
+    return U.el('div', { class: 'level-row' }, [
+      U.el('span', { class: 'level-badge', text: String(info.level), title: 'Nivel ' + info.level }),
+      U.el('div', { class: 'level-row__body' }, [
+        U.el('div', { class: 'level-row__head' }, [
+          U.el('strong', { text: info.title }),
+          U.el('span', { class: 'level-row__xp', text: (info.xp - info.cur).toLocaleString('es-ES') + ' / ' + (info.next - info.cur).toLocaleString('es-ES') + ' XP' })
+        ]),
+        bar,
+        U.el('small', { class: 'level-row__meta', text: '+' + Progress.xpToday().toLocaleString('es-ES') + ' XP hoy' + (nx ? ' · Nivel ' + nx.level + ': ' + nx.icon + ' ' + nx.name : '') })
+      ])
+    ]);
+  };
+
   Progress.tileNode = function () {
     const box = U.el('div', { class: 'progress-tile' });
+    box.appendChild(Progress.levelNode());
     const st = Progress.streak();
     const t = Game.today();
     box.appendChild(U.el('div', { class: 'progress-tile__row' }, [

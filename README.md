@@ -296,8 +296,6 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
   - Mujer: melena lisa, melena ondulada, con flequillo, media melena, bob, pixie, coleta alta, moño,
     dos trenzas, trenza de lado, rizos largos, afro, rapado, ondas largas con raya, ondas cortas,
     rizos a los hombros, rizos cortos, ondas medias con volumen y rizos con volumen.
-  - **Bandana** para los peinados ondulados y rizados de mujer: roja, mostaza, turquesa, lila o roja
-    de lunares, anudada a un lado.
   - Ropa: pijama azul, verde, granate o **morado**, bata blanca o negro.
   - **Vello facial** en el hombre: afeitado, barba de 3 días, bigote, perilla, candado, barba corta o
     completa.
@@ -379,6 +377,39 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
 - **Modo amable** 🌱: si un día te quedas sin vidas dos veces (o pierdes 7), la app no te castiga más:
   te propone una pausa de recuperación y, el resto del día, las pausas no cuestan y las distracciones
   cuestan la mitad. También se activa a mano con *Día amable*.
+
+### Experiencia, niveles y desbloqueables
+- **Experiencia (XP)**, calculada a partir de tu historial (igual en todos tus dispositivos): **1 XP por
+  minuto de estudio efectivo**, +20 por bloque sin distracciones, +15 por pausa guiada completa, +100
+  por logro y +25 por misión cumplida (las misiones se cuentan en cada dispositivo).
+- **Niveles** con título (en femenino o masculino según el avatar): Estudiante de 6º, Aspirante MIR,
+  Opositor/a, Opositor/a de hierro, Repasador/a incansable, Máquina de test, Residente en potencia,
+  Futuro/a R1, Top 1000, Top 500, Top 100 y Número 1 del MIR. Cada nivel cuesta algo más que el
+  anterior: unas 6 h efectivas al día llevan al nivel 30 en unos 4 meses.
+- En la tarjeta *Modo juego*: insignia con el nivel, barra de XP, XP de hoy y el próximo desbloqueo. En
+  el temporizador, «Nv 7» junto a los corazones (en ordenador). Al subir de nivel suena una fanfarria
+  y se anuncia lo que desbloqueas.
+- **Desbloqueables** (en el editor del avatar, con candado hasta conseguirlos; la lista está en
+  *Logros*):
+
+  | Nivel | Desbloqueas |
+  |---|---|
+  | 2 | Gorro de quirófano |
+  | 4 | Fondo del retrato: biblioteca |
+  | 5 | Mascarilla al cuello |
+  | 6 | Mascota: gato (duerme sobre tus libros) |
+  | 7 | Pijama turquesa |
+  | 9 | Fondo: hospital de noche |
+  | 10 | Bata con nombre bordado |
+  | 12 | Pijama de corazones |
+  | 14 | Mascota: perro (se sienta delante de tu mesa) |
+  | 18 | Fondo: habitación |
+  | 25 | Pijama dorado |
+  | 30 | Fonendo dorado |
+  | Logro «Búho» | Mascota: búho (posado en el flexo) |
+  | Logro «Equipo» | Pin de corazón |
+
+  Tu pareja ve tus desbloqueables (y tu mascota) en la mesa de al lado.
 
 ### Modo cooperativo (en la sala)
 - **Meta conjunta**: horas de estudio efectivo entre los dos cada día (12 h por defecto; se cambia en

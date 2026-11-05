@@ -27,11 +27,18 @@
   Avatar.EYES = [['#5a3a24', 'Marrones'], ['#3f7a4a', 'Verdes'], ['#3d6fb6', 'Azules'], ['#6f7884', 'Grises']];
   Avatar.OUTFITS = [
     ['#3f72e8', 'Pijama azul'], ['#2a9a73', 'Pijama verde'], ['#9a3256', 'Pijama granate'],
-    ['coat', 'Bata blanca'], ['#363b4a', 'Negro'], ['#6a4fc4', 'Pijama morado']
+    ['coat', 'Bata blanca'], ['#363b4a', 'Negro'], ['#6a4fc4', 'Pijama morado'],
+    // Desbloqueables (se ganan subiendo de nivel)
+    ['#1fb5a8', 'Pijama turquesa', 'out:turquesa'], ['coatname', 'Bata con nombre bordado', 'out:bordada'],
+    ['hearts', 'Pijama de corazones', 'out:corazones'], ['#d4a531', 'Pijama dorado', 'out:dorado']
   ];
-  // Bandanas para recoger el pelo (melenas onduladas y rizadas)
-  Avatar.BANDANAS = [['', 'Sin bandana'], ['#d8343f', 'Roja'], ['#e0a526', 'Mostaza'], ['#1fa3a0', 'Turquesa'], ['#9b6bd6', 'Lila'], ['dots', 'Roja de lunares']];
-  Avatar.WAVY = ['ondas', 'ondaslargas', 'ondascortas', 'ondasmedias', 'rizos', 'rizosmedios', 'rizoscortos', 'rizosvolumen', 'afrof'];
+  /** Clase CSS del fondo elegido para el retrato. */
+  Avatar.bgClass = function (cfg) {
+    const bg = cfg && cfg.bg;
+    return bg ? ' avbg avbg--' + bg : '';
+  };
+  /** ¿Está desbloqueado? (Sin el módulo de progreso, todo lo está.) */
+  Avatar.unlocked = function (id) { return !id || !global.Progress || Progress.unlocked(id); };
   // Peinados por género. [clave, nombre]
   Avatar.STYLES_M = [
     ['corto', 'Corto'], ['raya', 'Raya al lado'], ['tupe', 'Tupé'], ['atras', 'Hacia atrás'], ['degradado', 'Degradado'],
@@ -70,7 +77,7 @@
       a.style = list.some(function (s) { return s[0] === mapped; }) ? mapped : list[0][0];
     }
     if (a.sex !== 'm' || !Avatar.FACIAL.some(function (s) { return s[0] === a.facial; })) a.facial = 'ninguno';
-    if (a.sex !== 'f' || Avatar.WAVY.indexOf(a.style) < 0 || !Avatar.BANDANAS.some(function (b) { return b[0] === a.bandana; })) a.bandana = '';
+    delete a.bandana;   // ya no hay bandanas
     return a;
   }
   Avatar.normal = normal;
@@ -611,8 +618,10 @@
     const hairHex = (Avatar.HAIRS[a.hair] || Avatar.HAIRS[1])[0];
     const hairR = ramp(hairHex);
     hairR.skin = mix(skinR.shadow, hairR.base, 0.35);   // para el rapado: piel entre el pelo
-    const outfit = (Avatar.OUTFITS[a.outfit] || Avatar.OUTFITS[0])[0];
-    const coat = outfit === 'coat';
+    const rawOutfit = (Avatar.OUTFITS[a.outfit] || Avatar.OUTFITS[0])[0];
+    const coat = rawOutfit === 'coat' || rawOutfit === 'coatname';
+    a.pattern = rawOutfit === 'hearts' ? 'hearts' : rawOutfit === 'coatname' ? 'name' : '';
+    const outfit = coat ? 'coat' : rawOutfit === 'hearts' ? '#ef7aa1' : rawOutfit;
     const head = a.sex === 'f' ? HEADF : HEADM;
     const st = styleShapes(a.style, a.sex);
     const hairOpts = { texture: hairTexture(a.style, st) };
@@ -646,9 +655,11 @@
       for (let x = 8; x <= 13; x++) put(px, x, 46, coatR.shadow);
       put(px, 8, 47, coatR.shadow); put(px, 13, 47, coatR.shadow); put(px, 8, 48, coatR.shadow); put(px, 13, 48, coatR.shadow);
       put(px, 10, 43, '#e05a72'); put(px, 10, 44, '#e05a72'); put(px, 10, 45, '#9aa3b5');
+      if (a.pattern === 'name') embroidery(px, 13, 43);
     } else {
       const clothR = ramp(outfit);
       shade(px, body, clothR, {});
+      if (a.pattern === 'hearts') heartsPattern(px, body, 0);
       // Cuello en V con ribete
       const vee = fill(poly([[19.6, 37.2], [28.4, 37.2], [24, 42.6]]));
       shade(px, vee, neckR, { outline: false, flat: true });
@@ -692,6 +703,17 @@
       }
     }
 
+    // 6b. Mascarilla bajada al cuello, con las gomas a las orejas
+    if (a.mask) {
+      const mR = ramp('#9fd0f0');
+      const band = fill(poly([[18.4, 35.4], [29.6, 35.4], [28.8, 39.6], [19.2, 39.6]]));
+      shade(px, band, mR, { softEdge: true, texture: function (x, y, t) { return y === 37 && t !== 'line' ? 'shadow' : null; } });
+      for (let k = 0; k <= 8; k++) {
+        put(px, Math.round(18.4 - k * 0.45), Math.round(35.4 - k), '#d9ecf8');
+        put(px, Math.round(29.6 + k * 0.45), Math.round(35.4 - k), '#c3dff2');
+      }
+    }
+
     // 7. Pelo de delante, con su sombra sobre la frente
     if (st.scalp) {
       // Calvo: brillo en la coronilla
@@ -732,21 +754,19 @@
       }
     }
 
-    // 7b. Bandana: una cinta por encima de la frente con el nudo a un lado
-    if (a.bandana) {
-      const dots = a.bandana === 'dots';
-      const bR = ramp(dots ? '#d8343f' : a.bandana);
-      bR.dot = '#fff3f0';
-      const band = fill(and(vol(2.6), function (x, y) {
-        const t = (x - CX) / 11.5, yc = 11.6 + 2.8 * t * t;
-        return y > yc - 0.3 && y < yc + 3.4 && Math.abs(x - CX) < 14.8;
-      }));
-      const knot = fill(or(ell(34.2, 10.6, 2.1, 1.6), ell(36.6, 9, 1.8, 1.4), ell(36.4, 12.2, 1.6, 1.3),
-        capsule([[35.4, 12.4], [37.6, 16.4]], 0.8), capsule([[35, 12.6], [36, 17]], 0.75)));
-      castShadow(px, band, 0, 1, 0.25);
-      const tex = dots ? function (x, y, t) { return (x * 3 + y * 5) % 7 === 0 && t !== 'line' ? 'dot' : null; } : null;
-      shade(px, band, bR, { texture: tex });
-      shade(px, knot, bR, { texture: tex });
+    // 7c. Gorro de quirófano, estampado, con las cintas detrás
+    if (a.hat === 'gorro') {
+      const hR = ramp('#2fa59a');
+      hR.dot = '#e8fff9';
+      const capM = fill(and(ell(CX, 13.6, 13.4, 9.6), function (x, y) { const t = (x - CX) / 11; return y < 15.4 + 2.4 * t * t; }));
+      castShadow(px, capM, 0, 1, 0.28);
+      shade(px, capM, hR, { texture: function (x, y, t) { return (x * 2 + y * 3) % 6 === 0 && t !== 'line' && t !== 'deep' ? 'dot' : null; } });
+      // Dobladillo
+      for (let x = 12; x <= 36; x++) {
+        const t = (x - CX) / 11, y = Math.round(15.4 + 2.4 * t * t) - 1;
+        if (capM[y * W + x]) put(px, x, y, hR.shadow);
+      }
+      shade(px, fill(or(capsule([[35.4, 15.4], [37.6, 19.6]], 0.8), capsule([[35, 16], [36.2, 20.6]], 0.7))), hR, {});
     }
 
     // 8. Gafas
@@ -768,16 +788,17 @@
 
     // 9. Fonendo con volumen: el tubo asoma a los dos lados del cuello y cae
     //    por el pecho; campana a la izquierda, olivas a la derecha.
-    const tubeR = a.outfit === 4 ? ramp('#aeb6c8') : ramp('#3a4256');
+    const tubeR = stethTube(a);
     const tube = fill(or(capsule([[19.4, 37.2], [18.2, 40.5], [17.5, 44.5]], 1.05), capsule([[28.6, 37.2], [29.8, 40.5], [30.4, 43.2]], 1.05)));
     shade(px, tube, tubeR, { outline: false });
-    const metalR = ramp('#d8dde8');
+    const metalR = stethMetal(a);
     const bell = fill(ell(17.5, 46.8, 2.4, 2.2));
     shade(px, bell, metalR, {});
     put(px, 16, 46, '#ffffff');
     const yoke = fill(or(capsule([[30.4, 43.2], [29.2, 45.8]], 0.7), capsule([[30.4, 43.2], [31.8, 45.8]], 0.7)));
     shade(px, yoke, metalR, { outline: false });
     put(px, 29, 46, '#2b2f3a'); put(px, 32, 46, '#2b2f3a');
+    if (a.pin) heartPin(px, 31, 44);
 
     return px;
   }
@@ -811,6 +832,32 @@
       legs: [[[20.6, 55], [20.4, 65], [20.2, 73]], [[27.4, 55], [27.6, 65], [27.8, 73]]] }
   };
 
+  /* ── Detalles desbloqueables ────────────────────────────── */
+  function stethTube(a) {
+    if (a.steth === 'oro') return ramp('#8a6a1c');
+    return a.outfit === 4 ? ramp('#aeb6c8') : ramp('#3a4256');
+  }
+  function stethMetal(a) { return a.steth === 'oro' ? ramp('#f2c94c') : ramp('#d8dde8'); }
+  /** Corazoncitos blancos repartidos por el pijama. */
+  function heartsPattern(px, mask, off) {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if ((x + off * 3) % 7 !== 1 || (y + (Math.floor((x + off * 3) / 7) % 2) * 3) % 6 !== 0) continue;
+      const cells = [[0, 0], [2, 0], [0, 1], [1, 1], [2, 1], [1, 2]];
+      if (!cells.every(function (c) { return inM(mask, x + c[0], y + c[1]); })) continue;
+      cells.forEach(function (c) { put(px, x + c[0], y + c[1], '#fff1f6'); });
+    }
+  }
+  /** Nombre bordado en azul en el pecho de la bata. */
+  function embroidery(px, x, y) {
+    const c = '#2f5fd0';
+    [[0, 1], [1, 0], [2, 1], [3, 0], [4, 1], [5, 1], [6, 0], [7, 1]].forEach(function (p) { put(px, x + p[0], y + p[1], c); });
+    put(px, x + 2, y + 2, '#7ea5ff'); put(px, x + 6, y + 2, '#7ea5ff');
+  }
+  function heartPin(px, x, y) {
+    [[0, 0], [2, 0], [0, 1], [1, 1], [2, 1], [1, 2]].forEach(function (p) { put(px, x + p[0], y + p[1], '#ff4d6d'); });
+    put(px, x, y, '#ffb3c1'); put(px, x + 1, y + 2, '#c91f43');
+  }
+
   function figure(px, a, pose, skinR, neckR, outfit, layer) {
     const P = POSES[pose] || POSES.idle;
     const coat = outfit === 'coat';
@@ -826,7 +873,10 @@
       // Tronco (y el faldón de la bata)
       const torso = or(capsule([[16.8, 40.6], [31.2, 40.6]], 2.8), poly([[14.4, 41], [33.6, 41], [32.2, 56.5], [15.8, 56.5]]));
       const skirt = coat ? poly([[15.6, 53], [32.4, 53], [34.4, 64.5], [13.6, 64.5]]) : null;
-      shade(px, fill(skirt ? or(torso, skirt) : torso), clothR, coat ? { bias: 0.1 } : {});
+      const torsoM = fill(skirt ? or(torso, skirt) : torso);
+      shade(px, torsoM, clothR, coat ? { bias: 0.1 } : {});
+      if (a.pattern === 'hearts') heartsPattern(px, torsoM, 1);
+      if (a.pattern === 'name') embroidery(px, 17, 47);
       if (!coat) {
         for (let x = 17; x <= 31; x++) put(px, x, 56, pantsR.deep);   // cinturilla
       } else {
@@ -848,12 +898,13 @@
       return;
     }
     // Encima: fonendo y brazos
-    const tubeR = a.outfit === 4 ? ramp('#aeb6c8') : ramp('#3a4256');
+    const tubeR = stethTube(a);
     shade(px, fill(or(capsule([[21, 38.2], [19.8, 41], [19.4, 45]], 0.9), capsule([[27, 38.2], [28.2, 41], [28.6, 44]], 0.9))), tubeR, { outline: false });
-    const metalR = ramp('#d8dde8');
+    const metalR = stethMetal(a);
     shade(px, fill(ell(19.4, 46.8, 2, 1.9)), metalR, {});
     put(px, 18, 46, '#ffffff');
     shade(px, fill(or(capsule([[28.6, 44], [27.8, 46]], 0.6), capsule([[28.6, 44], [29.6, 46]], 0.6))), metalR, { outline: false });
+    if (a.pin) heartPin(px, 23, 45);
     P.arms.forEach(function (arm) {
       const sh = arm[0], el = arm[1], hd = arm[2];
       const mid = [el[0] + (hd[0] - el[0]) * 0.55, el[1] + (hd[1] - el[1]) * 0.55];
@@ -1039,21 +1090,52 @@
           'aria-pressed': on ? 'true' : 'false',
           onclick: function () { cfg.style = o[0]; save(); }
         });
-        b.innerHTML = Avatar.svg(Object.assign({}, cfg, { style: o[0], facial: 'ninguno', glasses: false }), 'neutral', 44, true);
+        b.innerHTML = Avatar.svg(Object.assign({}, cfg, { style: o[0], facial: 'ninguno', glasses: false, hat: '', mask: false }), 'neutral', 44, true);
         b.appendChild(U.el('span', { text: o[1] }));
         box.appendChild(b);
       });
       return box;
     }
+    /**
+     * Chips de desbloqueables. Cada opción: [campo, valor, valor al quitarlo,
+     * etiqueta, id de desbloqueo]. toggle: cada chip se enciende y apaga solo.
+     */
+    function lockChips(list, toggle) {
+      const box = U.el('div', { class: 'chips' });
+      list.forEach(function (o) {
+        const key = o[0], val = o[1], off = o[2];
+        const on = toggle ? cfg[key] === val : (cfg[key] || '') === val;
+        const lock = o[4] && !Avatar.unlocked(o[4]) ? o[4] : null;
+        box.appendChild(U.el('button', {
+          class: 'chip' + (on ? ' is-active' : '') + (lock ? ' is-locked' : ''), type: 'button',
+          text: (lock ? '🔒 ' : '') + o[3], title: lock ? 'Se desbloquea con ' + Progress.unlockLabel(lock) : o[3],
+          'aria-pressed': on ? 'true' : 'false',
+          onclick: function () {
+            if (lock) { UI.toast('🔒 ' + o[3].replace(/^\S+ /, '') + ': se desbloquea con ' + Progress.unlockLabel(lock)); return; }
+            cfg[key] = toggle && on ? off : val;
+            save();
+          }
+        }));
+      });
+      return box;
+    }
+
     function swatchRow(label, list, key, title) {
       const sw = U.el('div', { class: 'swatches' });
       list.forEach(function (c, i) {
         const color = Array.isArray(c) ? c[0] : c;
         const name = Array.isArray(c) ? c[1] : title + ' ' + (i + 1);
+        const lock = Array.isArray(c) && c[2] && !Avatar.unlocked(c[2]) ? c[2] : null;
+        const bg = color === 'coat' ? '#f2f4f8' : color === 'coatname' ? '' : color === 'hearts' ? '' : color;
         sw.appendChild(U.el('button', {
-          class: 'swatch' + (cfg[key] === i ? ' is-active' : '') + (color === 'coat' ? ' swatch--coat' : ''), type: 'button',
-          style: { background: color === 'coat' ? '#f2f4f8' : color }, title: name, 'aria-label': name,
-          onclick: function () { cfg[key] = i; save(); }
+          class: 'swatch' + (cfg[key] === i ? ' is-active' : '') + (color === 'coat' ? ' swatch--coat' : '') +
+            (color === 'coatname' ? ' swatch--coatname' : '') + (color === 'hearts' ? ' swatch--hearts' : '') + (lock ? ' is-locked' : ''),
+          type: 'button', style: bg ? { background: bg } : {},
+          title: lock ? name + ' · 🔒 ' + Progress.unlockLabel(lock) : name, 'aria-label': name + (lock ? ' (bloqueado)' : ''),
+          onclick: function () {
+            if (lock) { UI.toast('🔒 ' + name + ': se desbloquea con ' + Progress.unlockLabel(lock)); return; }
+            cfg[key] = i; save();
+          }
         }));
       });
       rows.appendChild(row(label, sw));
@@ -1062,6 +1144,7 @@
     function paintAll() {
       if (cfg.sex) {
         preview.innerHTML = Avatar.svg(cfg, 'happy', 132);
+        preview.className = 'avatar-editor__preview' + Avatar.bgClass(cfg);
       } else {
         U.clear(preview);
         preview.appendChild(U.el('span', { class: 'avatar-editor__empty', text: 'Elige hombre o mujer para empezar' }));
@@ -1075,20 +1158,20 @@
       swatchRow('Pelo', Avatar.HAIRS, 'hair');
       swatchRow('Ojos', Avatar.EYES, 'eyes');
       if (cfg.sex === 'm') rows.appendChild(row('Vello facial', chips(Avatar.FACIAL, 'facial', a.facial)));
-      if (cfg.sex === 'f' && Avatar.WAVY.indexOf(a.style) >= 0) {
-        const bw = U.el('div', { class: 'swatches' });
-        Avatar.BANDANAS.forEach(function (b) {
-          const on = (a.bandana || '') === b[0];
-          bw.appendChild(U.el('button', {
-            class: 'swatch' + (on ? ' is-active' : '') + (!b[0] ? ' swatch--none' : '') + (b[0] === 'dots' ? ' swatch--dots' : ''), type: 'button',
-            style: { background: !b[0] ? 'transparent' : b[0] === 'dots' ? '' : b[0] }, title: b[1], 'aria-label': b[1],
-            onclick: function () { cfg.bandana = b[0]; save(); }
-          }));
-        });
-        rows.appendChild(row('Bandana', bw));
-      }
       swatchRow('Ropa', Avatar.OUTFITS, 'outfit');
       rows.appendChild(row('Gafas', chips([[false, 'Sin gafas'], [true, 'Con gafas']], 'glasses', !!cfg.glasses)));
+      rows.appendChild(row('Accesorios', lockChips([
+        ['hat', 'gorro', '', '🧢 Gorro de quirófano', 'acc:gorro'],
+        ['mask', true, false, '😷 Mascarilla al cuello', 'acc:mascarilla'],
+        ['pin', true, false, '💗 Pin de corazón', 'acc:pin'],
+        ['steth', 'oro', '', '🩺 Fonendo dorado', 'acc:fonendo']
+      ], true)));
+      rows.appendChild(row('Mascota', lockChips([
+        ['pet', '', '', 'Ninguna'], ['pet', 'gato', '', '🐈 Gato', 'pet:gato'], ['pet', 'perro', '', '🐕 Perro', 'pet:perro'], ['pet', 'buho', '', '🦉 Búho', 'pet:buho']
+      ])));
+      rows.appendChild(row('Fondo', lockChips([
+        ['bg', '', '', 'Ninguno'], ['bg', 'biblioteca', '', '📚 Biblioteca', 'bg:biblioteca'], ['bg', 'hospital', '', '🏥 Hospital de noche', 'bg:hospital'], ['bg', 'habitacion', '', '🪟 Habitación', 'bg:habitacion']
+      ])));
     }
     paintAll();
     return wrap;

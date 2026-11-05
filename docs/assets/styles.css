@@ -1500,7 +1500,61 @@ body > .gameover{position:fixed}
 .study-scene.is-corner .study-station__art > svg{width:var(--station-w,120px)}
 .study-scene.is-corner .study-scene__row{gap:28px}
 
-/* Bandanas en el editor */
-.swatch--none{border:2px dashed var(--line);background:transparent;position:relative}
-.swatch--none::after{content:'';position:absolute;left:50%;top:15%;bottom:15%;width:2px;margin-left:-1px;background:var(--text-faint);transform:rotate(45deg)}
-.swatch--dots{background:radial-gradient(circle,#fff3f0 22%,transparent 24%) 0 0/8px 8px,#d8343f}
+
+/* ── Experiencia y niveles ─────────────────────────────── */
+.level-row{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:linear-gradient(135deg,rgba(255,207,102,.12),rgba(124,92,255,.08));border:1px solid rgba(255,207,102,.3)}
+.level-badge{
+  flex:0 0 auto;width:38px;height:38px;display:grid;place-items:center;font-weight:800;font-size:1rem;color:#3a2412;
+  background:#ffcf66;box-shadow:0 0 0 2px #6e4426, 0 0 0 4px #c48a55, 2px 2px 0 4px #3a2412;margin:4px;
+}
+.level-row__body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px}
+.level-row__head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:.86rem}
+.level-row__xp{font-size:.74rem;color:var(--text-faint);font-variant-numeric:tabular-nums;white-space:nowrap}
+.level-row__meta{font-size:.72rem;color:var(--text-faint)}
+.xp-bar{display:block;height:8px;background:#1b1f2e;border:1px solid #3a4256;overflow:hidden}
+.xp-bar__fill{display:block;height:100%;background:repeating-linear-gradient(90deg,#ffcf66 0 6px,#ffb84d 6px 8px);transition:width .6s steps(10)}
+.hud__lvl{font:800 10px/1 var(--font, system-ui);color:#3a2412;background:#ffcf66;padding:3px 5px;border-radius:4px;margin-left:2px;white-space:nowrap}
+@media (max-width:600px){ .hud__lvl{display:none} }
+
+/* Desbloqueables */
+.swatch.is-locked,.chip.is-locked{opacity:.45;filter:grayscale(.6)}
+.swatch.is-locked{position:relative}
+.swatch.is-locked::after{content:'🔒';position:absolute;inset:0;display:grid;place-items:center;font-size:12px}
+.swatch--coatname{background:linear-gradient(#f2f4f8,#f2f4f8) padding-box;box-shadow:inset 6px -6px 0 -3px #2f5fd0}
+.swatch--hearts{background:radial-gradient(circle,#fff1f6 22%,transparent 24%) 0 0/9px 9px,#ef7aa1}
+.unlocks__title{margin:16px 0 8px;font-size:.9rem}
+.unlocks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.unlock{display:grid;grid-template-columns:24px minmax(0,1fr);gap:0 8px;align-items:center;padding:7px 9px;border-radius:10px;background:var(--bg-soft);border:1px dashed var(--line);opacity:.65}
+.unlock.is-on{opacity:1;border-style:solid;border-color:rgba(92,224,168,.45)}
+.unlock__icon{grid-row:span 2;font-size:18px;text-align:center}
+.unlock__name{font-size:.8rem;font-weight:600}
+.unlock small{font-size:.7rem;color:var(--text-faint)}
+
+/* Fondos del retrato */
+.avbg{border-radius:14px;overflow:hidden}
+.avbg--biblioteca{background:
+  repeating-linear-gradient(90deg,#7a3b2e 0 6px,#2f5fa8 6px 11px,#c49a3a 11px 15px,#3d7a52 15px 21px,#8a5a34 21px 23px) 0 4%/100% 30% no-repeat,
+  linear-gradient(#5c3820,#5c3820) 0 34%/100% 4% no-repeat,
+  repeating-linear-gradient(90deg,#3d7a52 0 5px,#c4592c 5px 10px,#e9e3d4 10px 13px,#2f5fa8 13px 19px,#8a5a34 19px 21px) 0 38%/100% 30% no-repeat,
+  linear-gradient(#5c3820,#5c3820) 0 68%/100% 4% no-repeat,
+  #4a2e1a !important}
+.avbg--hospital{background:
+  radial-gradient(circle at 78% 22%,#fff8d8 0 6%,transparent 7%),
+  linear-gradient(90deg,transparent 47%,#c9d3e6 47% 53%,transparent 53%) 50% 10%/60% 50% no-repeat,
+  linear-gradient(transparent 47%,#c9d3e6 47% 53%,transparent 53%) 50% 10%/60% 50% no-repeat,
+  linear-gradient(#1b2a52,#24386e) 50% 10%/60% 50% no-repeat,
+  linear-gradient(#e4eaf3 0 70%,#b9c6d8 70%) !important}
+.avbg--habitacion{background:
+  linear-gradient(90deg,transparent 48%,#fff 48% 52%,transparent 52%) 20% 14%/40% 42% no-repeat,
+  linear-gradient(#8fd3ff,#ffd9a0) 20% 14%/40% 42% no-repeat,
+  linear-gradient(#f3d9b8 0 72%,#c48a55 72% 76%,#a96f40 76%) !important}
+.tile-avatar.avbg{padding:4px 4px 0}
+
+/* Mascotas en la escena */
+.scene-pet{transform-box:fill-box;transform-origin:50% 100%}
+.scene-pet--cat{animation:petBreath 3.6s ease-in-out infinite}
+.scene-pet--dog{animation:petBob 2.8s steps(2) infinite}
+.scene-pet--owl{animation:petBob 3.4s steps(2) infinite}
+@keyframes petBreath{0%,100%{transform:none}50%{transform:scaleY(1.08)}}
+@keyframes petBob{0%,100%{transform:none}50%{transform:translateY(-1px)}}
+@media (prefers-reduced-motion:reduce){ .scene-pet{animation:none!important} }

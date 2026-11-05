@@ -554,6 +554,10 @@
     box.appendChild(hearts);
     box.classList.toggle('is-ko', t.left === 0);
     if (t.kind) box.appendChild(U.el('span', { class: 'hud__kind', text: '🌱', title: 'Modo amable' }));
+    if (global.Progress) {
+      const li = Progress.levelInfo();
+      box.appendChild(U.el('span', { class: 'hud__lvl', text: 'Nv ' + li.level, title: li.title + ' · ' + li.xp.toLocaleString('es-ES') + ' XP' }));
+    }
     box.title = Avatar.fmtLives(t.left) + ' de ' + t.max + ' vidas hoy · ' + (t.kind ? 'modo amable: pausa gratis · distracción ½' : 'pausa ½ · distracción 1');
   };
 
@@ -618,7 +622,7 @@
 
     const body = U.el('div', { class: 'game-tile' });
     if (cfg) {
-      body.appendChild(Avatar.node(cfg, mood(t.left, t.max), 70));
+      body.appendChild(Avatar.node(cfg, mood(t.left, t.max), 70, ('tile-avatar' + Avatar.bgClass(cfg))));
       const info = U.el('div', { class: 'game-tile__info' });
       const hearts = Avatar.hearts(t.left, t.max, 16);
       hearts.classList.add('hearts--wrap');
