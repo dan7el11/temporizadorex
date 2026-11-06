@@ -54,11 +54,32 @@
       osc.stop(t0 + dur + 0.05);
     },
 
-    play: function (notes, type) {
+    /*
+     * Un solo sonido a la vez: los avisos del temporizador (inicio, fin,
+     * pausa…) se ponen en cola detrás del que esté sonando, en vez de
+     * pisarse; los del modo juego se omiten si ya está sonando otro o si
+     * acaba de terminar un bloque (la animación se ve igual).
+     */
+    busyUntil: 0,
+    quietUntil: 0,
+    play: function (notes, type, opts) {
       if (!this.enabled()) return;
+      const o = opts || {};
+      const now = Date.now();
+      const dur = notes.reduce(function (a, n) { return Math.max(a, n[1] + n[2]); }, 0) * 1000;
+      let offset = 0;
+      if (o.game) {
+        if (now < this.busyUntil || now < this.quietUntil) return;
+      } else if (now < this.busyUntil) {
+        offset = (this.busyUntil - now) / 1000 + 0.08;
+        if (offset > 3) offset = 0;   // algo raro: no esperar tanto
+      }
+      this.busyUntil = Math.max(this.busyUntil, now + offset * 1000 + dur);
       const self = this;
-      notes.forEach(function (n) { self.tone(n[0], n[1], n[2], n[3], type); });
+      notes.forEach(function (n) { self.tone(n[0], n[1] + offset, n[2], n[3], type); });
     },
+    /** Silencia los sonidos del modo juego durante un rato (p. ej. al terminar un bloque). */
+    quiet: function (ms) { this.quietUntil = Math.max(this.quietUntil, Date.now() + ms); },
 
     /** Inicio de bloque: dos notas ascendentes, limpias. */
     start: function () {
@@ -113,7 +134,11 @@
     gameOn: function () {
       return !(window.Game && Game.settings && Game.settings().sounds === false);
     },
-    g: function (notes, type) { if (this.gameOn()) this.play(notes, type); },
+    g: function (notes, type) { if (this.gameOn()) this.play(notes, type, { game: true }); },
+    /** Impacto y daño en uno (antes eran dos sonidos a la vez). */
+    hit: function () {
+      this.g([[146.83, 0, 0.06, 0.3], [98, 0.04, 0.1, 0.28], [392, 0.1, 0.09, 0.26], [261.63, 0.18, 0.16, 0.26]], 'square');
+    },
 
     /** Corazón que se rompe: chasquido y caída. */
     heartBreak: function () {
@@ -153,14 +178,12 @@
 
     /** Modo juego: pierdes una vida (dos notas que caen, en 8 bits). */
     hurt: function () {
-      if (!this.gameOn()) return;
-      this.play([[392, 0, 0.09, 0.28], [261.63, 0.08, 0.16, 0.28]], 'square');
+      this.g([[392, 0, 0.09, 0.28], [261.63, 0.08, 0.16, 0.28]], 'square');
     },
 
     /** Modo juego: vida extra. */
     oneUp: function () {
-      if (!this.gameOn()) return;
-      this.play([
+      this.g([
         [659.25, 0, 0.08, 0.22], [783.99, 0.08, 0.08, 0.22], [1318.5, 0.16, 0.08, 0.22],
         [1046.5, 0.24, 0.08, 0.22], [1174.66, 0.32, 0.08, 0.22], [1567.98, 0.4, 0.18, 0.22]
       ], 'square');
@@ -168,8 +191,7 @@
 
     /** Modo juego: sin vidas. */
     gameOver: function () {
-      if (!this.gameOn()) return;
-      this.play([
+      this.g([
         [523.25, 0, 0.18, 0.26], [392, 0.18, 0.18, 0.26], [329.63, 0.36, 0.18, 0.26], [261.63, 0.54, 0.5, 0.28]
       ], 'square');
     },

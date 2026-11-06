@@ -403,6 +403,9 @@
     document.getElementById('btnPause').textContent = 'Pausar';
     if (!skipped) {
       Sound.end();
+      // Al terminar un bloque, un solo sonido: el de siempre (misiones, logros
+      // o niveles que salten ahora se ven, pero no suenan encima)
+      Sound.quiet(2500);
       const next = state.blocks[state.index + 1];
       Notify.show('Bloque terminado: ' + b.name,
         next ? 'Siguiente: ' + next.name + ' (' + U.fmtHuman(next.plannedMs) + ')' : 'Era el último bloque de la sesión.');
@@ -1222,6 +1225,9 @@
     if (state.pausedAt) {
       const p = Date.now() - state.pausedAt;
       setLayers('.js-pausetime', U.fmt(p, { floor: true }));
+      // Cuánto falta para que la pausa reste el siguiente medio corazón
+      const nx = Game.pauseDrainNext(state);
+      setLayers('.stage__pauseTag', 'PAUSA · distracción en curso' + (nx !== null ? ' · −½ ❤ en ' + U.fmt(nx, { floor: true }) : ''));
       pausedNodes.forEach(function (n) { n.hidden = false; });
     } else {
       pausedNodes.forEach(function (n) { n.hidden = true; });

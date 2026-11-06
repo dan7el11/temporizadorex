@@ -82,6 +82,9 @@ historial también puedes «repetir» un día ya hecho.
   máximo contraste (blanco o casi negro, según el color) y sobre la parte negra una versión aclarada
   del mismo color, así se lee igual de bien a un lado y otro de la línea.
 - **Sonidos** de inicio y de fin de bloque, y cuenta atrás opcional en los últimos 5 segundos.
+  Nunca suenan dos a la vez: si coinciden (fin de un bloque e inicio del siguiente), van uno detrás
+  de otro; y al terminar un bloque solo suena su aviso (las misiones, logros o niveles que salten en
+  ese momento se ven, pero no suenan encima).
 - **Aviso antes del final del bloque** (1 minuto por defecto; se cambia o se quita en *Ajustes →
   Temporizador*): con la app delante, un aviso discreto («⏳ Queda 1 minuto: …») y un tono suave; en
   segundo plano, una notificación con el bloque siguiente (hay que tener activadas las
@@ -305,7 +308,10 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
 - **Vidas por día** (10 por defecto; de 1 a 10). El día de estudio empieza a las 4:00, así que una
   noche larga no lo corta. **Lo que pierdes en una sesión sigue perdido en la siguiente.** Hay
   **medios corazones**:
-  - **Pausa**: ½. **La primera pausa del día es gratis.**
+  - **Pausa**: ½ al empezarla (**la primera del día es gratis**) y, **mientras dura, ½ más cada 3 min**
+    (en modo amable, cada 6). En la pantalla de pausa se ve cuánto falta para el siguiente («−½ ❤ en
+    2:10») y sale una etiqueta junto a los corazones cada vez que resta. Los minutos se cambian (o se
+    quita, con 0) en Ajustes.
   - **Distracción rápida**: 1.
   - **Distracciones declaradas** al terminar un bloque: 1 cada una, o ½ si duraron menos de un
     minuto de media.

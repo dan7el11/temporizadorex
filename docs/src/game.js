@@ -21,7 +21,7 @@
   'use strict';
 
   const Game = {};
-  const DEFAULTS = { enabled: true, dayLives: 10, regain: true, anim: true, scene: true, coopGoalH: 12, sounds: true, causeFirst: true, streakGoalH: 5, roomView: false };
+  const DEFAULTS = { enabled: true, dayLives: 10, regain: true, anim: true, scene: true, coopGoalH: 12, sounds: true, causeFirst: true, streakGoalH: 5, roomView: false, pauseDrainMin: 3 };
   const DAY_CUT_H = 4;
   const REGEN_MS = 45 * 60000;
   const REGEN_KEY = 'mir2027.game.regen.v1';
@@ -127,6 +127,7 @@
     const b = state.blocks[state.index];
     const running = b && !b.isBreak && !state.pausedAt && !state.gate && state.runningSince;
     const now = Date.now();
+    if (state.pausedAt) drainPause(state);
     if (!running) { lastTickAt = 0; return; }
     if (lastTickAt) {
       const r = regenState();
@@ -145,6 +146,59 @@
     }
     lastTickAt = now;
   };
+
+  /* ── La pausa drena vida mientras dura ─────────────────── */
+  /*
+   * Además del coste al empezarla, una pausa resta ½ vida cada pocos minutos
+   * (3 por defecto; el doble de margen en modo amable). Cada tramo tiene un id
+   * fijo (instante de la pausa + número), así que no se cobra dos veces ni al
+   * recargar ni entre dispositivos.
+   */
+  function drainStep(t) {
+    const m = parseFloat(Game.settings().pauseDrainMin) || 0;
+    return m > 0 ? m * (t.kind ? 2 : 1) * 60000 : 0;
+  }
+  /** Cuánto falta para el próximo medio corazón (o null si no drena). */
+  Game.pauseDrainNext = function (state) {
+    if (!Game.enabled() || !state || !state.pausedAt) return null;
+    const step = drainStep(Game.today());
+    if (!step) return null;
+    const el = Date.now() - state.pausedAt;
+    return step - (el % step);
+  };
+  function drainPause(state) {
+    const t = Game.today();
+    const step = drainStep(t);
+    if (!step) return;
+    const n = Math.floor((Date.now() - state.pausedAt) / step);
+    for (let k = 1; k <= n; k++) {
+      const before = Game.today();
+      const e = Store.addGameLog({ id: 'drain_' + state.pausedAt + '_' + k, day: before.day, at: state.pausedAt + k * step, d: -1, why: 'pausa-larga' });
+      if (!e) continue;
+      const after = Game.today();
+      const lost = before.left - after.left;
+      if (ensure(state)) state.game.lost += lost;
+      regenState().ms = 0; saveRegen();
+      if (!lost) continue;
+      hurtUntil = Date.now() + 1500;
+      pulse('lose');
+      Sound.hurt();
+      pushHit({ kind: 'pause', lost: lost, ko: before.left > 0 && after.left <= 0 });
+      if (before.left > 0 && after.left <= 0) UI.toast('¡Sin vidas! La pausa sigue restando: vuelve cuando puedas');
+      Game.renderHud(state);
+      hudTag('−½');
+      Game.renderTile();
+      if (global.Room) Room.pushNow();
+    }
+  }
+  /** Etiqueta pequeña que sube desde los corazones del temporizador. */
+  function hudTag(text) {
+    const box = document.getElementById('hudGame');
+    if (!box) return;
+    const tag = U.el('span', { class: 'hud__tag', text: text });
+    box.appendChild(tag);
+    setTimeout(function () { tag.remove(); }, 1600);
+  }
 
   /* ── Perder ─────────────────────────────────────────────── */
   /**
@@ -485,8 +539,7 @@
           if (o.lost > 0) Sound.hurt();
         } else {
           frame('hit', 'hurt');
-          Sound.thud();
-          Sound.hurt();
+          Sound.hit();
           if (navigator.vibrate) { try { navigator.vibrate([40, 30, 80]); } catch (e) { /* noop */ } }
         }
         layer.classList.add('is-hit');
@@ -682,6 +735,18 @@
       U.el('div', { class: 'setting__txt' }, [U.el('span', { text: 'Vidas por día' }),
         U.el('small', { text: 'De 1 a 10. Se rellenan cada día a las 4:00.' })]),
       lives
+    ]));
+
+    const drain = U.el('input', { type: 'number', class: 'num-setting', min: '0', max: '30', step: '1', value: String(s.pauseDrainMin),
+      onchange: function () {
+        const n = U.clamp(parseInt(drain.value, 10) || 0, 0, 30);
+        drain.value = String(n);
+        Game.set({ pauseDrainMin: n });
+      } });
+    box.appendChild(U.el('div', { class: 'setting' }, [
+      U.el('div', { class: 'setting__txt' }, [U.el('span', { text: 'La pausa drena vida' }),
+        U.el('small', { text: 'Minutos de pausa por cada ½ vida perdida mientras dura (además de lo que cuesta empezarla). 0 lo desactiva.' })]),
+      drain
     ]));
 
     toggle('regain', 'Recuperar vidas', 'Pausa guiada completa: +½. ' + Game.REGEN_MIN + ' min de estudio seguidos sin perder vidas: +1. Tu pareja puede regalarte una al día.');
