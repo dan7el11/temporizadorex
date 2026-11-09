@@ -52,12 +52,89 @@
   Coop.invalidate = function () { mineCache = null; streakCache = null; };
 
   /** Lo que publico en la sala. */
-  Coop.myState = function () { return { eff: Coop.mine() }; };
+  Coop.myState = function () { return { eff: Coop.mine(), duel: Coop.myDuel() }; };
+
+  /* ── C3 · Duelo semanal de bloques limpios ──────────────── */
+  const DUEL_KEY = 'mir2027.duel.v1';       // { week, me, peer, prize, prizeAt, peerName, told }
+  function weekKey(ts) { return U.dayKey(U.startOfWeek(ts || Date.now())); }
+  /** Bloques limpios de esta semana (sin ninguna distracción, de 10 min o más). */
+  Coop.weekClean = function () {
+    const from = U.startOfWeek(Date.now()).getTime();
+    let n = 0;
+    const count = function (b) {
+      if (!b.isBreak && b.startedAt >= from && b.status === 'done' && !(b.distractions || []).length && (b.actualMs || b.elapsedBefore || 0) >= 10 * 60000) n++;
+    };
+    Store.data.sessions.forEach(function (s) { (s.blocks || []).forEach(count); });
+    const run = global.Runner && Runner.getState();
+    if (run && !run.finished) run.blocks.forEach(count);
+    return n;
+  };
+  function duelStore() { return read(DUEL_KEY, {}) || {}; }
+  Coop.myDuel = function () {
+    const d = duelStore();
+    return { week: weekKey(), clean: Coop.weekClean(), prize: d.prize || '', prizeAt: d.prizeAt || 0 };
+  };
+  /** Marcador de la semana: el tuyo, el de tu pareja, quién gana y el premio pactado. */
+  Coop.duel = function () {
+    const d = duelStore();
+    const me = Coop.weekClean();
+    const peer = d.week === weekKey() ? (d.peer || 0) : 0;
+    return { me: me, peer: peer, leader: me > peer ? 'me' : peer > me ? 'peer' : '', prize: d.prize || '', peerName: d.peerName || 'Pareja' };
+  };
+  function receiveDuel(peer) {
+    const st = (peer && peer.state) || {};
+    const pd = st.coop && st.coop.duel;
+    const d = duelStore();
+    const wk = weekKey();
+    // Semana nueva: se anuncia el resultado de la anterior (una vez)
+    if (d.week && d.week !== wk && !d.told) {
+      const mine = d.me || 0, theirs = d.peer || 0;
+      if (mine || theirs) {
+        UI.toast(mine > theirs ? '🏆 Ganaste el duelo de la semana pasada ' + mine + '–' + theirs + (d.prize ? ' · premio: ' + d.prize : '')
+          : mine < theirs ? '⚔️ ' + (d.peerName || 'Tu pareja') + ' ganó el duelo de la semana pasada ' + theirs + '–' + mine + (d.prize ? ' · premio: ' + d.prize : '')
+            : '🤝 Empate en el duelo de la semana pasada (' + mine + '–' + theirs + ')');
+      }
+      d.told = true;
+    }
+    if (d.week !== wk) { d.week = wk; d.me = 0; d.peer = 0; d.told = false; }
+    d.me = Coop.weekClean();
+    if (pd && pd.week === wk) d.peer = Math.max(0, parseInt(pd.clean, 10) || 0);
+    if (pd && pd.prize && (pd.prizeAt || 0) > (d.prizeAt || 0)) { d.prize = String(pd.prize).slice(0, 80); d.prizeAt = pd.prizeAt; }
+    d.peerName = peer.name || d.peerName;
+    write(DUEL_KEY, d);
+  }
+  /** Pactar el premio del duelo (lo ve tu pareja). */
+  Coop.setPrize = function () {
+    let input;
+    UI.modal({
+      title: '🎁 Premio del duelo',
+      sub: 'Lo que gana quien haga más bloques limpios esta semana (lo ve tu pareja).',
+      build: function (close) {
+        input = U.el('input', { type: 'text', class: 'thought-input', maxlength: '80', value: duelStore().prize || '', placeholder: 'p. ej. quien pierda invita a cenar',
+          onkeydown: function (e) { if (e.key === 'Enter') { e.preventDefault(); close(true); } } });
+        setTimeout(function () { input.focus(); }, 30);
+        return input;
+      },
+      actions: function (close) {
+        return [U.el('button', { class: 'btn btn--ghost', text: 'Cancelar', onclick: function () { close(false); } }),
+          U.el('button', { class: 'btn btn--primary', text: 'Pactar', onclick: function () { close(true); } })];
+      }
+    }).then(function (ok) {
+      if (!ok || !input) return;
+      const d = duelStore();
+      d.prize = input.value.trim().slice(0, 80);
+      d.prizeAt = Date.now();
+      write(DUEL_KEY, d);
+      if (global.Room) Room.pushNow();
+      if (global.App) App.renderRoomStrip();
+    });
+  };
 
   function peerEff() { return read(PEER_KEY, {}); }
 
   /** Al recibir el estado de la pareja: guardar sus minutos y avisar si cae KO. */
   Coop.receive = function (peer) {
+    receiveDuel(peer);
     const st = (peer && peer.state) || {};
     if (st.coop && st.coop.eff && typeof st.coop.eff === 'object') {
       const saved = peerEff();
@@ -158,9 +235,25 @@
         U.el('span', { class: 'coop__dot coop__dot--me', text: 'Tú ' + hm(t.me) }),
         U.el('span', { class: 'coop__dot coop__dot--peer', text: (peerName || 'Pareja') + ' ' + hm(t.peer) }),
         s ? U.el('span', { class: 'coop__streak', text: '🔥 Racha de ' + U.plural(s, 'día', 'días') }) : null
-      ])
+      ]),
+      duelNode(peerName)
     ]);
   };
+  function duelNode(peerName) {
+    const d = Coop.duel();
+    const name = peerName || d.peerName;
+    return U.el('div', { class: 'duel' }, [
+      U.el('div', { class: 'duel__head' }, [
+        U.el('span', { class: 'duel__title', text: '⚔️ Duelo de la semana · bloques limpios' }),
+        U.el('span', { class: 'duel__score' }, [
+          U.el('span', { class: d.leader === 'me' ? 'is-lead' : '', text: (d.leader === 'me' ? '👑 ' : '') + 'Tú ' + d.me }),
+          U.el('span', { text: ' – ' }),
+          U.el('span', { class: d.leader === 'peer' ? 'is-lead' : '', text: d.peer + ' ' + name + (d.leader === 'peer' ? ' 👑' : '') })
+        ])
+      ]),
+      U.el('button', { class: 'duel__prize', type: 'button', onclick: Coop.setPrize, text: d.prize ? '🎁 Premio: ' + d.prize : '🎁 Pactar un premio' })
+    ]);
+  }
 
   global.Coop = Coop;
 })(window);

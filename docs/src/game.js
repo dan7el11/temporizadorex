@@ -90,6 +90,8 @@
   Game.init = function (state) {
     if (!state) return;
     state.game = { start: Game.today().left, lost: 0, gained: 0, perfect: 0 };
+    // ¿Empiezas a tu hora? (después de la animación de entrada)
+    if (global.Progress) setTimeout(function () { Progress.checkPunctual(); }, 3300);
   };
   function ensure(state) {
     if (state && state.game && state.game.start === undefined) {
@@ -246,7 +248,7 @@
     return done(Game.scene({
       kind: kind, ko: ko, free: free || (before.kind && !halves), kindMode: before.kind, lost: (before.left - after.left), left: after.left, max: after.max,
       projectile: icon,
-      title: kind === 'pause' ? 'Pausa' : '¡Distracción!'
+      title: o.title || (kind === 'pause' ? 'Pausa' : '¡Distracción!')
     }));
   };
 
@@ -271,6 +273,10 @@
           U.el('span', { text: r.label })
         ]));
       });
+      grid.appendChild(U.el('button', { class: 'causepop__btn causepop__btn--park', type: 'button', title: 'Lo anotas y sigues: no cuesta vida',
+        onclick: function () { finish('park'); } }, [
+        U.el('span', { class: 'causepop__icon', text: '📝' }), U.el('span', { text: 'Era un pensamiento: anotarlo' })
+      ]));
       grid.appendChild(U.el('button', { class: 'causepop__btn causepop__btn--none', type: 'button', onclick: function () { finish(null); } }, [
         U.el('span', { class: 'causepop__icon', text: '·' }), U.el('span', { text: 'Sin causa' })
       ]));

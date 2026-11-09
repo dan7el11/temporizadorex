@@ -270,9 +270,23 @@
     return '<g transform="translate(' + p.x + ',' + p.y + ')"><g class="scene-pet scene-pet--' + p.cls + '">' + frames + '</g></g>';
   }
 
+  /** Desorden en la mesa según el cansancio (1–3): bolas de papel, envoltorios, folios. */
+  function mess(level) {
+    let r = '';
+    const ball = function (x, y) { return px(x, y, 3, 2, '#f2f2ee') + px(x + 1, y - 1, 1, 1, '#f2f2ee') + px(x, y + 1, 3, 1, '#c9c9c0') + px(x + 1, y, 1, 1, '#b9b9ae'); };
+    r += ball(41, 64);
+    if (level >= 2) { r += ball(17, 64) + px(2, 65, 6, 1, '#ffcf66') + px(3, 64, 4, 1, '#e05a72'); }   // + envoltorio
+    if (level >= 3) {
+      // Folios por el suelo
+      r += px(-6, 84, 8, 2, '#fbf8ee') + px(-5, 85, 6, 1, '#d9d4c4') + px(64, 83, 7, 2, '#fbf8ee') + px(66, 84, 4, 1, '#c9c2ae') + ball(72, 84);
+    }
+    return '<g class="scene-mess">' + r + '</g>';
+  }
+
   /** Lo de la mesa, salvo que aún no haya llegado nadie (o esté dejándolo ahora mismo). */
   function propsOf(part, o) {
     if (o.noProps) return '';
+    if (o.mess) return (o.placing ? '<g class="scene-placed">' + props(part) + '</g>' : props(part)) + mess(o.mess);
     return o.placing ? '<g class="scene-placed">' + props(part) + '</g>' : props(part);
   }
 
@@ -464,10 +478,13 @@
     const meEnter = enterFrame(enter.me, part);
     const peerEnter = fx ? null : enterFrame(enter.peer, part);
     if (meEnter || peerEnter) setTimeout(function () { Scene.render(lastState); }, 130);
-    const myMode = meEnter || modeOf(me);
+    // Cansancio: el avatar y la mesa lo reflejan (y tu pareja lo ve)
+    const tired = global.Progress ? Progress.tired() : 0;
+    const myCfg = Object.assign({}, Avatar.config(), { tired: tired });
+    const myMode = Object.assign({ mess: tired }, meEnter || modeOf(me));
     const peerMode = ps ? (fx ? { mode: fx.mode, mood: fx.mood } : peerEnter || modeOf(peerMe)) : null;
     const roomView = Game.settings().roomView && global.Rooms;
-    const sig = JSON.stringify([Avatar.config(), myMode, ps ? [ps.avatar, peerMode, peer.name, ps.roomDeco] : null, part, coop, fx,
+    const sig = JSON.stringify([Avatar.config(), myMode, ps ? [ps.avatar, peerMode, peer.name, ps.roomDeco, ps.tired, ps.duel] : null, part, coop, fx,
       roomView ? Rooms.config() : 0]);
     if (sig === lastSig) return;
     lastSig = sig;
@@ -475,8 +492,8 @@
     U.clear(box);
     box.className = 'study-scene study-scene--' + part + (ps ? ' study-scene--duo' : '');
     const row = U.el('div', { class: 'study-scene__row' });
-    row.appendChild(station(Avatar.config(), myMode, 'Tú'));
-    if (ps) row.appendChild(station(ps.avatar, peerMode, peer.name || 'Pareja', !peerMe.session && !fx && !peerEnter, fx));
+    row.appendChild(station(myCfg, myMode, 'Tú'));
+    if (ps) row.appendChild(station(Object.assign({}, ps.avatar, { tired: ps.tired || 0 }), Object.assign({ mess: ps.tired || 0 }, peerMode), peer.name || 'Pareja', !peerMe.session && !fx && !peerEnter, fx));
     box.appendChild(row);
     if (coop) box.appendChild(U.el('div', { class: 'study-scene__coop', text: coop }));
     box.title = 'Toca para ver los cuartos en grande, a cada lado del reloj';
@@ -485,8 +502,10 @@
     const rooms = document.getElementById('studyRooms');
     if (rooms) {
       if (roomView) {
-        const list = [Object.assign({ cfg: Avatar.config(), deco: Rooms.config(), name: 'Tú' }, myMode)];
-        if (ps) list.push(Object.assign({ cfg: ps.avatar, deco: ps.roomDeco, name: peer.name || 'Pareja', away: !peerMe.session && !fx && !peerEnter, fx: fx }, peerMode));
+        // Corona para quien va ganando el duelo de la semana
+    const lead = global.Coop && Coop.active() ? Coop.duel().leader : '';
+    const list = [Object.assign({ cfg: myCfg, deco: Rooms.config(), name: 'Tú' + (lead === 'me' ? ' 👑' : '') }, myMode)];
+        if (ps) list.push(Object.assign({ cfg: Object.assign({}, ps.avatar, { tired: ps.tired || 0 }), mess: ps.tired || 0, deco: ps.roomDeco, name: (peer.name || 'Pareja') + (lead === 'peer' ? ' 👑' : ''), away: !peerMe.session && !fx && !peerEnter, fx: fx }, peerMode));
         Rooms.render(rooms, list);
         if (coop) rooms.appendChild(U.el('div', { class: 'study-rooms__coop', text: coop }));
       } else U.clear(rooms);
@@ -497,7 +516,7 @@
   function station(cfg, m, name, away, fx) {
     const el = U.el('div', { class: 'study-station' + (away ? ' is-away' : '') + ' is-' + m.mode + (fx ? ' is-peerhit' : '') });
     const art = U.el('div', { class: 'study-station__art' });
-    art.innerHTML = Scene.unit(m.mode === 'empty' ? null : cfg, { mode: m.mode, mood: m.mood, x: m.x, lamp: m.lamp, noProps: m.noProps, placing: m.placing, size: 150 });
+    art.innerHTML = Scene.unit(m.mode === 'empty' ? null : cfg, { mode: m.mode, mood: m.mood, x: m.x, lamp: m.lamp, noProps: m.noProps, placing: m.placing, mess: m.mess, size: 150 });
     el.appendChild(art);
     if (fx) el.appendChild(U.el('span', { class: 'study-station__hit', text: fx.badge }));
     else if (m.bubble) el.appendChild(U.el('span', { class: 'study-station__bubble', text: m.bubble }));

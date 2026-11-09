@@ -82,6 +82,7 @@
           color: i.color,
           topicId: i.topicId || '',
           isBreak: !!i.isBreak,
+          flow: !i.isBreak && !!Store.data.settings.flowDefault,
           // Configuración de la pausa guiada, si el bloque es una de ellas.
           pause: i.pause ? JSON.parse(JSON.stringify(i.pause)) : null,
           plannedMs: Math.round(i.minutes * 60000),
@@ -106,6 +107,7 @@
     applyColors();
     tick();
     if (!state.gate) startLoop();
+    else if (state.lateSince) awaitReturn(block());
     else showGate();
     armWarn();
     UI.toast('Sesión recuperada');
@@ -129,6 +131,7 @@
     Game.renderHud(state);
     if (global.Lost) Lost.renderToday();
     armWarn();
+    paintThoughtBtn();
   }
 
   /* ── Aviso antes del final del bloque ──────────────────── */
@@ -181,6 +184,11 @@
 
   function tick() {
     if (!state) return;
+    // Descanso programado a una hora (el almuerzo): llega su momento
+    if (state.plannedBreak && !state.gate && Date.now() >= state.plannedBreak.at) {
+      const pb = state.plannedBreak;
+      if (Runner.insertBreakNow(pb.minutes, pb.name, true)) { state.plannedBreak = null; persist(); return; }
+    }
     render();
     PiP.update(Runner.snapshot());
 
@@ -193,8 +201,19 @@
       lastBeepSecond = secs;
       Sound.tick();
     }
-    if (left <= 0) completeBlock();
-    else checkWarn();
+    if (left <= 0) {
+      const cb = block();
+      // Modo flow: el tiempo se cumple pero el bloque sigue hasta que digas «Terminar»
+      if (cb && cb.flow && !cb.isBreak) {
+        if (!cb.flowNotified) {
+          cb.flowNotified = true;
+          Sound.phase();
+          UI.toast('⏱ Tiempo cumplido · sigue mientras estés en racha y pulsa «✓ Hecho» al acabar');
+          Notify.show('Tiempo cumplido: ' + cb.name, 'Sigue contando como tiempo extra hasta que lo termines.');
+          persist();
+        }
+      } else completeBlock();
+    } else checkWarn();
     maybePersist();
   }
 
@@ -364,6 +383,13 @@
     // golpea al avatar; sin más preguntas después.
     if (Game.enabled() && Game.settings().causeFirst !== false) {
       Game.pickCause().then(function (cause) {
+        // «Era un pensamiento»: se anota y no cuenta como distracción
+        if (cause === 'park') {
+          b.distractions = b.distractions.filter(function (d) { return d !== entry; });
+          persist(); tick();
+          Runner.parkThought();
+          return;
+        }
         if (cause) { Reasons.apply(entry, { reasons: [cause], freeText: null }); persist(); tick(); }
         if (!state || state.finished) return;
         Game.lose(state, 'distracción', { halves: 2, cause: cause });
@@ -417,6 +443,10 @@
 
     // Pausa guiada completa: descansar bien cura medio corazón.
     if (!skipped && b.isBreak && b.pause) Game.restDone(state, b);
+
+    // Descanso largo (almuerzo…): no se sigue solo; se espera y se mide
+    // cuánto tardas en volver.
+    if (!skipped && isLongBreak(b)) { awaitReturn(b); return; }
 
     // Pausa metida a mitad de un bloque: se vuelve a él en el acto, sin
     // preguntas, con el tiempo que le quedaba.
@@ -629,6 +659,294 @@
       }
     });
   }
+
+  /* ── Descansos largos (almuerzo, comida…) ───────────────── */
+  function isLongBreak(b) {
+    return !!b && (b.longBreak || (b.isBreak && !b.pause && b.plannedMs >= 10 * 60000));
+  }
+
+  /**
+   * Mete un descanso largo ahora: el bloque en curso se parte y, al volver,
+   * sigue con lo que le quedaba. Al terminar el descanso no se arranca solo:
+   * se mide cuánto tardas en volver.
+   */
+  Runner.insertBreakNow = function (minutes, name, scheduled) {
+    if (!state || state.finished || state.gate) return false;
+    const b = block();
+    if (!b || b.isBreak) { if (!scheduled) UI.toast('Ya estás en un descanso'); return false; }
+    const now = Date.now();
+    if (state.pausedAt) {
+      b.distractions.push({ type: 'pause', at: state.pausedAt, ms: now - state.pausedAt, count: 1, reasons: [], freeText: null });
+      state.pausedAt = null;
+      document.getElementById('stage').classList.remove('is-paused');
+      document.getElementById('btnPause').textContent = 'Pausar';
+    }
+    const elapsed = elapsedMs();
+    const rest = Math.max(0, b.plannedMs - elapsed);
+    b.elapsedBefore = elapsed;
+    b.plannedMs = Math.max(elapsed, 1000);
+    b.endedAt = now;
+    b.status = 'split';
+    state.runningSince = null;
+    stopLoop();
+    const pending = b.distractions.filter(function (d) { return d.type === 'quick' && !d.ms; });
+    b.distractions = b.distractions.filter(function (d) { return !(d.type === 'quick' && !d.ms); });
+    const brk = {
+      uid: U.uid('b'), presetId: null, name: name || 'Descanso', color: '#e0a526', topicId: '',
+      isBreak: true, longBreak: true, pause: null, resumes: true,
+      plannedMs: Math.round(U.clamp(minutes, 1, 240) * 60000),
+      elapsedBefore: 0, startedAt: null, endedAt: null, status: 'pending', distractions: []
+    };
+    const insert = [brk];
+    if (rest >= 1000 || b.flow) {
+      insert.push({
+        uid: U.uid('b'), presetId: b.presetId, name: b.name, color: b.color, topicId: b.topicId || '',
+        isBreak: false, continues: b.uid, flow: b.flow, plannedMs: Math.max(rest, 60000), elapsedBefore: 0,
+        startedAt: null, endedAt: null, status: 'pending', distractions: pending
+      });
+    }
+    state.blocks.splice.apply(state.blocks, [state.index + 1, 0].concat(insert));
+    timelineSig = '';
+    UI.closeTransient();
+    state.index++;
+    beginBlock();
+    UI.toast('🍽 ' + brk.name + ' · ' + U.fmtHuman(brk.plannedMs) + '. Al acabar te aviso y mido cuánto tardas en volver');
+    return true;
+  };
+
+  /** Programa un descanso largo a una hora (p. ej. el almuerzo a las 14:00). */
+  Runner.planBreak = function (hhmm, minutes, name) {
+    if (!state) return;
+    const parts = String(hhmm).split(':');
+    const d = new Date();
+    d.setHours(parseInt(parts[0], 10) || 0, parseInt(parts[1], 10) || 0, 0, 0);
+    if (d.getTime() < Date.now() - 60000) d.setDate(d.getDate() + 1);
+    state.plannedBreak = { at: d.getTime(), minutes: minutes, name: name || 'Descanso' };
+    persist();
+    UI.toast('🍽 ' + (name || 'Descanso') + ' programado a las ' + U.fmtClock(d) + ' (' + U.plural(minutes, 'minuto', 'minutos') + ')');
+  };
+  Runner.cancelPlannedBreak = function () { if (state) { state.plannedBreak = null; persist(); } };
+
+  /** Fin del descanso largo: espera a que vuelvas y mide el retraso. */
+  function awaitReturn(b) {
+    if (!state.lateSince) { state.lateSince = b.endedAt || Date.now(); persist(); }
+    const since = state.lateSince;
+    let counter = null, ticker = null, reminder = null;
+    reminder = setTimeout(function () {
+      Notify.show('Llevas 5 min de retraso', 'Tu ' + b.name.toLowerCase() + ' terminó a las ' + U.fmtClock(new Date(since)) + '. ¡A estudiar!', true);
+    }, Math.max(1000, since + 5 * 60000 - Date.now()));
+    UI.modal({
+      title: '⏰ Fin del ' + b.name.toLowerCase(),
+      sub: 'Terminó a las ' + U.fmtClock(new Date(since)) + '. Desde entonces cuenta el retraso: más de 1 minuto cuesta vida y va al tiempo perdido.',
+      dismissible: false,
+      build: function () {
+        counter = U.el('div', { class: 'late-counter', text: '0:00' });
+        const paint = function () {
+          const ms = Date.now() - ((state && state.lateSince) || since);
+          counter.textContent = (ms > 60000 ? '+' : '') + U.fmt(ms);
+          counter.classList.toggle('is-late', ms > 60000);
+        };
+        paint();
+        ticker = setInterval(paint, 500);
+        return U.el('div', { class: 'late-box' }, [U.el('span', { class: 'late-box__label', text: 'Tiempo desde el final' }), counter]);
+      },
+      actions: function (close) {
+        return [
+          U.el('button', { class: 'btn btn--ghost', text: 'Terminar sesión', onclick: function () { close(false); } }),
+          U.el('button', { class: 'btn btn--primary', text: 'Volver a estudiar', onclick: function () { close(true); } })
+        ];
+      }
+    }).then(function (back) {
+      clearInterval(ticker); clearTimeout(reminder);
+      if (!state || state.finished) return;
+      const late = Date.now() - (state.lateSince || since);
+      state.lateSince = null;
+      b.lateMs = late;
+      if (!back) { Runner.finish('terminada en el descanso'); return; }
+      if (state.index + 1 >= state.blocks.length) { Runner.finish('completada'); return; }
+      state.index++;
+      const nb = block();
+      beginBlock();
+      if (late > 60000) {
+        nb.distractions.push({ type: 'late', at: since, ms: late, count: 1, reasons: [], freeText: 'Vuelta tardía: ' + b.name });
+        persist();
+        Game.lose(state, 'distracción', { halves: Math.min(6, Math.ceil(late / (5 * 60000))), title: '¡Llegas tarde!' });
+        UI.toast('⏰ Vuelves ' + U.fmtHuman(late) + ' tarde · va al tiempo perdido');
+      } else {
+        Sound.phase();
+        UI.toast('⏱ ¡Puntual! Vuelves a tu hora');
+      }
+    });
+  }
+
+  /* ── Aparcar pensamientos ────────────────────────────────── */
+  const THOUGHTS_KEY = 'mir2027.thoughts.v1';
+  function allThoughts() { try { return JSON.parse(localStorage.getItem(THOUGHTS_KEY) || '[]'); } catch (e) { return []; } }
+  function saveThoughts(list) { try { localStorage.setItem(THOUGHTS_KEY, JSON.stringify(list.slice(-200))); } catch (e) { /* noop */ } }
+  Runner.thoughts = function () { return allThoughts(); };
+  function paintThoughtBtn() {
+    const btn = document.getElementById('btnThought');
+    const n = state && state.thoughts ? state.thoughts.length : 0;
+    if (btn) btn.textContent = '💭 Anotar' + (n ? ' (' + n + ')' : '');
+  }
+  /**
+   * Anota en pocos segundos lo que te ronda la cabeza («llamar al banco») sin
+   * parar el reloj y sin coste: así deja de distraerte. Se repasa al final.
+   */
+  Runner.parkThought = function () {
+    if (!state || state.finished) return;
+    let input;
+    UI.modal({
+      title: '💭 Aparcar un pensamiento',
+      sub: 'Escríbelo y sigue: el reloj no se para y no cuesta vida. Lo verás al terminar la sesión.',
+      build: function (close) {
+        input = U.el('input', { type: 'text', class: 'thought-input', maxlength: '140', placeholder: 'p. ej. llamar al banco, mirar el examen de 2019…',
+          onkeydown: function (e) { if (e.key === 'Enter') { e.preventDefault(); close('save'); } } });
+        setTimeout(function () { input.focus(); }, 30);
+        return input;
+      },
+      actions: function (close) {
+        return [
+          U.el('button', { class: 'btn btn--ghost', text: 'Cancelar', onclick: function () { close(null); } }),
+          U.el('button', { class: 'btn btn--primary', text: 'Aparcar', onclick: function () { close('save'); } })
+        ];
+      }
+    }).then(function (r) {
+      const text = input && input.value.trim();
+      if (r !== 'save' || !text || !state) return;
+      const t = { id: U.uid('th'), at: Date.now(), text: text, block: (block() || {}).name || '', done: false };
+      state.thoughts = (state.thoughts || []).concat([t]);
+      saveThoughts(allThoughts().concat([t]));
+      persist();
+      paintThoughtBtn();
+      UI.toast('💭 Aparcado. Sigue con lo tuyo');
+    });
+  };
+  /** Lista de pensamientos aparcados, con casillas para marcarlos como hechos. */
+  Runner.thoughtsNode = function (list) {
+    const box = U.el('div', { class: 'thoughts' }, [U.el('strong', { class: 'thoughts__title', text: '💭 Pensamientos aparcados' })]);
+    const ul = U.el('ul', { class: 'thoughts__list' });
+    list.forEach(function (t) {
+      const cb = U.el('input', { type: 'checkbox', checked: t.done ? true : null, onchange: function () {
+        const all = allThoughts();
+        all.forEach(function (x) { if (x.id === t.id) x.done = cb.checked; });
+        t.done = cb.checked;
+        saveThoughts(all);
+      } });
+      ul.appendChild(U.el('li', {}, [U.el('label', {}, [cb, U.el('span', { text: t.text })]), U.el('small', { text: U.fmtClock(new Date(t.at)) + (t.block ? ' · ' + t.block : '') })]));
+    });
+    box.appendChild(ul);
+    return box;
+  };
+
+  /* ── Ajuste rápido del bloque (tocar el reloj) ─────────── */
+  /** Termina el bloque ya, como hecho (no saltado): «lo terminé antes». */
+  Runner.doneNow = function () {
+    if (!state || state.gate || state.finished) return;
+    if (state.pausedAt) Runner.resume();
+    completeBlock(false);
+  };
+
+  /**
+   * Panel para cambiar el tiempo sin ir de 5 en 5: deslizador de lo que queda,
+   * terminar ya, modo flow (seguir contando al llegar a 0), descanso largo y
+   * los minutos de los bloques siguientes, escritos directamente.
+   */
+  Runner.openAdjust = function () {
+    if (!state || state.finished || state.gate) return;
+    const b = block();
+    if (!b) return;
+    showChrome('stick');
+    const el0 = elapsedMs();
+    UI.modal({
+      title: '⏱ ' + b.name,
+      sub: 'Llevas ' + U.fmtHuman(el0) + '. Cambia lo que queda o termina cuando hayas acabado.',
+      build: function (close) {
+        const frag = document.createDocumentFragment();
+        // Lo que queda, con deslizador
+        const leftMin = Math.max(0, Math.round((b.plannedMs - elapsedMs()) / 60000));
+        const max = Math.max(180, leftMin + 60);
+        const out = U.el('strong', { class: 'adjust__big', text: U.fmtHuman(leftMin * 60000) });
+        const slider = U.el('input', { type: 'range', class: 'adjust__range', min: '0', max: String(max), step: '1', value: String(leftMin),
+          oninput: function () { out.textContent = slider.value === '0' ? 'terminar ya' : U.fmtHuman(slider.value * 60000); },
+          onchange: function () { apply(+slider.value); } });
+        function apply(min) {
+          if (min <= 0) { close(true); Runner.doneNow(); return; }
+          b.plannedMs = Math.max(60000, elapsedMs() + min * 60000);
+          b.flowNotified = false;
+          b.endWarned = false;
+          persist(); tick(); armWarn();
+          out.textContent = U.fmtHuman(min * 60000);
+          slider.value = String(min);
+        }
+        frag.appendChild(U.el('div', { class: 'adjust__row' }, [U.el('span', { class: 'adjust__label', text: 'Queda' }), out]));
+        frag.appendChild(slider);
+        const chips = U.el('div', { class: 'chips adjust__chips' });
+        [[-15, '−15'], [-5, '−5'], [5, '+5'], [15, '+15'], [30, '+30'], [60, '+1 h']].forEach(function (c) {
+          chips.appendChild(U.el('button', { class: 'chip', type: 'button', text: c[1] + (Math.abs(c[0]) < 60 ? ' min' : ''),
+            onclick: function () { apply(Math.max(0, Math.round((b.plannedMs - elapsedMs()) / 60000) + c[0])); } }));
+        });
+        frag.appendChild(chips);
+
+        // Modo flow
+        const flow = U.el('input', { type: 'checkbox', checked: b.flow ? true : null,
+          onchange: function () { b.flow = flow.checked; b.flowNotified = false; persist(); tick(); } });
+        frag.appendChild(U.el('div', { class: 'setting adjust__flow' }, [
+          U.el('div', { class: 'setting__txt' }, [U.el('span', { text: 'Al llegar a 0, seguir contando' }),
+            U.el('small', { text: 'Modo flow: si estás en racha, el bloque no se corta; cuenta el tiempo extra hasta que pulses «✓ Hecho».' })]),
+          U.el('label', { class: 'switch' }, [flow, U.el('i')])
+        ]));
+
+        // Bloques siguientes: minutos escritos directamente
+        const nexts = state.blocks.slice(state.index + 1).map(function (x, k) { return [x, state.index + 1 + k]; }).filter(function (x) { return !x[0].pause; });
+        if (nexts.length) {
+          const box = U.el('div', { class: 'adjust__next' }, [U.el('span', { class: 'adjust__label', text: 'Después' })]);
+          nexts.slice(0, 6).forEach(function (x) {
+            const inp = U.el('input', { type: 'number', min: '1', max: '600', step: '1', value: String(Math.round(x[0].plannedMs / 60000)),
+              'aria-label': 'Minutos de ' + x[0].name,
+              onchange: function () { Runner.setBlockMinutes(x[1], U.clamp(parseInt(inp.value, 10) || 1, 1, 600)); } });
+            box.appendChild(U.el('label', { class: 'adjust__nextrow' }, [
+              U.el('span', { class: 'hblock__dot', style: { background: x[0].color } }), U.el('span', { text: x[0].name }), inp, U.el('small', { text: 'min' })
+            ]));
+          });
+          frag.appendChild(box);
+        }
+
+        // Descanso largo: ahora o a una hora
+        const brk = U.el('details', { class: 'adjust__break' + (state.plannedBreak ? ' is-planned' : '') });
+        brk.appendChild(U.el('summary', { text: state.plannedBreak
+          ? '🍽 ' + state.plannedBreak.name + ' a las ' + U.fmtClock(new Date(state.plannedBreak.at)) + ' (' + state.plannedBreak.minutes + ' min)'
+          : '🍽 Descanso largo (almuerzo, comida…)' }));
+        let bname = 'Almuerzo', bmin = 30;
+        const names = U.el('div', { class: 'chips' });
+        ['Almuerzo', 'Comida', 'Cena', 'Café', 'Siesta', 'Recado'].forEach(function (n) {
+          names.appendChild(U.el('button', { class: 'chip' + (n === bname ? ' is-active' : ''), type: 'button', text: n,
+            onclick: function () { bname = n; names.querySelectorAll('.chip').forEach(function (c) { c.classList.toggle('is-active', c.textContent === n); }); } }));
+        });
+        const mins = U.el('input', { type: 'number', min: '5', max: '240', step: '5', value: '30', class: 'num-setting', onchange: function () { bmin = U.clamp(parseInt(mins.value, 10) || 30, 5, 240); mins.value = String(bmin); } });
+        const at = U.el('input', { type: 'time', class: 'num-setting adjust__time', value: '14:00' });
+        brk.appendChild(names);
+        brk.appendChild(U.el('div', { class: 'adjust__brow' }, [U.el('span', { text: 'Durante' }), mins, U.el('small', { text: 'min' })]));
+        brk.appendChild(U.el('div', { class: 'adjust__brow' }, [
+          U.el('button', { class: 'btn btn--primary btn--sm', type: 'button', text: 'Empezar ahora',
+            onclick: function () { close(true); Runner.insertBreakNow(bmin, bname); } }),
+          U.el('span', { text: 'o a las' }), at,
+          U.el('button', { class: 'btn btn--ghost btn--sm', type: 'button', text: 'Programar',
+            onclick: function () { Runner.planBreak(at.value, bmin, bname); close(true); } }),
+          state.plannedBreak ? U.el('button', { class: 'btn btn--ghost btn--sm', type: 'button', text: 'Quitar el programado',
+            onclick: function () { Runner.cancelPlannedBreak(); close(true); } }) : null
+        ]));
+        frag.appendChild(brk);
+        return frag;
+      },
+      actions: function (close) {
+        return [
+          U.el('button', { class: 'btn btn--ghost', text: '✓ Terminar bloque ya', onclick: function () { close(true); Runner.doneNow(); } }),
+          U.el('button', { class: 'btn btn--primary', text: 'Listo', onclick: function () { close(true); } })
+        ];
+      }
+    }).then(function () { showChrome(); });
+  };
 
   /* ── Bloques de la sesión en marcha ────────────────────── */
   /**
@@ -1020,6 +1338,7 @@
       endedAt: state.endedAt,
       reason: state.reason,
       game: Game.snapshot(state),
+      thoughts: (state.thoughts || []).slice(),
       blocks: state.blocks.map(function (x) {
         return {
           name: x.name, color: x.color, presetId: x.presetId,
@@ -1073,6 +1392,7 @@
         const frag = document.createDocumentFragment();
         const gameNode = Game.summaryNode(session.game);
         if (gameNode) frag.appendChild(gameNode);
+        if ((session.thoughts || []).length) frag.appendChild(Runner.thoughtsNode(session.thoughts));
         const list = U.el('ul', { class: 'summary-list' });
         frag.appendChild(list);
         list.appendChild(U.el('li', { class: 'hblock' }, [
@@ -1200,8 +1520,9 @@
     const anim = animFor(b);
     if (stage.dataset.anim !== anim) stage.dataset.anim = anim;
 
-    const timeText = state.gate ? U.fmt(0) : U.fmt(left);
-    setLayers('.js-name', state.gate ? b.name + ' · completado' : b.name);
+    const over = !state.gate && b.flow ? elapsedMs() - b.plannedMs : 0;
+    const timeText = state.gate ? U.fmt(0) : over > 0 ? '+' + U.fmt(over) : U.fmt(left);
+    setLayers('.js-name', state.gate ? b.name + ' · completado' : over > 0 ? b.name + ' · tiempo extra' : b.name);
     setLayers('.js-time', timeText);
 
     const phase = renderPause(b, stage);

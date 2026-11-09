@@ -287,6 +287,10 @@
     document.getElementById('btnPause').addEventListener('click', function () { Runner.togglePause(); });
     document.getElementById('btnDistraction').addEventListener('click', function () { Runner.quickDistraction(); });
     document.getElementById('btnGuided').addEventListener('click', function () { Runner.openPauseNow(); });
+    document.getElementById('btnDone').addEventListener('click', function () { Runner.doneNow(); });
+    document.getElementById('btnAdjust').addEventListener('click', function () { Runner.openAdjust(); });
+    document.getElementById('btnThought').addEventListener('click', function () { Runner.parkThought(); });
+    document.getElementById('stage').addEventListener('dblclick', function () { Runner.openAdjust(); });
     document.getElementById('btnCheer').addEventListener('click', function () { Runner.showChrome('stick'); Cheers.open(); });
     document.getElementById('btnPip').addEventListener('click', function () { PiP.toggle(); });
     document.getElementById('btnBlocks').addEventListener('click', function () {
@@ -335,6 +339,9 @@
       if (e.code === 'Space' || k === ' ') { e.preventDefault(); Runner.togglePause(); }
       else if (k === 'd') { e.preventDefault(); Runner.quickDistraction(); }
       else if (k === 'g') { e.preventDefault(); Runner.openPauseNow(); }
+      else if (k === 't') { e.preventDefault(); Runner.openAdjust(); }
+      else if (k === 'h') { e.preventDefault(); Runner.doneNow(); }
+      else if (k === 'n') { e.preventDefault(); Runner.parkThought(); }
       else if (k === 'a' && Room.joined()) { e.preventDefault(); Runner.showChrome('stick'); Cheers.open(); }
       else if (k === 'b') { e.preventDefault(); Runner.showChrome('stick'); Runner.openQueue(); }
       else if (k === 'p') { e.preventDefault(); PiP.toggle(); }

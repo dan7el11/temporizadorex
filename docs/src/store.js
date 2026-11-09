@@ -238,7 +238,8 @@
     breakEvery: 90,          // minutos de estudio entre descansos automáticos
     breakMinutes: 10,        // duración de cada descanso insertado
     breakPresetId: 'p_descanso',
-    offerPause: true,        // ofrecer una pausa guiada al terminar cada bloque
+    offerPause: false,       // ofrecer una pausa guiada al terminar cada bloque
+    flowDefault: false,      // al llegar a 0, seguir contando hasta pulsar «Terminar bloque»
     quickMinutes: 2,         // minutos que se suponen por cada distracción sin pausa
     askQuickCost: true,      // preguntar al final del bloque cuánto costaron
     schedule: DEFAULT_SCHEDULE,
@@ -383,6 +384,8 @@
       }
       if (!Array.isArray(this.data.lostTime)) this.data.lostTime = [];
       if (!Array.isArray(this.data.gameLog)) this.data.gameLog = [];
+      // Ya no se ofrece la pausa al terminar cada bloque (molestaba): se apaga una vez para todos.
+      if (!this.data.settings.migOfferPause) { this.data.settings.offerPause = false; this.data.settings.migOfferPause = true; }
       // Del registro de vidas solo importa el día en curso: se guardan dos semanas.
       const oldest = U.dayKey(Date.now() - 14 * 86400000);
       this.data.gameLog = this.data.gameLog.filter(function (e) { return e && e.day >= oldest; });

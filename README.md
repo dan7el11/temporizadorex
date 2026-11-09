@@ -384,6 +384,43 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
   te propone una pausa de recuperación y, el resto del día, las pausas no cuestan y las distracciones
   cuestan la mitad. También se activa a mano con *Día amable*.
 
+### Bloques flexibles
+El temporizador no te ata a lo planeado:
+- **⏱ Tiempo** (o la tecla T, o doble clic en el reloj): un panel con lo que **queda** del bloque en un
+  **deslizador** (de 0 a varias horas, a 0 lo termina), atajos −15/−5/+5/+15/+30/+1 h, los **minutos de
+  los bloques siguientes escritos directamente** y el interruptor del **modo flow**.
+- **Modo flow**: al llegar a 0 el bloque no se corta; el reloj sigue en **tiempo extra** («+05:12 ·
+  tiempo extra») hasta que pulses **✓ Hecho**. Se activa en cada bloque o para todos en Ajustes.
+- **✓ Hecho** (o H): termina el bloque ya, como hecho (no saltado), cuando acabas antes.
+- Ya **no se ofrece una pausa** al terminar cada bloque (se puede volver a activar en Ajustes).
+
+### Descansos largos (almuerzo, comida…)
+- En **⏱ Tiempo → Descanso largo**: nombre (Almuerzo, Comida, Cena, Café, Siesta, Recado) y minutos,
+  **ahora** o **programado a una hora** (a esa hora se mete solo). El bloque en curso se parte y, al
+  volver, sigue con lo que le quedaba.
+- Al terminar el descanso **no arranca solo**: sale un aviso con un **contador de retraso** (y una
+  notificación a los 5 min). Si vuelves con más de 1 minuto de retraso, ese tiempo va al tiempo
+  perdido y cuesta vida (½ por cada 5 min); si vuelves a tu hora, «¡Puntual!».
+- Los bloques de descanso del plan de 10 min o más funcionan igual.
+
+### Contra el tiempo perdido
+- **💭 Aparcar pensamientos** (botón o tecla N): anotas en segundos lo que te ronda («llamar al
+  banco») sin parar el reloj y sin coste. En el menú de causas también está «Era un pensamiento:
+  anotarlo», que no cuenta como distracción. Se repasan (con casilla de hecho) en el resumen de la
+  sesión y en el fin de jornada.
+- **💸 Deuda de tiempo**: el tiempo perdido del día (pausas, distracciones, vueltas tardías) es deuda;
+  se salda estudiando por encima de tu objetivo diario. La tarjeta *Modo juego* la muestra con su barra
+  y, si ya llegaste al objetivo, ofrece un bloque para saldarla. **La que quede sin saldar resta vidas
+  al día siguiente** (½ por cada 15 min, hasta 3).
+- **😩 Cansancio visible**: con muchas distracciones el avatar tiene ojeras; más aún, párpados caídos y
+  pelo revuelto; y la mesa se llena de bolas de papel, envoltorios y folios por el suelo. Se recupera
+  con bloques limpios y pausas guiadas. Tu pareja lo ve en tu puesto.
+- **⏰ A tu hora**: con el horario activado (Tiempo perdido), la primera sesión de cada franja: si
+  empiezas a tu hora (5 min de margen), +30 XP; si llegas tarde, ½ vida por cada 10 min (hasta 2).
+- **⚔️ Duelo de la semana** (en la sala): quién hace más bloques limpios (sin distracciones, de 10 min
+  o más) de lunes a domingo, con el marcador en la tira de la sala, corona 👑 en el cuarto de quien va
+  ganando y un **premio pactado** que los dos veis. Al empezar la semana se anuncia quién ganó.
+
 ### Modo habitación
 - **Toca la escena** del temporizador y los puestos pasan a ser **cuartos en grande a cada lado del
   reloj**: el tuyo a la izquierda y el de tu pareja a la derecha, **en espejo**. Toca un cuarto para

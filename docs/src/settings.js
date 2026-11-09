@@ -8,6 +8,7 @@
   const TOGGLES = [
     ['sound', 'Sonidos', 'Aviso al empezar y al terminar cada bloque.', 'timer'],
     ['finalBeeps', 'Cuenta atrás final', 'Pitido en los últimos 5 segundos de cada bloque.', 'timer'],
+    ['flowDefault', 'Modo flow en todos los bloques', 'Al llegar a 0 el bloque de estudio no se corta: sigue contando tiempo extra hasta que pulses «✓ Hecho». Se puede cambiar en cada bloque con «⏱ Tiempo».', 'timer'],
     ['autoNext', 'Encadenar bloques automáticamente', 'Si lo desactivas, cada bloque espera a que pulses «Empezar».', 'timer'],
     ['fullscreenOnStart', 'Pantalla completa al iniciar', 'Abre el temporizador a pantalla completa.', 'timer'],
     ['wakeLock', 'Mantener la pantalla encendida', 'Evita que el dispositivo se apague durante la sesión.', 'timer'],

@@ -1622,3 +1622,51 @@ body > .gameover{position:fixed}
 @keyframes scenePlace{0%{transform:translateY(-6px);opacity:0}60%{opacity:1}100%{transform:none}}
 .hud__game{position:relative}
 .hud__tag{position:absolute;right:-6px;top:-6px;font:800 12px/1 var(--font, system-ui);color:#fff;background:#e0365a;padding:2px 6px;border-radius:999px;pointer-events:none;animation:peerTag 1.6s ease forwards}
+
+/* ── Ajuste rápido del bloque ──────────────────────────── */
+.adjust__row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.adjust__label{font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint)}
+.adjust__big{font-size:1.6rem;font-variant-numeric:tabular-nums}
+.adjust__range{width:100% !important;max-width:none !important;accent-color:var(--accent);margin:4px 0 10px;height:28px}
+.adjust__chips{margin-bottom:12px}
+.adjust__flow{margin:4px 0 12px}
+.adjust__next{display:flex;flex-direction:column;gap:6px;margin:6px 0 12px;padding-top:10px;border-top:1px solid var(--line)}
+.adjust__nextrow{display:grid;grid-template-columns:10px minmax(0,1fr) 72px auto;gap:8px;align-items:center;font-size:.86rem}
+.adjust__nextrow input{width:72px;background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:5px 8px;font-variant-numeric:tabular-nums}
+.adjust__break{border-top:1px solid var(--line);padding-top:10px}
+.adjust__break summary{cursor:pointer;font-weight:600;font-size:.9rem;margin-bottom:8px}
+.adjust__break.is-planned summary{color:#ffcf66}
+.adjust__brow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;font-size:.86rem}
+.adjust__time{width:auto}
+/* Vuelta del descanso largo */
+.late-box{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0}
+.late-box__label{font-size:.78rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:.06em}
+.late-counter{font-size:2.6rem;font-weight:800;font-variant-numeric:tabular-nums;color:#5ce0a8}
+.late-counter.is-late{color:#ff6b86;animation:pulse 1.6s ease-in-out infinite}
+/* Pensamientos aparcados */
+.thought-input{width:100%;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:10px 12px;font:inherit}
+.thoughts{display:flex;flex-direction:column;gap:6px;margin:10px 0;padding:10px 12px;border-radius:12px;background:var(--bg-soft);border:1px solid var(--line)}
+.thoughts__title{font-size:.86rem}
+.thoughts__list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.thoughts__list li{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:.86rem}
+.thoughts__list label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.thoughts__list input:checked + span{text-decoration:line-through;color:var(--text-faint)}
+.thoughts__list small{color:var(--text-faint);font-size:.72rem;white-space:nowrap}
+.causepop__btn--park{grid-column:span 2;background:rgba(124,92,255,.14);border-color:rgba(124,92,255,.45)}
+/* Deuda de tiempo */
+.debt{display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-radius:12px;background:rgba(255,107,134,.08);border:1px solid rgba(255,107,134,.35)}
+.debt.is-paid{background:rgba(92,224,168,.08);border-color:rgba(92,224,168,.4)}
+.debt__head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:.86rem}
+.debt__head small{color:var(--text-faint);font-size:.74rem}
+.debt-bar{display:block;height:8px;background:#2a1d26;border:1px solid #5a3442;overflow:hidden}
+.debt-bar__fill{display:block;height:100%;background:repeating-linear-gradient(90deg,#5ce0a8 0 6px,#37c48b 6px 8px)}
+.debt__hint{font-size:.74rem;color:var(--text-faint);line-height:1.35}
+.debt .btn{align-self:flex-start}
+/* Duelo */
+.duel{display:flex;flex-direction:column;gap:6px;margin-top:6px;padding-top:8px;border-top:1px dashed var(--line)}
+.duel__head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:.8rem}
+.duel__title{font-weight:650}
+.duel__score{font-variant-numeric:tabular-nums;color:var(--text-dim)}
+.duel__score .is-lead{color:#ffcf66;font-weight:700}
+.duel__prize{align-self:flex-start;background:none;border:1px dashed var(--line);border-radius:999px;color:var(--text-dim);font:inherit;font-size:.76rem;padding:3px 10px;cursor:pointer}
+.duel__prize:hover{border-color:var(--text-faint);color:var(--text)}

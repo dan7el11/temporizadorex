@@ -588,6 +588,18 @@
         if (f) for (let x = 23; x <= 25; x++) put(px, x, 32, lipLight);
       }
     }
+    // Cansancio (día de muchas distracciones): ojeras y párpados caídos
+    const tired = a.tired || 0;
+    if (tired >= 1 && mood !== 'ko') {
+      const bag = mix(skinR.shadow, '#6b4a8a', 0.3);
+      [17, 18, 19, 20, 27, 28, 29, 30].forEach(function (x) { put(px, x, 26, bag); });
+      if (tired >= 2) { put(px, 18, 27, bag); put(px, 19, 27, bag); put(px, 28, 27, bag); put(px, 29, 27, bag); }
+    }
+    if (tired >= 2 && mood !== 'ko' && mood !== 'blink' && mood !== 'hurt') {
+      // Párpados a media asta
+      for (let x = 17; x <= 20; x++) put(px, x, 24, ink);
+      for (let x = 27; x <= 30; x++) put(px, x, 24, ink);
+    }
     // Nariz: sombra a la derecha, brillo arriba
     put(px, 24, 26, skinR.light); put(px, 25, 27, skinR.shadow); put(px, 25, 28, skinR.shadow);
     put(px, 23, 29, skinR.shadow); put(px, 24, 29, skinR.deep);
@@ -752,6 +764,14 @@
         const n = Math.max(Math.abs(p1[0] - p0[0]), Math.abs(p1[1] - p0[1]));
         for (let k = 0; k <= n; k++) put(px, Math.round(p0[0] + (p1[0] - p0[0]) * k / n), Math.round(p0[1] + (p1[1] - p0[1]) * k / n), k % 2 ? '#e0546f' : '#f27a92');
       }
+    }
+
+    // 7b. Pelo revuelto cuando el día está siendo duro
+    if ((a.tired || 0) >= 2 && !st.scalp && a.hat !== 'gorro') {
+      const hR2 = hairR;
+      [[18, 5], [19, 4], [26, 5], [27, 4], [28, 3], [22, 4]].slice(0, a.tired >= 3 ? 6 : 3).forEach(function (p) {
+        if (!get(px, p[0], p[1])) { put(px, p[0], p[1], hR2.base); put(px, p[0], p[1] + 1, hR2.shadow); }
+      });
     }
 
     // 7c. Gorro de quirófano, estampado, con las cintas detrás
