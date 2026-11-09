@@ -1674,3 +1674,11 @@ body > .gameover{position:fixed}
 .pet-name{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:6px 10px;font:inherit;width:min(220px,100%)}
 .swatch--none{border:2px dashed var(--line);background:transparent;position:relative}
 .swatch--none::after{content:'';position:absolute;left:50%;top:15%;bottom:15%;width:2px;margin-left:-1px;background:var(--text-faint);transform:rotate(45deg)}
+/* Controles más compactos: los secundarios, solo icono (con su texto en pantallas muy anchas) */
+.ctrl--icon{min-width:44px;justify-content:center}
+.ctrl--icon .ico,.ctrl--icon [data-icon]{margin:0}
+.ctrl__count{font-weight:800}
+@media (max-width:1599px){ .ctrl__txt{display:none} .ctrl--icon{padding-left:12px;padding-right:12px;font-size:1.05rem} }
+.study-scene.is-corner-right{left:auto;right:16px;align-items:flex-end}
+.study-scene.is-mini .study-station__art > svg{width:64px}
+.study-scene.is-mini .study-station__name,.study-scene.is-mini .study-scene__coop{display:none}

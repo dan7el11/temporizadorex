@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="assets/styles.css?v=34">
+<link rel="stylesheet" href="assets/styles.css?v=35">
 </head>
 <body>
 
@@ -413,11 +413,11 @@
       <button class="ctrl ctrl--primary" id="btnPause" title="Pausar (Espacio)">Pausar</button>
       <button class="ctrl" id="btnDistraction" title="Distracción rápida sin pausar (D)">+ Distracción</button>
       <button class="ctrl" id="btnDone" title="Terminar este bloque ya, como hecho (H)">✓ Hecho</button>
-      <button class="ctrl" id="btnAdjust" title="Cambiar el tiempo que queda, modo flow y descansos largos (T o doble clic en el reloj)">⏱ Tiempo</button>
-      <button class="ctrl" id="btnThought" title="Aparcar un pensamiento sin parar el reloj (N)">💭 Anotar</button>
-      <button class="ctrl ctrl--guided" id="btnGuided" title="Pausa guiada ahora; luego sigues con este bloque (G)"><span data-icon="wind"></span>Pausa guiada</button>
-      <button class="ctrl" id="btnPip" title="Miniatura Picture in Picture (P)">Miniatura</button>
-      <button class="ctrl" id="btnBlocks" title="Ver y cambiar los bloques de la sesión (B)">Bloques</button>
+      <button class="ctrl ctrl--icon" id="btnAdjust" title="Tiempo: cambiar lo que queda, modo flow y descansos largos (T o doble clic en el reloj)" aria-label="Tiempo">⏱<span class="ctrl__txt"> Tiempo</span></button>
+      <button class="ctrl ctrl--icon" id="btnThought" title="Anotar: aparcar un pensamiento sin parar el reloj (N)" aria-label="Anotar un pensamiento">💭<span class="ctrl__txt"> Anotar</span><span class="ctrl__count"></span></button>
+      <button class="ctrl ctrl--guided ctrl--icon" id="btnGuided" title="Pausa guiada ahora; luego sigues con este bloque (G)" aria-label="Pausa guiada"><span data-icon="wind"></span><span class="ctrl__txt">Pausa guiada</span></button>
+      <button class="ctrl ctrl--icon" id="btnPip" title="Miniatura Picture in Picture (P)" aria-label="Miniatura">⧉<span class="ctrl__txt"> Miniatura</span></button>
+      <button class="ctrl ctrl--icon" id="btnBlocks" title="Ver y cambiar los bloques de la sesión (B)" aria-label="Bloques">☰<span class="ctrl__txt"> Bloques</span></button>
       <button class="ctrl" id="btnTogether" title="Proponer un descanso a la sala" hidden>Descanso juntos</button>
       <button class="ctrl ctrl--danger" id="btnEnd" title="Terminar la sesión">Terminar</button>
     </div>
@@ -429,33 +429,33 @@
 <video id="pipVideo" playsinline muted hidden></video>
 <canvas id="pipCanvas" width="640" height="360" hidden></canvas>
 
-<script src="src/utils.js?v=34"></script>
-<script src="src/store.js?v=34"></script>
-<script src="src/audio.js?v=34"></script>
-<script src="src/ui.js?v=34"></script>
-<script src="src/reasons.js?v=34"></script>
-<script src="src/topics.js?v=34"></script>
-<script src="src/pauses.js?v=34"></script>
-<script src="src/lost.js?v=34"></script>
-<script src="src/notify.js?v=34"></script>
-<script src="src/sync.js?v=34"></script>
-<script src="src/room.js?v=34"></script>
-<script src="src/cheers.js?v=34"></script>
-<script src="src/push.js?v=34"></script>
-<script src="src/avatar.js?v=34"></script>
-<script src="src/game.js?v=34"></script>
-<script src="src/scene.js?v=34"></script>
-<script src="src/rooms.js?v=34"></script>
-<script src="src/coop.js?v=34"></script>
-<script src="src/progress.js?v=34"></script>
-<script src="src/between.js?v=34"></script>
-<script src="src/library.js?v=34"></script>
-<script src="src/planner.js?v=34"></script>
-<script src="src/pip.js?v=34"></script>
-<script src="src/runner.js?v=34"></script>
-<script src="src/day.js?v=34"></script>
-<script src="src/history.js?v=34"></script>
-<script src="src/settings.js?v=34"></script>
-<script src="src/app.js?v=34"></script>
+<script src="src/utils.js?v=35"></script>
+<script src="src/store.js?v=35"></script>
+<script src="src/audio.js?v=35"></script>
+<script src="src/ui.js?v=35"></script>
+<script src="src/reasons.js?v=35"></script>
+<script src="src/topics.js?v=35"></script>
+<script src="src/pauses.js?v=35"></script>
+<script src="src/lost.js?v=35"></script>
+<script src="src/notify.js?v=35"></script>
+<script src="src/sync.js?v=35"></script>
+<script src="src/room.js?v=35"></script>
+<script src="src/cheers.js?v=35"></script>
+<script src="src/push.js?v=35"></script>
+<script src="src/avatar.js?v=35"></script>
+<script src="src/game.js?v=35"></script>
+<script src="src/scene.js?v=35"></script>
+<script src="src/rooms.js?v=35"></script>
+<script src="src/coop.js?v=35"></script>
+<script src="src/progress.js?v=35"></script>
+<script src="src/between.js?v=35"></script>
+<script src="src/library.js?v=35"></script>
+<script src="src/planner.js?v=35"></script>
+<script src="src/pip.js?v=35"></script>
+<script src="src/runner.js?v=35"></script>
+<script src="src/day.js?v=35"></script>
+<script src="src/history.js?v=35"></script>
+<script src="src/settings.js?v=35"></script>
+<script src="src/app.js?v=35"></script>
 </body>
 </html>

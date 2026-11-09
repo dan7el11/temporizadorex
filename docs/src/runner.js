@@ -785,9 +785,9 @@
   function saveThoughts(list) { try { localStorage.setItem(THOUGHTS_KEY, JSON.stringify(list.slice(-200))); } catch (e) { /* noop */ } }
   Runner.thoughts = function () { return allThoughts(); };
   function paintThoughtBtn() {
-    const btn = document.getElementById('btnThought');
+    const btn = document.querySelector('#btnThought .ctrl__count');
     const n = state && state.thoughts ? state.thoughts.length : 0;
-    if (btn) btn.textContent = '💭 Anotar' + (n ? ' (' + n + ')' : '');
+    if (btn) btn.textContent = n ? ' ' + n : '';
   }
   /**
    * Anota en pocos segundos lo que te ronda la cabeza («llamar al banco») sin

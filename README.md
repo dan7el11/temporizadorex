@@ -347,7 +347,8 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
   Ajustes.
 - **El reloj no se mueve**: sigue en la mitad de la pantalla. La escena va en el hueco entre el
   subtítulo y los controles; si no cabe (pantallas anchas y bajas), pasa a la esquina inferior
-  izquierda, junto a los controles, tan grande como quepa; y si tampoco hay sitio (móvil en
+  (izquierda o derecha, la que tenga más sitio) junto a los controles, tan grande como quepa; si
+  tampoco, en pequeño bajo el subtítulo; y si tampoco hay sitio (móvil en
   horizontal), se oculta. Nunca tapa el reloj. En las pausas guiadas se oculta para dejar la
   respiración en el centro.
 - **La escena del golpe sale de la mesa**: el avatar está sentado, se levanta y recibe el golpe (o se
@@ -392,6 +393,8 @@ El temporizador no te ata a lo planeado:
 - **Modo flow**: al llegar a 0 el bloque no se corta; el reloj sigue en **tiempo extra** («+05:12 ·
   tiempo extra») hasta que pulses **✓ Hecho**. Se activa en cada bloque o para todos en Ajustes.
 - **✓ Hecho** (o H): termina el bloque ya, como hecho (no saltado), cuando acabas antes.
+- Los botones secundarios del temporizador (⏱ Tiempo, 💭 Anotar, pausa guiada, ⧉ miniatura y ☰ bloques)
+  son solo iconos con su descripción al pasar el ratón; en pantallas muy anchas llevan también el texto.
 - Ya **no se ofrece una pausa** al terminar cada bloque (se puede volver a activar en Ajustes).
 
 ### Descansos largos (almuerzo, comida…)

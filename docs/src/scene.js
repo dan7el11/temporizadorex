@@ -631,7 +631,7 @@
     if (!runner || !box) return;
     runner.classList.remove('has-scene', 'scene-on');
     runner.style.removeProperty('--scene-space');
-    box.classList.remove('is-corner', 'is-compact', 'is-off');
+    box.classList.remove('is-corner', 'is-corner-right', 'is-compact', 'is-mini', 'is-off');
     box.style.removeProperty('bottom');
     box.style.removeProperty('--station-w');
     const rooms = document.getElementById('studyRooms');
@@ -685,17 +685,28 @@
     if (below()) return;
     box.classList.add('is-compact');
     if (below()) return;
-    // Esquina inferior izquierda, junto a los controles: el reloj no se toca
+    // Esquina inferior (la que tenga más sitio), junto a los controles: el reloj no se toca
     box.classList.remove('is-compact');
     box.classList.add('is-corner');
-    // Cada puesto tan grande como quepa a la izquierda de los controles
+    const vw = window.innerWidth;
+    const leftSpace = c.left - 24, rightSpace = vw - c.right - 24;
+    const right = rightSpace > leftSpace;
+    if (right) box.classList.add('is-corner-right');
+    const space = Math.max(leftSpace, rightSpace);
     const n = box.querySelectorAll('.study-station').length || 1;
-    const w = Math.floor(Math.min(170, (c.left - 24 - 28 * (n - 1)) / n));
-    if (w >= 80) {
+    const w = Math.floor(Math.min(170, (space - 16 * (n - 1)) / n));
+    if (w >= 64) {
       box.style.setProperty('--station-w', w + 'px');
-      // Por la izquierda no pisa el texto centrado: basta con que no suba más allá del subtítulo
-      if (c.bottom - box.offsetHeight > contentBottom - 60 || box.getBoundingClientRect().right < window.innerWidth * 0.22) return;
+      // Por el lado no pisa el texto centrado: basta con que no suba más allá del subtítulo
+      const r = box.getBoundingClientRect();
+      if (c.bottom - box.offsetHeight > contentBottom - 60 || r.right < vw * 0.22 || r.left > vw * 0.78) return;
     }
+    // Último recurso: muy pequeña en el hueco bajo el subtítulo
+    box.classList.remove('is-corner', 'is-corner-right');
+    box.style.removeProperty('--station-w');
+    box.classList.add('is-compact', 'is-mini');
+    if (below()) return;
+    box.classList.remove('is-mini');
     box.classList.add('is-off');
   }
   Scene.layout = layout;
