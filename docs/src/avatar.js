@@ -1189,6 +1189,29 @@
       rows.appendChild(row('Mascota', lockChips([
         ['pet', '', '', 'Ninguna'], ['pet', 'gato', '', '🐈 Gato', 'pet:gato'], ['pet', 'perro', '', '🐕 Perro', 'pet:perro'], ['pet', 'buho', '', '🦉 Búho', 'pet:buho']
       ])));
+      if (cfg.pet) {
+        // Tu mascota: raza, collar, chompa, lazo y nombre
+        const breeds = cfg.pet === 'gato' ? Scene.CAT_BREEDS : cfg.pet === 'perro' ? Scene.DOG_BREEDS : null;
+        if (breeds) rows.appendChild(row('Raza', lockChips(breeds.map(function (b) { return ['petBreed', b[0], '', b[1], b[2]]; }))));
+        const swPet = function (list, key, lockId) {
+          const sw = U.el('div', { class: 'swatches' });
+          list.forEach(function (c) {
+            const lock = c[0] && lockId && !Avatar.unlocked(lockId) ? lockId : null;
+            sw.appendChild(U.el('button', {
+              class: 'swatch' + ((cfg[key] || '') === c[0] ? ' is-active' : '') + (!c[0] ? ' swatch--none' : '') + (c[0] === 'stripes' ? ' swatch--stripes' : '') + (lock ? ' is-locked' : ''),
+              type: 'button', style: c[0] && c[0] !== 'stripes' ? { background: c[0] } : {}, title: lock ? c[1] + ' · 🔒 ' + Progress.unlockLabel(lock) : c[1], 'aria-label': c[1],
+              onclick: function () { if (lock) { UI.toast('🔒 Chompas: se desbloquean con ' + Progress.unlockLabel(lock)); return; } cfg[key] = c[0]; save(); }
+            }));
+          });
+          return sw;
+        };
+        rows.appendChild(row('Collar', swPet(Scene.PET_COLLARS, 'petCollar')));
+        rows.appendChild(row('Chompa', swPet(Scene.PET_SWEATERS, 'petSweater', 'pet:chompa')));
+        rows.appendChild(row('Lazo', lockChips([['petBow', true, false, '🎀 Lazo', 'pet:lazo']], true)));
+        const nm = U.el('input', { type: 'text', class: 'pet-name', maxlength: '14', value: cfg.petName || '', placeholder: 'Ponle nombre',
+          onchange: function () { cfg.petName = nm.value.trim().slice(0, 14); save(); } });
+        rows.appendChild(row('Nombre', nm));
+      }
       rows.appendChild(row('Fondo', lockChips([
         ['bg', '', '', 'Ninguno'], ['bg', 'biblioteca', '', '📚 Biblioteca', 'bg:biblioteca'], ['bg', 'hospital', '', '🏥 Hospital de noche', 'bg:hospital'], ['bg', 'habitacion', '', '🪟 Habitación', 'bg:habitacion']
       ])));

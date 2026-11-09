@@ -1670,3 +1670,7 @@ body > .gameover{position:fixed}
 .duel__score .is-lead{color:#ffcf66;font-weight:700}
 .duel__prize{align-self:flex-start;background:none;border:1px dashed var(--line);border-radius:999px;color:var(--text-dim);font:inherit;font-size:.76rem;padding:3px 10px;cursor:pointer}
 .duel__prize:hover{border-color:var(--text-faint);color:var(--text)}
+.swatch--stripes{background:repeating-linear-gradient(180deg,#c4405a 0 4px,#f4efe6 4px 8px)}
+.pet-name{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:6px 10px;font:inherit;width:min(220px,100%)}
+.swatch--none{border:2px dashed var(--line);background:transparent;position:relative}
+.swatch--none::after{content:'';position:absolute;left:50%;top:15%;bottom:15%;width:2px;margin-left:-1px;background:var(--text-faint);transform:rotate(45deg)}

@@ -114,107 +114,189 @@
     return P;
   }
 
+  /* Razas (colores y rasgos) y complementos */
+  const CAT_BREEDS = {
+    naranja: { O: '#e8913a', D: '#b9652a', W: '#fff2e2', K: '#7a3e16', G: '#8fd14f' },
+    gris: { O: '#9aa0aa', D: '#5f6570', W: '#e8eaee', K: '#3f444d', G: '#e0c341' },
+    negro: { O: '#2e2a33', D: '#1c1a20', W: '#4a4452', K: '#121016', G: '#e8d24a', noStripes: true },
+    siames: { O: '#efe2c8', D: '#5a4030', W: '#fff8ea', K: '#7a5a40', G: '#5aa0e8', points: true, noStripes: true },
+    calico: { O: '#fbf7f0', D: '#2e2a33', W: '#ffffff', K: '#8a7a6a', G: '#8fd14f', calico: true, noStripes: true }
+  };
+  const DOG_BREEDS = {
+    dorado: { C: '#d9a066', B: '#8a5a34', L: '#f4dcb4', K: '#a8743e', E: '#1d1410' },
+    dalmata: { C: '#f6f4ef', B: '#2b2b2b', L: '#ffffff', K: '#cfcac0', E: '#1d1410', spots: true },
+    carlino: { C: '#e3c08a', B: '#2b2420', L: '#e3c08a', K: '#b8925e', E: '#1d1410', mask: true },
+    husky: { C: '#8b94a3', B: '#5b6372', L: '#ffffff', K: '#6b7383', E: '#3d7fd0', husky: true }
+  };
+  Scene.CAT_BREEDS = [['naranja', 'Naranja'], ['negro', 'Negro', 'pet:gato-negro'], ['gris', 'Gris atigrado', 'pet:gato-gris'], ['siames', 'Siamés', 'pet:siames'], ['calico', 'Calicó', 'pet:calico']];
+  Scene.DOG_BREEDS = [['dorado', 'Dorado'], ['dalmata', 'Dálmata', 'pet:dalmata'], ['carlino', 'Carlino', 'pet:carlino'], ['husky', 'Husky', 'pet:husky']];
+  Scene.PET_COLLARS = [['', 'Sin collar'], ['#e0365a', 'Rojo'], ['#3f72e8', 'Azul'], ['#2e9a5a', 'Verde'], ['#ff7ab0', 'Rosa']];
+  Scene.PET_SWEATERS = [['', 'Sin chompa'], ['#c4405a', 'Granate'], ['#3f72e8', 'Azul'], ['#2e9a5a', 'Verde'], ['stripes', 'A rayas']];
+  function sweaterRows(P, x, y, w, h, c) {
+    for (let k = 0; k < h; k++) P(x, y + k, w, 1, c === 'stripes' ? (k % 2 ? '#f4efe6' : '#c4405a') : c);
+    // Puntos de punto (textura de lana)
+    if (c !== 'stripes') for (let i = 1; i < w; i += 2) P(x + i, y + h - 1, 1, 1, '#ffffff33');
+  }
+
   // Gato: duerme hecho una bola sobre los libros, mueve una oreja, se despierta,
-  // mira, mueve la cola, bosteza y se vuelve a dormir.
-  function drawCat(st) {
-    const O = '#e8913a', D = '#b9652a', K = '#7a3e16', W = '#fff2e2', Pk = '#f4a6a6', G = '#8fd14f', E = '#2b1a10';
+  // mira, mueve la cola, se lame la pata, bosteza, se estira y se vuelve a dormir.
+  function drawCat(st, v) {
+    const c = CAT_BREEDS[v.breed] || CAT_BREEDS.naranja;
+    const O = c.O, D = c.D, K = c.K, W = c.W, Pk = '#f4a6a6', G = c.G, E = '#2b1a10';
     const P = rectsAt(0, 0);
+    const tailC = c.points ? D : O;
+    const st2 = st.stretch ? 1 : 0;   // al estirarse, el lomo sube
     // Cola
-    if (st.tail === 'curl') { P(1, 7, 3, 1, O); P(0, 6, 1, 1, O); P(0, 5, 1, 1, D); }
-    else if (st.tail === 'a') { P(1, 3, 1, 4, O); P(0, 2, 2, 1, O); P(0, 1, 1, 1, D); P(2, 7, 1, 1, O); }
-    else { P(0, 3, 1, 3, O); P(1, 2, 1, 1, O); P(1, 1, 1, 1, D); P(1, 6, 2, 1, O); }
-    // Cuerpo tumbado, con rayas y tripa clara
-    P(3, 3, 8, 1, K); P(3, 4, 9, 1, O); P(2, 5, 11, 3, O); P(3, 8, 9, 1, K);
-    P(5, 4, 1, 2, D); P(8, 4, 1, 2, D); P(11, 5, 1, 2, D); P(4, 7, 7, 1, W);
-    P(11, 8, 3, 1, W);   // patitas delante
+    if (st.tail === 'curl') { P(1, 7, 3, 1, tailC); P(0, 6, 1, 1, tailC); P(0, 5, 1, 1, D); }
+    else if (st.tail === 'a') { P(1, 3, 1, 4, tailC); P(0, 2, 2, 1, tailC); P(0, 1, 1, 1, D); P(2, 7, 1, 1, tailC); }
+    else { P(0, 3, 1, 3, tailC); P(1, 2, 1, 1, tailC); P(1, 1, 1, 1, D); P(1, 6, 2, 1, tailC); }
+    // Cuerpo tumbado (o arqueado al estirarse)
+    P(3, 3 - st2, 8, 1, K); P(3, 4 - st2, 9, 1, O); P(2, 5 - st2, 11, 3 + st2, O); P(3, 8, 9, 1, K);
+    if (!c.noStripes) { P(5, 4 - st2, 1, 2, D); P(8, 4 - st2, 1, 2, D); P(11, 5 - st2, 1, 2, D); }
+    if (c.calico) { P(4, 4 - st2, 3, 2, '#e8913a'); P(8, 5, 3, 2, '#2e2a33'); P(3, 6, 2, 1, '#2e2a33'); }
+    P(4, 7, 7, 1, W);
+    if (v.sweater) sweaterRows(P, 4, 4 - st2, 7, 3 + st2, v.sweater);
+    P(11, 8, 3, 1, c.points ? D : W);   // patitas delante
     // Cabeza
     const hy = st.head === 'down' ? 3 : 1;
-    P(10, hy + 1, 6, 4, O); P(11, hy, 4, 1, O); P(10, hy + 5, 6, 1, K); P(12, hy, 2, 1, D);
+    P(10, hy + 1, 6, 4, O); P(11, hy, 4, 1, O); P(10, hy + 5, 6, 1, K);
+    if (!c.noStripes) P(12, hy, 2, 1, D);
+    if (c.calico) P(13, hy, 3, 2, '#e8913a');
+    if (c.points) P(11, hy + 2, 4, 3, D);   // máscara del siamés
     // Orejas (una se mueve de vez en cuando)
-    if (st.ear === 'twitch') { P(10, hy - 1, 2, 1, O); } else { P(10, hy - 1, 2, 1, O); P(10, hy - 2, 1, 1, O); P(11, hy - 1, 1, 1, Pk); }
-    P(14, hy - 1, 2, 1, O); P(15, hy - 2, 1, 1, O); P(14, hy - 1, 1, 1, Pk);
+    const earC = c.points ? D : O;
+    if (st.ear === 'twitch') { P(10, hy - 1, 2, 1, earC); } else { P(10, hy - 1, 2, 1, earC); P(10, hy - 2, 1, 1, earC); P(11, hy - 1, 1, 1, Pk); }
+    P(14, hy - 1, 2, 1, earC); P(15, hy - 2, 1, 1, earC); P(14, hy - 1, 1, 1, Pk);
+    if (v.bow) { P(12, hy - 2, 1, 2, '#ff7ab0'); P(14, hy - 2, 1, 2, '#ff7ab0'); P(13, hy - 1, 1, 1, '#e0365a'); }
     // Ojos, nariz y boca
-    if (st.eyes === 'open') { P(11, hy + 2, 1, 1, G); P(14, hy + 2, 1, 1, G); P(11, hy + 1, 1, 1, O); }
+    const ex = st.look === 'left' ? -1 : 0;
+    if (st.eyes === 'open') { P(11 + ex, hy + 2, 1, 1, G); P(14 + ex, hy + 2, 1, 1, G); }
     else { P(11, hy + 2, 1, 1, E); P(14, hy + 2, 1, 1, E); }
     P(12, hy + 3, 2, 1, Pk);
     if (st.mouth === 'yawn') { P(12, hy + 4, 2, 2, '#c0425a'); P(12, hy + 4, 2, 1, '#7a2034'); }
+    if (st.mouth === 'lick') P(13, hy + 4, 1, 1, '#e05a72');
+    // Pata levantada (se lame)
+    if (st.paw) { P(12, hy + 4 + (st.paw === 2 ? -1 : 0), 2, 2, c.points ? D : W); }
+    // Collar con cascabel
+    if (v.collar) { P(10, hy + 5, 6, 1, v.collar); P(12, hy + 6, 1, 1, '#f5d23a'); }
     return P.out();
   }
   const CAT_SEQ = (function () {
     const s = [];
-    const sleep = { head: 'down', eyes: 'closed', ear: 'up', tail: 'curl', mouth: '' };
+    const sleep = { head: 'down', eyes: 'closed', ear: 'up', tail: 'curl', mouth: '', paw: 0, stretch: 0, look: '' };
     const add = function (n, st) { for (let i = 0; i < n; i++) s.push(Object.assign({}, sleep, st)); };
-    add(16, {}); add(1, { ear: 'twitch' }); add(3, {}); add(1, { ear: 'twitch' }); add(2, {});
-    add(2, { head: 'up' }); add(2, { head: 'up', eyes: 'open' });
+    add(14, {}); add(1, { ear: 'twitch' }); add(3, {}); add(1, { ear: 'twitch' }); add(2, {});
+    add(2, { head: 'up' }); add(2, { head: 'up', eyes: 'open' }); add(2, { head: 'up', eyes: 'open', look: 'left' });
     for (let i = 0; i < 3; i++) { add(1, { head: 'up', eyes: 'open', tail: 'a' }); add(1, { head: 'up', eyes: 'open', tail: 'b' }); }
-    add(1, { head: 'up' }); add(2, { head: 'up', eyes: 'open', tail: 'a' });
-    add(3, { head: 'up', mouth: 'yawn' }); add(2, { head: 'up' }); add(10, {});
+    add(1, { head: 'up' });
+    // Se lame la pata
+    for (let i = 0; i < 3; i++) { add(1, { head: 'up', paw: 2, mouth: 'lick' }); add(1, { head: 'up', paw: 1 }); }
+    add(2, { head: 'up', eyes: 'open', tail: 'a' });
+    add(3, { head: 'up', mouth: 'yawn' });
+    add(3, { head: 'up', stretch: 1, tail: 'a' }); add(1, { head: 'up' });
+    add(12, {});
     return s;
   })();
 
-  // Perro: sentado delante de la mesa, jadea, mueve la cola, parpadea, mira por
-  // la ventana e inclina la cabeza con las orejas en alto.
-  function drawDog(st) {
-    const C = '#d9a066', B = '#8a5a34', L = '#f4dcb4', E = '#1d1410', K = '#a8743e', T = '#e05a72';
+  // Perro: sentado, jadea, mueve la cola, parpadea, mira por la ventana, inclina
+  // la cabeza, «ladra», se rasca la oreja y a ratos se tumba a dormir.
+  function drawDog(st, v) {
+    const c = DOG_BREEDS[v.breed] || DOG_BREEDS.dorado;
+    const C = c.C, B = c.B, L = c.L, K = c.K, E = c.E, T = '#e05a72', N = '#1d1410';
     const P = rectsAt(0, 0);
-    // Cola (se mueve arriba y abajo)
+    if (st.lie) {
+      // Tumbado durmiendo
+      P(10, 10, 2, 1, C);
+      P(1, 7, 10, 4, C); P(3, 8, 6, 2, L); P(1, 11, 3, 1, L); P(7, 11, 3, 1, L);
+      if (c.spots) { P(2, 8, 1, 1, B); P(9, 9, 1, 1, B); P(5, 10, 1, 1, B); }
+      if (v.sweater) sweaterRows(P, 2, 7, 8, 2, v.sweater);
+      P(2, 4, 8, 4, C); P(3, 3, 6, 1, C); P(4, 6, 4, 2, c.mask ? '#3a302a' : L); P(5, 6, 2, 1, N);
+      P(1, 4, 1, 4, B); P(10, 4, 1, 4, B);
+      if (c.husky) P(4, 4, 4, 2, L);
+      P(4, 5, 1, 1, K); P(7, 5, 1, 1, K);
+      if (v.collar) P(3, 8, 6, 1, v.collar);
+      if (v.bow) { P(4, 2, 1, 2, '#ff7ab0'); P(6, 2, 1, 2, '#ff7ab0'); P(5, 3, 1, 1, '#e0365a'); }
+      // Zzz
+      const zy = st.z ? 0 : 1;
+      P(10, zy, 2, 1, '#ffffff'); P(11, zy + 1, 1, 1, '#ffffff'); P(10, zy + 2, 2, 1, '#ffffff');
+      return P.out();
+    }
+    // Cola (arriba y abajo)
     if (st.tail === 'up') { P(10, 7, 2, 1, C); P(11, 6, 1, 1, C); } else { P(10, 9, 2, 1, C); P(11, 10, 1, 1, C); }
     // Cuerpo sentado
     P(3, 6, 6, 5, C); P(4, 7, 4, 3, L); P(2, 9, 1, 2, K); P(9, 9, 1, 2, K); P(3, 11, 2, 1, L); P(7, 11, 2, 1, L);
+    if (c.spots) { P(3, 7, 1, 1, B); P(8, 8, 1, 1, B); P(5, 10, 1, 1, B); }
+    if (v.sweater) sweaterRows(P, 3, 7, 6, 3, v.sweater);
+    // Pata de atrás rascando la oreja
+    if (st.scratch) { P(9, 4 + (st.scratch === 2 ? 1 : 0), 2, 3, C); P(10, 3 + (st.scratch === 2 ? 1 : 0), 1, 1, K); }
     // Cabeza (se inclina un píxel)
     const hx = st.tilt ? 1 : 0, hy = st.tilt ? -1 : 0;
-    P(2 + hx, 1, 8, 5, C); P(3 + hx, 0, 6, 1, C); P(4 + hx, 4, 4, 2, L); P(5 + hx, 4, 2, 1, E);
+    P(2 + hx, 1, 8, 5, C); P(3 + hx, 0, 6, 1, C);
+    if (c.spots) { P(3 + hx, 1, 1, 1, B); P(8 + hx, 3, 1, 1, B); }
+    if (c.husky) { P(4 + hx, 1, 4, 3, L); P(5 + hx, 0, 2, 1, L); }
+    P(4 + hx, 4, 4, 2, c.mask ? '#3a302a' : L); P(5 + hx, 4, 2, 1, N);
     P(5 + hx, 5, 2, 1, K);
     // Orejas caídas, o en alto cuando presta atención
     if (st.tilt) { P(1 + hx, 0, 1, 2, B); P(0 + hx, 1, 1, 1, B); P(10 + hx, 1, 1, 4, B); }
     else { P(1, 1, 1, 4, B); P(10, 1, 1, 4, B); P(1, 5, 1, 1, K); P(10, 5, 1, 1, K); }
+    if (v.bow) { P(4 + hx, -1, 1, 2, '#ff7ab0'); P(6 + hx, -1, 1, 2, '#ff7ab0'); P(5 + hx, 0, 1, 1, '#e0365a'); }
     // Ojos
     const ex = st.eyes === 'left' ? -1 : st.eyes === 'right' ? 1 : 0;
-    if (st.eyes === 'closed') { P(4 + hx, 2 + hy + 1, 1, 1, K); P(7 + hx, 2 + hy + 1, 1, 1, K); }
+    if (st.eyes === 'closed') { P(4 + hx, 3 + hy, 1, 1, K); P(7 + hx, 3 + hy, 1, 1, K); }
     else { P(4 + hx + ex, 2, 1, 1, E); P(7 + hx + ex, 2, 1, 1, E); P(4 + hx + ex, 1, 1, 1, '#ffffff'); }
-    // Lengua fuera (jadeando)
-    if (st.tongue) { P(5 + hx, 6, 2, 1, T); P(5 + hx, 7, 1, 1, T); }
+    // Lengua fuera (jadeando) o boca abierta («¡guau!»)
+    if (st.bark) { P(5 + hx, 5, 2, 2, '#7a2034'); P(11, 0, 1, 2, '#ffffff'); P(11, 3, 1, 1, '#ffffff'); }
+    else if (st.tongue) { P(5 + hx, 6, 2, 1, T); P(5 + hx, 7, 1, 1, T); }
+    if (v.collar) { P(3, 6, 6, 1, v.collar); P(5, 7, 2, 1, '#f5d23a'); }
     return P.out();
   }
   const DOG_SEQ = (function () {
     const s = [];
-    for (let i = 0; i < 40; i++) {
-      const st = { tail: i % 2 ? 'up' : 'down', tongue: Math.floor(i / 2) % 2 === 0 && !(i >= 30 && i < 36), eyes: 'open', tilt: false };
+    for (let i = 0; i < 64; i++) {
+      const st = { tail: i % 2 ? 'up' : 'down', tongue: Math.floor(i / 2) % 2 === 0, eyes: 'open', tilt: false, bark: false, scratch: 0, lie: false, z: false };
       if (i === 9 || i === 27) st.eyes = 'closed';
-      if (i >= 14 && i < 20) st.eyes = 'left';      // mira hacia la ventana
-      if (i >= 30 && i < 36) { st.tilt = true; st.eyes = 'right'; }   // ¿qué estudias?
+      if (i >= 14 && i < 20) st.eyes = 'left';                       // mira hacia la ventana
+      if (i >= 22 && i < 26) { st.tilt = true; st.eyes = 'right'; st.tongue = false; }   // ¿qué estudias?
+      if (i === 28 || i === 30) { st.bark = true; st.tongue = false; }  // ¡guau!
+      if (i >= 33 && i < 39) { st.scratch = i % 2 ? 2 : 1; st.eyes = 'closed'; st.tongue = false; st.tail = 'down'; }
+      if (i >= 42 && i < 62) { st.lie = true; st.z = Math.floor(i / 3) % 2 === 0; }   // siesta
       s.push(st);
     }
     return s;
   })();
 
-  // Búho: posado en el flexo, parpadea, gira la cabeza y bate las alas con un saltito.
-  function drawOwl(st) {
+  // Búho: posado en el flexo, parpadea, gira la cabeza, ulula y bate las alas.
+  function drawOwl(st, v) {
     const b = '#8a5a34', d = '#5c3820', w = '#fff8e0', k = '#1d1410', y = '#f2b233', L = '#d9b48a';
     const P = rectsAt(0, 0);
     const dy = st.hop ? -1 : 0, lx = st.look || 0;
     P(2, 3 + dy, 5, 5, b); P(3, 5 + dy, 3, 3, L); P(4, 6 + dy, 1, 1, d);
+    if (v.sweater) sweaterRows(P, 2, 5 + dy, 5, 2, v.sweater);
     P(1, 0 + dy, 7, 4, b); P(1, -1 + dy, 1, 1, b); P(7, -1 + dy, 1, 1, b);
     if (st.eyes === 'closed') { P(2 + lx, 2 + dy, 2, 1, d); P(5 + lx, 2 + dy, 2, 1, d); }
     else {
       P(2 + lx, 1 + dy, 2, 2, w); P(5 + lx, 1 + dy, 2, 2, w);
       P(3 + lx, 2 + dy, 1, 1, k); P(5 + lx, 2 + dy, 1, 1, k);
     }
-    P(4 + lx, 3 + dy, 1, 1, y);
+    P(4 + lx, 3 + dy, 1, st.hoot ? 2 : 1, y);
+    if (st.hoot) { P(9, -2, 1, 2, '#ffffff'); P(10, -3, 1, 1, '#ffffff'); }
     if (st.wings === 'up') { P(0, 1 + dy, 1, 4, d); P(8, 1 + dy, 1, 4, d); P(-1, 1 + dy, 1, 2, d); P(9, 1 + dy, 1, 2, d); }
     else { P(1, 4 + dy, 1, 3, d); P(7, 4 + dy, 1, 3, d); }
+    if (v.collar) P(2, 4 + dy, 5, 1, v.collar);
+    if (v.bow) { P(2, -2 + dy, 1, 2, '#ff7ab0'); P(4, -2 + dy, 1, 2, '#ff7ab0'); P(3, -1 + dy, 1, 1, '#e0365a'); }
     P(3, 8 + dy, 1, 1, y); P(5, 8 + dy, 1, 1, y);
     return P.out();
   }
   const OWL_SEQ = (function () {
     const s = [];
-    for (let i = 0; i < 40; i++) {
-      const st = { eyes: 'open', look: 0, wings: 'down', hop: false };
-      if (i === 6 || i === 22 || i === 33) st.eyes = 'closed';
+    for (let i = 0; i < 50; i++) {
+      const st = { eyes: 'open', look: 0, wings: 'down', hop: false, hoot: false };
+      if (i === 6 || i === 22 || i === 33 || i === 45) st.eyes = 'closed';
       if (i >= 10 && i < 15) st.look = -1;
       if (i >= 16 && i < 21) st.look = 1;
       if (i === 26 || i === 28) { st.wings = 'up'; st.hop = true; }
       if (i === 27) st.wings = 'down';
+      if (i >= 37 && i < 41) st.hoot = i % 2 === 1;   // ¡uh-uh!
       s.push(st);
     }
     return s;
@@ -225,14 +307,14 @@
     perro: { x: 36, y: 74, cls: 'dog', tick: 0.2, seq: DOG_SEQ, draw: drawDog },
     buho: { x: 5, y: 44, cls: 'owl', tick: 0.2, seq: OWL_SEQ, draw: drawOwl }
   };
-  // Fotogramas distintos de cada mascota y en qué tics se ven
+  // Posturas distintas de cada mascota (en orden) y en qué tics se ven
   Object.keys(PETS).forEach(function (k) {
     const p = PETS[k];
     const byKey = {};
-    p.frames = [];
+    p.uniq = [];
     p.seq.forEach(function (st, i) {
       const key = JSON.stringify(st);
-      if (!byKey[key]) { byKey[key] = { svg: p.draw(st), ticks: [] }; p.frames.push(byKey[key]); }
+      if (!byKey[key]) { byKey[key] = { st: st, ticks: [] }; p.uniq.push(byKey[key]); }
       byKey[key].ticks.push(i);
     });
   });
@@ -243,7 +325,7 @@
     let css = '';
     Object.keys(PETS).forEach(function (k) {
       const p = PETS[k], n = p.seq.length;
-      p.frames.forEach(function (f, fi) {
+      p.uniq.forEach(function (f, fi) {
         let kf = '';
         let prev = null;
         for (let i = 0; i < n; i++) {
@@ -254,20 +336,31 @@
         css += '.pf-' + k + '-' + fi + '{opacity:0;animation:pf-' + k + '-' + fi + ' ' + (n * p.tick).toFixed(2) + 's step-end infinite}';
       });
     });
-    // Con movimiento reducido, solo la primera postura
     css += '@media (prefers-reduced-motion:reduce){[class^="pf-"]{animation:none!important}.pf-gato-0,.pf-perro-0,.pf-buho-0{opacity:1}}';
     const st = document.createElement('style');
     st.id = 'petAnim';
     st.textContent = css;
     document.head.appendChild(st);
   }
+  /** Variante de la mascota (raza y complementos) a partir de la configuración del avatar. */
+  function petVariant(cfg) {
+    return {
+      breed: cfg.petBreed || '', collar: cfg.petCollar || '', sweater: cfg.petSweater || '', bow: !!cfg.petBow
+    };
+  }
+  const petCache = {};
   function pet(cfg) {
     const p = cfg && PETS[cfg.pet];
     if (!p) return '';
     ensurePetCss();
-    const frames = p.frames.map(function (f, fi) { return '<g class="pf-' + cfg.pet + '-' + fi + '">' + f.svg + '</g>'; }).join('');
+    const v = petVariant(cfg);
+    const key = cfg.pet + JSON.stringify(v);
+    if (!petCache[key]) {
+      petCache[key] = p.uniq.map(function (f, fi) { return '<g class="pf-' + cfg.pet + '-' + fi + '">' + p.draw(f.st, v) + '</g>'; }).join('');
+    }
     // La posición va en un grupo aparte: el CSS de la respiración no la pisa
-    return '<g transform="translate(' + p.x + ',' + p.y + ')"><g class="scene-pet scene-pet--' + p.cls + '">' + frames + '</g></g>';
+    const title = cfg.petName ? '<title>' + String(cfg.petName).replace(/[<&>]/g, '') + '</title>' : '';
+    return '<g transform="translate(' + p.x + ',' + p.y + ')"><g class="scene-pet scene-pet--' + p.cls + '">' + title + petCache[key] + '</g></g>';
   }
 
   /** Desorden en la mesa según el cansancio (1–3): bolas de papel, envoltorios, folios. */
@@ -504,8 +597,9 @@
       if (roomView) {
         // Corona para quien va ganando el duelo de la semana
     const lead = global.Coop && Coop.active() ? Coop.duel().leader : '';
-    const list = [Object.assign({ cfg: myCfg, deco: Rooms.config(), name: 'Tú' + (lead === 'me' ? ' 👑' : '') }, myMode)];
-        if (ps) list.push(Object.assign({ cfg: Object.assign({}, ps.avatar, { tired: ps.tired || 0 }), mess: ps.tired || 0, deco: ps.roomDeco, name: (peer.name || 'Pareja') + (lead === 'peer' ? ' 👑' : ''), away: !peerMe.session && !fx && !peerEnter, fx: fx }, peerMode));
+    const petTag = function (c) { return c && c.pet && c.petName ? ' · ' + ({ gato: '🐈', perro: '🐕', buho: '🦉' }[c.pet] || '') + ' ' + c.petName : ''; };
+    const list = [Object.assign({ cfg: myCfg, deco: Rooms.config(), name: 'Tú' + (lead === 'me' ? ' 👑' : '') + petTag(myCfg) }, myMode)];
+        if (ps) list.push(Object.assign({ cfg: Object.assign({}, ps.avatar, { tired: ps.tired || 0 }), mess: ps.tired || 0, deco: ps.roomDeco, name: (peer.name || 'Pareja') + (lead === 'peer' ? ' 👑' : '') + petTag(ps.avatar), away: !peerMe.session && !fx && !peerEnter, fx: fx }, peerMode));
         Rooms.render(rooms, list);
         if (coop) rooms.appendChild(U.el('div', { class: 'study-rooms__coop', text: coop }));
       } else U.clear(rooms);

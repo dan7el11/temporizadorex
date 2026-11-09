@@ -474,10 +474,18 @@ El temporizador no te ata a lo planeado:
 
   Tu pareja ve tus desbloqueables (y tu mascota) en la mesa de al lado.
 
-  Las **mascotas tienen su rutina**, animada por fotogramas: el gato duerme respirando, mueve una oreja,
-  levanta la cabeza, abre los ojos, mueve la cola, bosteza y se vuelve a dormir; el perro jadea con la
-  lengua fuera, mueve la cola, parpadea, mira hacia la ventana e inclina la cabeza con las orejas en
-  alto; el búho parpadea, gira la cabeza a un lado y a otro y bate las alas con un saltito.
+  Las **mascotas tienen su rutina**, animada por fotogramas:
+  - **Gato**: duerme respirando, mueve una oreja, levanta la cabeza, abre los ojos y mira a un lado,
+    mueve la cola, **se lame la pata**, bosteza, **se estira** y se vuelve a dormir.
+  - **Perro**: jadea, mueve la cola, parpadea, mira por la ventana, inclina la cabeza, **ladra**, **se
+    rasca la oreja** con la pata de atrás y **se tumba a echar la siesta** (con sus «Zzz»).
+  - **Búho**: parpadea, gira la cabeza, **ulula** y bate las alas con un saltito.
+
+  **Razas** (desbloqueables): gato naranja, negro (nivel 8), gris atigrado (10), siamés (17) y calicó
+  (23); perro dorado, dálmata (16), carlino (19) y husky (26). **Complementos**: collar (rojo, azul,
+  verde o rosa; con cascabel o chapita), **chompa** (granate, azul, verde o a rayas; nivel 13), **lazo**
+  (nivel 21) y **nombre** (sale junto a tu nombre en el modo habitación). Se eligen en el editor del
+  avatar al escoger mascota.
 
 ### Modo cooperativo (en la sala)
 - **Meta conjunta**: horas de estudio efectivo entre los dos cada día (12 h por defecto; se cambia en

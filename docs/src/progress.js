@@ -309,6 +309,15 @@
     { id: 'room:luces', level: 20, name: 'Cuarto: guirnalda de luces', icon: '✨' },
     { id: 'room:pecera', level: 22, name: 'Cuarto: pecera', icon: '🐠' },
     { id: 'room:foto', badge: 'equipo', name: 'Cuarto: foto de los dos', icon: '💞' },
+    { id: 'pet:gato-negro', level: 8, name: 'Gato negro', icon: '🐈‍⬛' },
+    { id: 'pet:gato-gris', level: 10, name: 'Gato gris atigrado', icon: '🐈' },
+    { id: 'pet:chompa', level: 13, name: 'Chompas para tu mascota', icon: '🧶' },
+    { id: 'pet:dalmata', level: 16, name: 'Perro dálmata', icon: '🐕' },
+    { id: 'pet:siames', level: 17, name: 'Gato siamés', icon: '🐈' },
+    { id: 'pet:carlino', level: 19, name: 'Perro carlino', icon: '🐶' },
+    { id: 'pet:lazo', level: 21, name: 'Lazo para tu mascota', icon: '🎀' },
+    { id: 'pet:calico', level: 23, name: 'Gato calicó', icon: '🐈' },
+    { id: 'pet:husky', level: 26, name: 'Perro husky', icon: '🐺' },
     { id: 'pet:buho', badge: 'buho', name: 'Mascota: búho', icon: '🦉' },
     { id: 'acc:pin', badge: 'equipo', name: 'Pin de corazón', icon: '💗' }
   ];
