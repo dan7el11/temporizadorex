@@ -26,23 +26,23 @@
     ['pizarra', '📝 Pizarra con apuntes', 'room:pizarra'], ['luces', '✨ Guirnalda de luces', 'room:luces'],
     ['pecera', '🐠 Pecera', 'room:pecera'], ['foto', '💞 Foto de los dos', 'room:foto'],
     // De la tienda (solo aparecen cuando son tuyos)
-    ['pemberley', '🖼️ Cuadro de Pemberley', 'shop:room-pemberley'], ['rosas', '🌹 Rosas en la ventana', 'shop:room-rosas'],
+    ['pemberley', '🖼️ Cuadro de Pemberley', 'shop:room-pemberley'], ['amanecer', '🌅 Cuadro: paseo al amanecer', 'shop:room-amanecer'], ['rosas', '🌹 Rosas en la ventana', 'shop:room-rosas'],
     ['cartas', '✒️ Cartas, pluma y tintero', 'shop:room-cartas'], ['darcy', '🖼️ Foto de Mr Darcy', 'shop:room-darcy'],
     ['te', '🫖 Juego de té', 'shop:room-te'], ['escoba', '🧹 Escoba voladora', 'shop:room-escoba'], ['varita', '🪄 Varita y libro de hechizos', 'shop:room-varita'],
     ['estandarte', '🚩 Estandarte de casa', 'shop:room-estandarte'], ['snitch', '✨ Pelotita dorada con alas', 'shop:room-snitch'],
     ['bandera', '🏴‍☠️ Bandera pirata', 'shop:room-bandera'], ['cofre', '💰 Cofre del tesoro', 'shop:room-cofre'],
-    ['timon', '☸️ Timón de barco', 'shop:room-timon'], ['mapa', '🗺️ Mapa del tesoro', 'shop:room-mapa'], ['carne', '🍖 Carne con hueso', 'shop:room-carne'],
+    ['timon', '☸️ Timón de barco', 'shop:room-timon'], ['figuras', '🧸 Figuritas de la tripulación', 'shop:room-figuras'], ['mapa', '🗺️ Mapa del tesoro', 'shop:room-mapa'], ['carne', '🍖 Carne con hueso', 'shop:room-carne'],
     ['banderin', '🚩 Banderín rojo y blanco', 'shop:room-banderin'], ['pelota', '⚽ Pelota de fútbol', 'shop:room-pelota'],
     ['estadio', '🏟️ Póster del Monumental', 'shop:room-estadio'], ['camiseta', '👕 Camiseta enmarcada', 'shop:room-camiseta'], ['trofeo', '🏆 Trofeo', 'shop:room-trofeo']
   ];
   // En la mesa auxiliar caben 3 cosas: al poner una cuarta se quita la más antigua.
-  Rooms.DESK = ['darcy', 'te', 'cartas', 'varita', 'carne', 'trofeo'];
+  Rooms.DESK = ['darcy', 'te', 'cartas', 'varita', 'carne', 'trofeo', 'figuras'];
   const DESK_X = [75, 83, 91];
   // Objetos que comparten sitio en la pared: poner uno quita el otro.
-  Rooms.SLOT = { poster: 'a', pemberley: 'a', bandera: 'a', estadio: 'a', diploma: 'b', estandarte: 'b', mapa: 'b', camiseta: 'b' };
+  Rooms.SLOT = { poster: 'a', pemberley: 'a', amanecer: 'a', bandera: 'a', estadio: 'a', diploma: 'b', estandarte: 'b', mapa: 'b', camiseta: 'b' };
   // Recorte de cada objeto para verlo suelto (en la tienda): [x, y, ancho, alto]
   const BOX = {
-    pemberley: [45, 6, 22, 18], rosas: [7, 28, 12, 15], escoba: [0, 46, 16, 52], estandarte: [64, 15, 18, 22],
+    pemberley: [45, 6, 22, 18], amanecer: [44, 3, 22, 27], rosas: [7, 28, 12, 15], escoba: [0, 46, 16, 52], estandarte: [64, 15, 18, 22],
     snitch: [62, 18, 18, 12], bandera: [45, 5, 22, 18], cofre: [96, 80, 24, 20], timon: [72, 50, 20, 20], banderin: [43, 27, 24, 13],
     pelota: [82, 86, 18, 14], estadio: [43, 2, 24, 27], mapa: [64, 15, 20, 18], camiseta: [64, 14, 20, 20]
   };
@@ -413,15 +413,55 @@
       for (let x = 45; x < 65; x++) for (let y = 25; y < 27; y++) { const d = (64 - x) - (y - 25) * 1.4; if (d >= 9 && d < 13) r += px(x, y, 1, 1, '#d81e2c'); }
       return r;
     },
+    amanecer: function () {
+      // Paseo al amanecer: prado entre la niebla, cielo pálido y alguien que
+      // camina hacia ti con un abrigo largo oscuro y la camisa abierta
+      let r = px(44, 3, 22, 27, '#6e4426') + px(44, 3, 22, 1, '#8a5a34') + px(45, 4, 20, 25, '#cfd2cb');
+      r += px(45, 4, 20, 4, '#c3c8c4') + px(45, 8, 20, 2, '#e4d9c6') + px(45, 10, 20, 2, '#f2d2b0') + px(45, 12, 20, 1, '#e8dccb');
+      // Árboles entre la niebla
+      [[45, 12, 4, 6], [48, 11, 3, 7], [52, 13, 4, 5], [57, 12, 3, 6], [60, 11, 5, 7]].forEach(function (t, i) {
+        r += px(t[0], t[1], t[2], t[3], i % 2 ? '#a9b0a6' : '#b8bdb4');
+      });
+      r += px(45, 16, 20, 3, '#d4d8d0', ' opacity=".85"');
+      // Prado
+      r += px(45, 19, 20, 10, '#7d9468') + px(45, 19, 20, 2, '#a4b49a') + px(45, 27, 20, 2, '#6a8258');
+      [[46, 24], [47, 25], [48, 23], [62, 25], [63, 24]].forEach(function (p) { r += px(p[0], p[1], 1, 1, '#eef0e8'); });
+      r += px(61, 21, 3, 3, '#4e6a42') + px(60, 22, 1, 2, '#4e6a42') + px(62, 20, 1, 1, '#5f7a50');   // arbusto
+      // La figura: pelo oscuro, camisa blanca abierta, abrigo largo que se abre al andar
+      const fx = 54;
+      r += px(fx, 12, 3, 1, '#2b2326') + px(fx - 1, 13, 1, 1, '#2b2326') + px(fx, 13, 3, 2, '#d9b494') + px(fx + 1, 15, 1, 1, '#c9a07e');
+      r += px(fx - 2, 15, 7, 11, '#26262c') + px(fx - 3, 18, 1, 8, '#26262c') + px(fx + 5, 18, 1, 8, '#2e2e34') + px(fx - 2, 26, 3, 1, '#1d1d22') + px(fx + 2, 26, 3, 1, '#1d1d22');
+      r += px(fx, 15, 3, 4, '#f2f2ee') + px(fx + 1, 15, 1, 1, '#d9b494') + px(fx, 19, 3, 1, '#d8d6cc');
+      r += px(fx, 20, 1, 6, '#5a4a3a') + px(fx + 2, 20, 1, 6, '#5a4a3a') + px(fx + 1, 20, 1, 3, '#4a3a2c');
+      r += px(fx - 3, 21, 1, 1, '#f2f2ee') + px(fx + 5, 21, 1, 1, '#f2f2ee');   // puños de la camisa
+      // Niebla por delante, en la parte baja
+      r += '<rect x="45" y="22" width="20" height="3" fill="#e8ebe4" opacity=".35"/>';
+      return r;
+    },
+    figuras: function (part, ctx) {
+      // Tres figuritas en su peana: capitán con sombrero de paja, espadachín
+      // de pelo verde y navegante pelirroja
+      const x = ctx.dx;
+      let r = px(x - 1, 79, 11, 1, '#3a4256') + px(x - 1, 80, 11, 0.6, '#262c3a');
+      // Capitán
+      r += px(x - 1, 71, 4, 1, '#e8c66a') + px(x, 70, 2, 1, '#e8c66a') + px(x, 71, 2, 1, '#d0202c');
+      r += px(x, 72, 2, 1, '#e8c4a0') + px(x, 73, 2, 2, '#d0202c') + px(x, 75, 2, 2, '#3a5fa8') + px(x, 77, 1, 2, '#e8c4a0') + px(x + 1, 77, 1, 2, '#e8c4a0');
+      // Espadachín
+      r += px(x + 3, 71, 2, 1, '#4caf50') + px(x + 3, 72, 2, 1, '#d9b494') + px(x + 3, 73, 2, 2, '#f2f2ee') + px(x + 3, 75, 2, 1, '#2e7d32') + px(x + 3, 76, 2, 3, '#26262c');
+      r += px(x + 5, 74, 1, 3, '#c9ccd4');
+      // Navegante
+      r += px(x + 6, 70, 3, 2, '#f08a2c') + px(x + 9, 71, 1, 2, '#f08a2c') + px(x + 7, 72, 2, 1, '#e8c4a0') + px(x + 7, 73, 2, 2, '#4a7ad0') + px(x + 7, 75, 2, 1, '#f2f2ee') + px(x + 7, 76, 1, 3, '#e8c4a0') + px(x + 8, 76, 1, 3, '#e8c4a0');
+      return r;
+    },
     /* Mesa auxiliar: junto al escritorio, para dejar más cosas */
     darcy: function (part, ctx) {
-      // Retrato de un caballero de la Regencia: pelo oscuro rizado, corbatín blanco y levita
+      // Foto enmarcada: el paseo al amanecer entre la niebla, en pequeño
       const x = ctx.dx;
       let r = px(x + 6, 74, 1, 6, '#7a5a3a');
-      r += px(x, 69, 7, 11, '#b8892c') + px(x, 69, 7, 1, '#e8c86a') + px(x + 1, 70, 5, 9, '#d8c8a0');
-      r += px(x + 2, 71, 3, 1, '#2b2326') + px(x + 1, 72, 1, 2, '#2b2326') + px(x + 5, 72, 1, 1, '#2b2326');
-      r += px(x + 2, 72, 3, 3, '#e8c4a0') + px(x + 2, 73, 1, 1, '#3a2a1a') + px(x + 4, 73, 1, 1, '#3a2a1a');
-      r += px(x + 2, 75, 3, 1, '#ffffff') + px(x + 1, 76, 5, 3, '#1f2b4a') + px(x + 3, 76, 1, 2, '#f4f4f0');
+      r += px(x, 69, 7, 11, '#b8892c') + px(x, 69, 7, 1, '#e8c86a');
+      r += px(x + 1, 70, 5, 3, '#d9d6cc') + px(x + 1, 72, 5, 1, '#f2d2b0') + px(x + 1, 73, 5, 2, '#c9cec4') + px(x + 1, 75, 5, 4, '#7d9468');
+      r += px(x + 1, 75, 5, 1, '#c9cec4', ' opacity=".7"');
+      r += px(x + 3, 72, 1, 1, '#3a2a1a') + px(x + 2, 73, 3, 4, '#26262c') + px(x + 3, 73, 1, 2, '#f4f4f0') + px(x + 3, 75, 1, 2, '#5a4a3a');
       return r;
     },
     te: function (part, ctx) {
@@ -469,7 +509,7 @@
     },
   };
   // Orden de pintado: lo de la pared antes que lo del suelo
-  const ORDER = ['luces', 'poster', 'pemberley', 'bandera', 'estadio', 'reloj', 'diploma', 'estandarte', 'mapa', 'camiseta', 'foto', 'banderin', 'estanteria', 'pecera', 'pizarra',
+  const ORDER = ['luces', 'poster', 'pemberley', 'amanecer', 'bandera', 'estadio', 'reloj', 'diploma', 'estandarte', 'mapa', 'camiseta', 'foto', 'banderin', 'estanteria', 'pecera', 'pizarra',
     'timon', 'rosas', 'alfombra'];
   const FLOOR_BACK = ['escoba', 'lampara', 'planta'];
   const FLOOR_FRONT = ['cofre', 'pelota'];
@@ -501,7 +541,7 @@
     const ctx = { house: (cfg && cfg.house) || 'leon' };
     ORDER.forEach(function (id) { if (items.indexOf(id) >= 0) r += DECO[id](part, ctx); });
     // Lo que va en el suelo, detrás del puesto
-    FLOOR_BACK.forEach(function (id) { if (items.indexOf(id) >= 0) r += DECO[id](part, ctx); });
+    FLOOR_BACK.forEach(function (id) { if (items.indexOf(id) >= 0 && !(id === 'escoba' && unit && unit.mode === 'fly')) r += DECO[id](part, ctx); });
     // Mesa auxiliar con lo que tengas encima (hasta 3 cosas)
     r += deskExt();
     items.filter(function (id) { return Rooms.DESK.indexOf(id) >= 0; }).slice(-3).forEach(function (id, i) {
@@ -510,8 +550,8 @@
     FLOOR_FRONT.forEach(function (id) { if (items.indexOf(id) >= 0) r += DECO[id](part, ctx); });
     // Sombra del puesto en el suelo
     r += '<ellipse cx="54" cy="98" rx="46" ry="3" fill="#000" opacity=".12"/>';
-    r += Scene.unit(cfg, Object.assign({ part: part }, unit, { nest: { x: 10, y: 14, w: 100 } }));
-    if (items.indexOf('snitch') >= 0) r += DECO.snitch(part);
+    r += Scene.unit(cfg, Object.assign({ part: part }, unit, { nest: { x: 10, y: 14, w: 100 }, room: !(unit && unit.still), items: items }));
+    if (items.indexOf('snitch') >= 0 && !(unit && unit.event && unit.event.kind === 'snitch')) r += DECO.snitch(part);
     // De noche, el cuarto se oscurece un poco (salvo la luz de las lámparas)
     // (más oscuro si la luz aún está apagada: alguien está entrando)
     const off = unit && unit.lamp === false;
@@ -548,7 +588,7 @@
       el.dataset.i = i;
       const frame = U.el('div', { class: 'room__frame' });
       const art = U.el('div', { class: 'room__art' + (i ? ' is-mirror' : '') });
-      art.innerHTML = Rooms.svg(it.mode === 'empty' ? null : it.cfg, it.deco, { mode: it.mode, mood: it.mood, x: it.x, lamp: it.lamp, noProps: it.noProps, placing: it.placing, mess: it.mess }, 400);
+      art.innerHTML = Rooms.svg(it.mode === 'empty' ? null : it.cfg, it.deco, { mode: it.mode, mood: it.mood, x: it.x, y: it.y, k: it.k, lamp: it.lamp, noProps: it.noProps, placing: it.placing, mess: it.mess, event: it.event }, 400);
       frame.appendChild(art);
       el.appendChild(frame);
       if (it.fx) el.appendChild(U.el('span', { class: 'room__tag room__tag--hit', text: it.fx.badge }));

@@ -357,7 +357,109 @@
     };
   }
   const petCache = {};
-  function pet(cfg) {
+
+  /* ── Paseos de la mascota por el cuarto ─────────────────────
+   * Cada mascota sigue un horario de 20–25 minutos (el mismo para todos, a
+   * partir del reloj): su rutina en su sitio, baja de la mesa, se echa en la
+   * alfombra, se va del cuarto, vuelve por delante, se sienta junto a la
+   * ventana y regresa. En la vista pequeña solo se nota cuando no está.
+   * Coordenadas del puesto (el cuarto lo coloca en 10,14).
+   */
+  const PET_PLAN = {
+    gato: (function () {
+      const DESK = [47, 47], DOWN = [56, 77], RUG = [72, 77], OUT = [122, 77], WIN = [-10, 77], NEAR = [40, 77];
+      return [
+        { stay: DESK, d: 480 }, { from: DESK, to: DOWN, d: 1.6 }, { from: DOWN, to: RUG, d: 4 },
+        { stay: RUG, d: 420, label: 'rug' }, { from: RUG, to: OUT, d: 7 }, { away: true, d: 240 },
+        { from: OUT, to: WIN, d: 16 }, { stay: WIN, d: 300 }, { from: WIN, to: NEAR, d: 6 }, { from: NEAR, to: DESK, d: 1.4 }
+      ];
+    })(),
+    perro: (function () {
+      const SPOT = [36, 74], RUG = [70, 74], OUT = [122, 74], WIN = [-12, 74];
+      return [
+        { stay: SPOT, d: 420 }, { from: SPOT, to: RUG, d: 4 }, { stay: RUG, d: 480, nap: true }, { from: RUG, to: OUT, d: 6 },
+        { away: true, d: 180 }, { from: OUT, to: WIN, d: 15 }, { stay: WIN, d: 240 }, { from: WIN, to: SPOT, d: 6 }
+      ];
+    })(),
+    buho: (function () {
+      const LAMP = [5, 44], SHELF = [98, -3], WIN = [-3, 18], SKY = [-34, -40];
+      return [
+        { stay: LAMP, d: 420 }, { from: LAMP, to: SHELF, d: 4, fly: true }, { stay: SHELF, d: 360, needs: 'estanteria' },
+        { from: SHELF, to: WIN, d: 5, fly: true }, { stay: WIN, d: 200 }, { from: WIN, to: SKY, d: 3, fly: true },
+        { away: true, d: 200 }, { from: SKY, to: LAMP, d: 4, fly: true }
+      ];
+    })()
+  };
+  Object.keys(PET_PLAN).forEach(function (k) { PET_PLAN[k].total = PET_PLAN[k].reduce(function (a, x) { return a + x.d; }, 0); });
+
+  /** En qué tramo del horario está la mascota ahora. */
+  function petState(kind, now) {
+    const plan = PET_PLAN[kind];
+    if (!plan) return null;
+    const t = ((now || Date.now()) / 1000) % plan.total;
+    let acc = 0;
+    for (let i = 0; i < plan.length; i++) {
+      if (t < acc + plan[i].d) return { i: i, seg: plan[i], el: t - acc };
+      acc += plan[i].d;
+    }
+    return { i: 0, seg: plan[0], el: 0 };
+  }
+  /** Clave del tramo (para volver a dibujar solo al cambiar). */
+  Scene.petKey = function (cfg) {
+    const s = cfg && cfg.pet ? petState(cfg.pet) : null;
+    return s ? cfg.pet + s.i : '';
+  };
+
+  // Andando / volando: dos fotogramas que se alternan
+  function drawCatWalk(f, v) {
+    const c = CAT_BREEDS[v.breed] || CAT_BREEDS.naranja;
+    const O = c.O, D = c.D, K = c.K, W = c.W, Pk = '#f4a6a6', G = c.G;
+    const P = rectsAt(0, 0);
+    const tailC = c.points ? D : O;
+    P(0, f ? 0 : 1, 1, 3, tailC); P(1, 3, 1, 1, tailC);
+    P(2, 3, 10, 1, K); P(1, 4, 12, 3, O); P(3, 6, 8, 1, W);
+    if (!c.noStripes) { P(4, 4, 1, 2, D); P(7, 4, 1, 2, D); P(10, 4, 1, 2, D); }
+    if (c.calico) { P(3, 4, 3, 2, '#e8913a'); P(8, 4, 3, 2, '#2e2a33'); }
+    if (v.sweater) sweaterRows(P, 3, 4, 8, 2, v.sweater);
+    const legs = f ? [3, 5, 10, 12] : [2, 4, 9, 11];
+    legs.forEach(function (x) { P(x, 7, 1, 2, c.points ? D : O); P(x, 8, 1, 1, c.points ? D : W); });
+    P(11, 0, 5, 4, O); P(12, -1, 3, 1, O);
+    if (c.points) P(12, 1, 4, 3, D);
+    if (c.calico) P(13, 0, 3, 1, '#e8913a');
+    const earC = c.points ? D : O;
+    P(11, -2, 1, 2, earC); P(15, -2, 1, 2, earC); P(12, -1, 1, 1, Pk);
+    P(14, 1, 1, 1, G); P(16, 2, 1, 1, Pk);
+    if (v.bow) { P(12, -3, 1, 2, '#ff7ab0'); P(14, -3, 1, 2, '#ff7ab0'); P(13, -2, 1, 1, '#e0365a'); }
+    if (v.collar) { P(11, 4, 4, 1, v.collar); P(13, 5, 1, 1, '#f5d23a'); }
+    return P.out();
+  }
+  function drawDogWalk(f, v) {
+    const c = DOG_BREEDS[v.breed] || DOG_BREEDS.dorado;
+    const C = c.C, B = c.B, L = c.L, K = c.K, E = c.E, T = '#e05a72', N = '#1d1410';
+    const P = rectsAt(0, 0);
+    P(0, f ? 2 : 3, 1, 2, C); P(1, 4, 1, 1, C);
+    P(1, 5, 9, 4, C); P(2, 8, 7, 1, L);
+    if (c.spots) { P(3, 5, 1, 1, B); P(6, 7, 1, 1, B); P(8, 6, 1, 1, B); }
+    if (v.sweater) sweaterRows(P, 2, 5, 7, 3, v.sweater);
+    const legs = f ? [2, 4, 7, 9] : [1, 3, 8, 10];
+    legs.forEach(function (x) { P(x, 9, 1, 2, C); P(x, 11, 1, 1, K); });
+    P(8, 1, 5, 5, C); P(9, 0, 3, 1, C);
+    if (c.husky) P(9, 1, 3, 3, L);
+    P(12, 3, 2, 2, c.mask ? '#3a302a' : L); P(13, 3, 1, 1, N);
+    P(8, 2, 1, 3, B); P(11, 2, 1, 1, E);
+    if (f) P(12, 5, 1, 1, T);
+    if (v.collar) { P(8, 6, 4, 1, v.collar); P(10, 7, 1, 1, '#f5d23a'); }
+    if (v.bow) { P(9, -1, 1, 2, '#ff7ab0'); P(11, -1, 1, 2, '#ff7ab0'); P(10, 0, 1, 1, '#e0365a'); }
+    return P.out();
+  }
+  const PET_W = { gato: 17, perro: 14, buho: 10 };
+  function moveFrames(kind, v, seg) {
+    if (kind === 'buho') return [drawOwl({ eyes: 'open', look: 0, wings: 'up', hop: false, hoot: false }, v), drawOwl({ eyes: 'open', look: 0, wings: 'down', hop: true, hoot: false }, v)];
+    if (kind === 'perro') return [drawDogWalk(0, v), drawDogWalk(1, v)];
+    return [drawCatWalk(0, v), drawCatWalk(1, v)];
+  }
+
+  function pet(cfg, o) {
     const p = cfg && PETS[cfg.pet];
     if (!p) return '';
     ensurePetCss();
@@ -366,9 +468,33 @@
     if (!petCache[key]) {
       petCache[key] = p.uniq.map(function (f, fi) { return '<g class="pf-' + cfg.pet + '-' + fi + '">' + p.draw(f.st, v) + '</g>'; }).join('');
     }
-    // La posición va en un grupo aparte: el CSS de la respiración no la pisa
     const title = cfg.petName ? '<title>' + String(cfg.petName).replace(/[<&>]/g, '') + '</title>' : '';
-    return '<g transform="translate(' + p.x + ',' + p.y + ')"><g class="scene-pet scene-pet--' + p.cls + '">' + title + petCache[key] + '</g></g>';
+    const routine = '<g class="scene-pet scene-pet--' + p.cls + '">' + title + petCache[key] + '</g>';
+    const st = o && o.petsOff ? null : petState(cfg.pet);
+    // Fuera del cuarto: no está (en las dos vistas)
+    if (st && st.seg.away) return '';
+    // Vista pequeña, o sin paseos: en su sitio de siempre
+    if (!o || !o.room || !st) return '<g transform="translate(' + p.x + ',' + p.y + ')">' + routine + '</g>';
+    const seg = st.seg;
+    if (seg.needs && (o.items || []).indexOf(seg.needs) < 0) return '<g transform="translate(' + p.x + ',' + p.y + ')">' + routine + '</g>';
+    if (seg.stay) {
+      let inner = routine;
+      if (seg.nap) {
+        // Siesta larga en la alfombra: tumbado, con sus «Zzz»
+        const lie = function (z) { return drawDog({ lie: true, z: z }, v); };
+        inner = '<g class="scene-pet scene-pet--dog">' + title + '<g class="pz-0">' + lie(true) + '</g><g class="pz-1">' + lie(false) + '</g></g>';
+      }
+      return '<g transform="translate(' + seg.stay[0] + ',' + seg.stay[1] + ')">' + inner + '</g>';
+    }
+    // Andando (o volando) de un sitio a otro: el movimiento sigue aunque se redibuje
+    const fr = moveFrames(cfg.pet, v, seg);
+    const left = seg.to[0] < seg.from[0];
+    const w = PET_W[cfg.pet] || 14;
+    const frames = '<g class="pw-0">' + fr[0] + '</g><g class="pw-1">' + fr[1] + '</g>';
+    const body = left ? '<g transform="translate(' + w + ',0) scale(-1,1)">' + frames + '</g>' : frames;
+    const style = '--x0:' + seg.from[0] + 'px;--y0:' + seg.from[1] + 'px;--x1:' + seg.to[0] + 'px;--y1:' + seg.to[1] + 'px;' +
+      'animation-duration:' + seg.d + 's;animation-delay:-' + st.el.toFixed(2) + 's';
+    return '<g class="pet-move' + (seg.fly ? ' pet-move--fly' : '') + '" style="' + style + '">' + body + '</g>';
   }
 
   /** Desorden en la mesa según el cansancio (1–3): bolas de papel, envoltorios, folios. */
@@ -441,6 +567,17 @@
       // Incorporándose: de pie detrás de la mesa, que le tapa las piernas
       const b = Avatar.bodyInner(cfg, 'idle', mood);
       behind += '<g class="who who--rise">' + who(cfg, 'idle', mood, SEAT_X, UH - b.h - 4) + '</g>';
+    } else if (cfg && mode === 'reach') {
+      // De pie tras la mesa, con los brazos en alto (intenta atrapar algo)
+      const b = Avatar.bodyInner(cfg, 'win', mood);
+      behind += '<g class="who who--reach">' + who(cfg, 'win', mood, SEAT_X, UH - b.h - 4) + '</g>';
+    } else if (cfg && mode === 'fly') {
+      // Llega volando en la escoba, desde la ventana
+      // Sentado en la escoba (de lado), bajando desde la ventana hasta la mesa
+      const b = Avatar.bodyInner(cfg, 'sit', mood);
+      const k = o.k || 0, e = 1 - Math.pow(1 - k, 2);
+      const x = Math.round(-55 + (STAND_X + 55) * k), y = Math.round(-70 + (UH - b.h - 6 + 70) * e);
+      front += '<g class="who who--fly">' + broomArt(x + 4, y + 57) + who(cfg, 'sit', mood, x, y) + '</g>';
     } else if (cfg && mode === 'step') {
       const b = Avatar.bodyInner(cfg, 'walk', mood);
       front += '<g class="who who--step">' + who(cfg, 'walk', mood, sx, UH - b.h) + '</g>';
@@ -466,7 +603,7 @@
       behind + desk(lamp, part) +
       // Sentado: el libro, las manos y lo de la mesa van por delante del cuerpo
       (mode === 'desk' && cfg ? body + book(true) + hands(cfg) + propsOf(part, o) : book(false) + propsOf(part, o) + body) +
-      pet(cfg) + front + '</svg>';
+      pet(cfg, o) + front + (o.room ? eventArt(cfg, o.event) : '') + '</svg>';
     return svg;
   };
 
@@ -485,6 +622,68 @@
     return { mode: 'desk', mood: s.happy ? 'happy' : 'neutral', bubble: s.ending ? '🏁' : '' };
   }
 
+  /* ── Lo que hacen los objetos de la tienda ──────────────────
+   * Cada 6 minutos, si están en el cuarto:
+   *   pelotita dorada: cruza por delante y el avatar se levanta a por ella
+   *                    (una vez la atrapa y otra se le escapa);
+   *   carne con hueso: el brazo se estira como si fuera de goma hasta la
+   *                    mesa auxiliar y vuelve con un bocado.
+   */
+  const EV_PERIOD = 360;
+  Scene.eventAt = function (deco, now) {
+    const items = deco && Array.isArray(deco.items) ? deco.items : [];
+    const t = ((now || Date.now()) / 1000) % EV_PERIOD;
+    const round = Math.floor((now || Date.now()) / 1000 / EV_PERIOD);
+    if (items.indexOf('snitch') >= 0 && t >= 60 && t < 68) return { kind: 'snitch', el: t - 60, caught: round % 2 === 0 };
+    if (items.indexOf('carne') >= 0 && t >= 240 && t < 248) {
+      const desk = items.filter(function (id) { return global.Rooms && Rooms.DESK.indexOf(id) >= 0; }).slice(-3);
+      return { kind: 'carne', el: t - 240, slot: desk.indexOf('carne') };
+    }
+    return null;
+  };
+  function withEvent(m, deco, cfg) {
+    if (!m || m.mode !== 'desk' || !cfg) return m;
+    const ev = Scene.eventAt(deco);
+    if (!ev || (ev.kind === 'carne' && ev.slot < 0)) return m;
+    const out = Object.assign({}, m, { event: ev });
+    if (ev.kind === 'snitch') {
+      const reach = ev.el >= 3.2 && ev.el < 5.4;
+      if (reach) out.mode = 'reach';
+      if (ev.caught && ev.el >= 4.4) out.bubble = '✨ ¡Atrapada!';
+      out.ev = 'snitch' + (reach ? 1 : 0) + (out.bubble ? 1 : 0);
+    } else {
+      if (ev.el >= 3.2) { out.bubble = '🍖'; out.mood = 'happy'; }
+      out.ev = 'carne' + (ev.el >= 3.2 ? 1 : 0);
+    }
+    return out;
+  }
+  function eventArt(cfg, ev) {
+    if (!ev) return '';
+    const delay = 'animation-delay:-' + ev.el.toFixed(2) + 's';
+    if (ev.kind === 'snitch') {
+      const ball = '<g class="room-snitch__wings">' + px(-3, 1, 3, 1, '#ffffff', ' opacity=".9"') + px(4, 1, 3, 1, '#ffffff', ' opacity=".9"') + '</g>' +
+        px(0, 0, 4, 4, '#e0b43a') + px(1, -1, 2, 1, '#f2d06b') + px(0, 0, 2, 2, '#f8e08a');
+      return '<g class="ev-snitch' + (ev.caught ? ' ev-snitch--catch' : '') + '" style="' + delay + '">' + ball + '</g>';
+    }
+    if (ev.kind === 'carne') {
+      const DX = [75, 83, 91];
+      const mx = DX[ev.slot] - 10 + 3, x0 = 38;
+      const skin = Avatar.palette(cfg);
+      const len = mx - x0;
+      return '<g class="ev-arm" style="' + delay + '">' + px(x0, 62, len, 2, skin.skin) + px(x0, 64, len, 1, skin.shadow) + px(x0 + len - 2, 61, 3, 3, skin.skin) + '</g>' +
+        '<g class="ev-bite" style="--dx:' + (-len) + 'px;' + delay + '">' + px(mx - 1, 60, 3, 2, '#8a3a1a') + px(mx - 1, 60, 2, 1, '#b8552a') + '</g>';
+    }
+    return '';
+  }
+  /** Escoba voladora bajo los pies. */
+  function broomArt(x, y) {
+    let r = px(x - 6, y, 60, 2, '#8a5a34') + px(x - 6, y, 60, 1, '#a8743e');
+    for (let k = 0; k < 10; k++) r += px(x - 16 + k, y - 3 + Math.floor(k / 4), 1, 8 - Math.floor(k / 2), k % 2 ? '#d9b45a' : '#c7a04a');
+    r += px(x - 7, y - 1, 2, 4, '#7a5a3a');
+    r += '<g class="room-glint">' + px(x - 22, y + 2, 1, 1, '#fff6c0') + px(x - 27, y - 1, 1, 1, '#ffffff') + px(x - 32, y + 3, 1, 1, '#f2d06b') + '</g>';
+    return r;
+  }
+
   /* ── Entrar en la sesión ─────────────────────────────────── */
   /*
    * Al empezar una sesión (la tuya, o la de tu pareja en tu pantalla): el
@@ -495,11 +694,13 @@
   const enter = { me: 0, peer: 0 };
   let enteredSession = null;
   let lastPeerSession;
-  function enterFrame(start, part) {
+  function enterFrame(start, part, broom) {
     if (!start) return null;
     const t = Date.now() - start;
     if (t < 0 || t > ENTER_MS) return null;
     const dark = part === 'evening' || part === 'night';
+    // Con la escoba en el cuarto: entra volando por la ventana
+    if (broom && t < 1300) return { mode: 'fly', mood: 'happy', k: Math.round(t / 1300 * 20) / 20, lamp: dark ? false : undefined, noProps: true };
     if (t < 1300) {
       // Entra andando desde la derecha, con pasos
       const k = t / 1300;
@@ -576,17 +777,23 @@
       if (lastPeerSession === false && on) enter.peer = Date.now();
       lastPeerSession = on;
     }
-    const meEnter = enterFrame(enter.me, part);
-    const peerEnter = fx ? null : enterFrame(enter.peer, part);
+    const roomView0 = Game.settings().roomView && global.Rooms;
+    const has = function (deco, id) { return !!(deco && Array.isArray(deco.items) && deco.items.indexOf(id) >= 0); };
+    const myDeco = roomView0 ? Rooms.config() : null;
+    const meEnter = enterFrame(enter.me, part, roomView0 && has(myDeco, 'escoba'));
+    const peerEnter = fx ? null : enterFrame(enter.peer, part, roomView0 && ps && has(ps.roomDeco, 'escoba'));
     if (meEnter || peerEnter) setTimeout(function () { Scene.render(lastState); }, 130);
     // Cansancio: el avatar y la mesa lo reflejan (y tu pareja lo ve)
     const tired = global.Progress ? Progress.tired() : 0;
     const myCfg = Object.assign({}, Avatar.config(), { tired: tired });
     const myMode = Object.assign({ mess: tired }, meEnter || modeOf(me));
     const peerMode = ps ? (fx ? { mode: fx.mode, mood: fx.mood } : peerEnter || modeOf(peerMe)) : null;
-    const roomView = Game.settings().roomView && global.Rooms;
-    const sig = JSON.stringify([Avatar.config(), myMode, ps ? [ps.avatar, peerMode, peer.name, ps.roomDeco, ps.tired, ps.duel] : null, part, coop, fx,
-      roomView ? Rooms.config() : 0]);
+    const roomView = roomView0;
+    // En el cuarto, lo que hacen los objetos desbloqueados (pelotita dorada, carne…)
+    const myRoomMode = roomView ? withEvent(myMode, myDeco, myCfg) : myMode;
+    const peerRoomMode = roomView && ps ? withEvent(peerMode, ps.roomDeco, ps.avatar) : peerMode;
+    const sig = JSON.stringify([myRoomMode.ev || '', peerRoomMode && peerRoomMode.ev || '', Avatar.config(), myMode, ps ? [ps.avatar, peerMode, peer.name, ps.roomDeco, ps.tired, ps.duel, Scene.petKey(ps.avatar)] : null, part, coop, fx,
+      roomView ? Rooms.config() : 0, Scene.petKey(myCfg)]);
     if (sig === lastSig) return;
     lastSig = sig;
     box.hidden = false;
@@ -606,8 +813,8 @@
         // Corona para quien va ganando el duelo de la semana
     const lead = global.Coop && Coop.active() ? Coop.duel().leader : '';
     const petTag = function (c) { return c && c.pet && c.petName ? ' · ' + ({ gato: '🐈', perro: '🐕', buho: '🦉' }[c.pet] || '') + ' ' + c.petName : ''; };
-    const list = [Object.assign({ cfg: myCfg, deco: Rooms.config(), name: 'Tú' + (lead === 'me' ? ' 👑' : '') + petTag(myCfg) }, myMode)];
-        if (ps) list.push(Object.assign({ cfg: Object.assign({}, ps.avatar, { tired: ps.tired || 0 }), mess: ps.tired || 0, deco: ps.roomDeco, name: (peer.name || 'Pareja') + (lead === 'peer' ? ' 👑' : '') + petTag(ps.avatar), away: !peerMe.session && !fx && !peerEnter, fx: fx }, peerMode));
+    const list = [Object.assign({ cfg: myCfg, deco: Rooms.config(), name: 'Tú' + (lead === 'me' ? ' 👑' : '') + petTag(myCfg) }, myRoomMode)];
+        if (ps) list.push(Object.assign({ cfg: Object.assign({}, ps.avatar, { tired: ps.tired || 0 }), mess: ps.tired || 0, deco: ps.roomDeco, name: (peer.name || 'Pareja') + (lead === 'peer' ? ' 👑' : '') + petTag(ps.avatar), away: !peerMe.session && !fx && !peerEnter, fx: fx }, peerRoomMode));
         Rooms.render(rooms, list);
         if (coop) rooms.appendChild(U.el('div', { class: 'study-rooms__coop', text: coop }));
       } else U.clear(rooms);

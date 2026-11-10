@@ -522,6 +522,23 @@ desde la tienda o desde los editores (lo comprado aparece allí, sin candado).
   vista de frente), bufanda roja y blanca, banderín, pelota, póster del Monumental de noche, camiseta
   enmarcada, trofeo para la mesa y camiseta de la banda para la mascota.
 
+**Nuevos en esta versión**: cuadro «paseo al amanecer» (el prado con niebla y él caminando con el
+abrigo largo y la camisa abierta; la foto de Mr Darcy de la mesa es esa misma escena en pequeño) y
+figuritas de la tripulación para la mesa (capitán con sombrero de paja, espadachín y navegante).
+
+**Objetos que se animan** (en el modo habitación):
+- **Escoba**: al empezar la sesión llegas volando en ella por la ventana y aterrizas junto a la mesa.
+- **Pelotita dorada**: cada 6 minutos cruza por delante y tu avatar se levanta a atraparla; una vez lo
+  consigue («✨ ¡Atrapada!») y la siguiente se le escapa.
+- **Carne con hueso** (en la mesa auxiliar): cada 6 minutos el brazo se estira como si fuera de goma
+  hasta la carne y vuelve con un bocado («🍖»).
+
+**Mascotas que pasean**: cada una sigue un horario de 20–25 minutos. El gato duerme y se acicala en la
+mesa, baja, se echa en la alfombra, se va del cuarto, vuelve cruzando por delante, se sienta junto a la
+ventana y sube otra vez; el perro pasa de su sitio a la alfombra para una siesta larga, sale, vuelve y
+se sienta junto a la ventana; el búho vuela del flexo a la estantería y a la ventana, sale a dar una
+vuelta y regresa. En la vista pequeña se queda en su sitio (salvo cuando ha salido).
+
 **Mesa auxiliar**: el cuarto tiene una mesita pegada al escritorio donde caben hasta 3 cosas (foto de
 Mr Darcy, té, cartas, varita, carne con hueso, trofeo); al poner una cuarta se quita la más antigua.
 

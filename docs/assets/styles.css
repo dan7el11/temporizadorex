@@ -1800,3 +1800,23 @@ body > .gameover{position:fixed}
 .chip__swatch{width:14px;height:14px;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);flex:0 0 auto}
 .shop-card--house{grid-template-columns:1fr;grid-column:1 / -1;border-style:dashed}
 .shop-card--house .chips{grid-column:1}
+
+/* ── Mascotas que pasean y animaciones de los objetos ───── */
+.pet-move{animation-name:petMove;animation-timing-function:linear;animation-fill-mode:both}
+@keyframes petMove{from{transform:translate(var(--x0),var(--y0))}to{transform:translate(var(--x1),var(--y1))}}
+.pet-move--fly{animation-timing-function:ease-in-out}
+.pw-0,.pw-1{animation:pwStep .42s steps(1) infinite}
+.pw-1{animation-delay:-.21s}
+@keyframes pwStep{0%{opacity:1}50%{opacity:0}}
+.pz-0,.pz-1{animation:pwStep 2.4s steps(1) infinite}
+.pz-1{animation-delay:-1.2s}
+.ev-snitch{animation:evSnitch 8s linear both}
+.ev-snitch--catch{animation-name:evSnitchCatch}
+@keyframes evSnitch{0%{transform:translate(-22px,30px)}15%{transform:translate(4px,20px)}30%{transform:translate(20px,34px)}45%{transform:translate(32px,24px)}53%{transform:translate(40px,18px)}62%{transform:translate(54px,26px)}76%{transform:translate(76px,16px)}90%{transform:translate(100px,28px)}100%{transform:translate(126px,20px)}}
+@keyframes evSnitchCatch{0%{transform:translate(-22px,30px);opacity:1}15%{transform:translate(4px,20px)}30%{transform:translate(20px,34px)}45%{transform:translate(28px,22px)}55%{transform:translate(30px,26px);opacity:1}72%{transform:translate(30px,26px);opacity:1}76%,100%{transform:translate(30px,26px);opacity:0}}
+.ev-arm{transform-box:fill-box;transform-origin:0 50%;animation:evArm 8s ease-in-out both}
+@keyframes evArm{0%{transform:scaleX(0)}16%{transform:scaleX(1)}24%{transform:scaleX(1)}40%,100%{transform:scaleX(0)}}
+.ev-bite{animation:evBite 8s ease-in-out both}
+@keyframes evBite{0%,24%{transform:translateX(0);opacity:1}40%{transform:translateX(var(--dx));opacity:1}44%,100%{transform:translateX(var(--dx));opacity:0}}
+.who--fly{filter:drop-shadow(0 3px 0 rgba(0,0,0,.18))}
+@media (prefers-reduced-motion:reduce){ .pet-move,.pw-0,.pw-1,.pz-0,.pz-1,.ev-snitch,.ev-arm,.ev-bite{animation:none!important} .pw-1,.pz-1{opacity:0} }
