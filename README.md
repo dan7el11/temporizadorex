@@ -532,8 +532,14 @@ figuritas de la tripulación para la mesa (capitán con sombrero de paja, espada
   y aterrizas junto a la mesa.
 - **Pelotita dorada**: cada 6 minutos cruza por delante y tu avatar se levanta a atraparla; una vez lo
   consigue («✨ ¡Atrapada!») y la siguiente se le escapa.
-- **Carne con hueso** (en la mesa auxiliar): cada 6 minutos el brazo se estira como si fuera de goma
-  hasta la carne y vuelve con un bocado («🍖»).
+- **Carne con hueso** (en la mesa auxiliar): cada 6 minutos el antebrazo derecho sale del codo (la mano
+  deja el libro), se estira como goma en curva con líneas de velocidad, cierra el puño sobre la carne y
+  vuelve de golpe con un rebote y el bocado («🍖»).
+- **Sombrero de paja puesto**: cada 6 minutos, el puño gigante (Gear Third): se sopla el pulgar («👍💨»),
+  el brazo se hincha desde el hombro en un puño enorme con vapor («💪») y luego se desinfla («💨»).
+- **Llegada pirata** (con el sombrero de paja, la bandera, el timón o las figuritas): la ventana se abre,
+  dos manos estiradas desde lejos agarran el marco y el avatar sale disparado hacia dentro como un
+  cohete, aterriza con un bote y la ventana se cierra. Si también tienes la escoba, se alternan.
 
 **Mascotas que pasean**: cada una sigue un horario de 20–25 minutos. El gato duerme y se acicala en la
 mesa, baja, se echa en la alfombra, se va del cuarto, vuelve cruzando por delante, se sienta junto a la

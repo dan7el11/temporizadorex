@@ -533,12 +533,15 @@
   }
 
   /** Manos sobre el libro (por encima de él); la derecha acompaña a la página. */
-  function hands(cfg) {
+  function hands(cfg, ev) {
     const c = Avatar.palette(cfg);
     const hand = function (x) {
       return px(x, 64, 3, 2, c.skin) + px(x, 66, 3, 1, c.shadow) + px(x - 1, 64, 1, 2, c.shadow) + px(x + 3, 64, 1, 2, c.line);
     };
-    return '<g class="scene-hand scene-hand--l">' + hand(26) + '</g><g class="scene-hand scene-hand--r">' + hand(36) + '</g>';
+    // Mientras el brazo derecho se estira (o se hincha), su mano no está en el libro
+    const away = ev && (ev.kind === 'carne' || ev.kind === 'gear');
+    const right = away ? '<g class="ev-hand-away ev-hand-away--' + ev.kind + '" style="animation-delay:-' + ev.el.toFixed(2) + 's">' + hand(36) + '</g>' : '<g class="scene-hand scene-hand--r">' + hand(36) + '</g>';
+    return '<g class="scene-hand scene-hand--l">' + hand(26) + '</g>' + right;
   }
 
   function who(cfg, pose, mood, x, y, clipH, extraClass) {
@@ -581,6 +584,9 @@
       front += '<clipPath id="' + id + '" clipPathUnits="userSpaceOnUse"><rect x="-3" y="-5" width="30" height="30"/></clipPath>' +
         '<g clip-path="url(#' + id + ')"><g class="fly-out" style="animation-delay:-' + el + 's">' + rider + '</g></g>' +
         '<g class="fly-in" style="animation-delay:-' + el + 's">' + rider + '</g>';
+    } else if (cfg && mode === 'rocket') {
+      const el = Math.max(0, (Date.now() - (o.flyStart || Date.now())) / 1000).toFixed(2);
+      front += rocketArt(cfg, el, mood);
     } else if (cfg && mode === 'step') {
       const b = Avatar.bodyInner(cfg, 'walk', mood);
       front += '<g class="who who--step">' + who(cfg, 'walk', mood, sx, UH - b.h) + '</g>';
@@ -605,7 +611,7 @@
     const svg = open +
       behind + desk(lamp, part) +
       // Sentado: el libro, las manos y lo de la mesa van por delante del cuerpo
-      (mode === 'desk' && cfg ? body + book(true) + hands(cfg) + propsOf(part, o) : book(false) + propsOf(part, o) + body) +
+      (mode === 'desk' && cfg ? body + book(true) + hands(cfg, o.room && o.event) + propsOf(part, o) : book(false) + propsOf(part, o) + body) +
       pet(cfg, o) + front + (o.room ? eventArt(cfg, o.event) : '') + '</svg>';
     return svg;
   };
@@ -633,10 +639,12 @@
    *                    mesa auxiliar y vuelve con un bocado.
    */
   const EV_PERIOD = 360;
-  Scene.eventAt = function (deco, now) {
+  Scene.eventAt = function (deco, now, cfg) {
     const items = deco && Array.isArray(deco.items) ? deco.items : [];
     const t = ((now || Date.now()) / 1000) % EV_PERIOD;
     const round = Math.floor((now || Date.now()) / 1000 / EV_PERIOD);
+    // Con el sombrero de paja puesto: el puño gigante (se sopla el pulgar y el brazo se hincha)
+    if (cfg && cfg.hat === 'paja' && t >= 150 && t < 159) return { kind: 'gear', el: t - 150 };
     if (items.indexOf('snitch') >= 0 && t >= 60 && t < 68) return { kind: 'snitch', el: t - 60, caught: round % 2 === 0 };
     if (items.indexOf('carne') >= 0 && t >= 240 && t < 248) {
       const desk = items.filter(function (id) { return global.Rooms && Rooms.DESK.indexOf(id) >= 0; }).slice(-3);
@@ -646,7 +654,7 @@
   };
   function withEvent(m, deco, cfg) {
     if (!m || m.mode !== 'desk' || !cfg) return m;
-    const ev = Scene.eventAt(deco);
+    const ev = Scene.eventAt(deco, null, cfg);
     if (!ev || (ev.kind === 'carne' && ev.slot < 0)) return m;
     const out = Object.assign({}, m, { event: ev });
     if (ev.kind === 'snitch') {
@@ -654,6 +662,12 @@
       if (reach) out.mode = 'reach';
       if (ev.caught && ev.el >= 4.4) out.bubble = '✨ ¡Atrapada!';
       out.ev = 'snitch' + (reach ? 1 : 0) + (out.bubble ? 1 : 0);
+    } else if (ev.kind === 'gear') {
+      // 0–1,6 s: se sopla el pulgar · 1,6–6,8: puño gigante · luego se desinfla
+      const ph = ev.el < 1.6 ? 0 : ev.el < 6.8 ? 1 : 2;
+      out.bubble = ph === 0 ? '👍💨' : ph === 1 ? '💪' : '💨';
+      out.mood = 'happy';
+      out.ev = 'gear' + ph;
     } else {
       if (ev.el >= 3.2) { out.bubble = '🍖'; out.mood = 'happy'; }
       out.ev = 'carne' + (ev.el >= 3.2 ? 1 : 0);
@@ -669,14 +683,74 @@
       return '<g class="ev-snitch' + (ev.caught ? ' ev-snitch--catch' : '') + '" style="' + delay + '">' + ball + '</g>';
     }
     if (ev.kind === 'carne') {
+      // El antebrazo derecho sale del codo y se estira como goma (con una curva
+      // que se tensa), cierra el puño sobre la carne y vuelve de golpe con el bocado
       const DX = [75, 83, 91];
-      const mx = DX[ev.slot] - 10 + 3, x0 = 38;
-      const skin = Avatar.palette(cfg);
-      const len = mx - x0;
-      return '<g class="ev-arm" style="' + delay + '">' + px(x0, 62, len, 2, skin.skin) + px(x0, 64, len, 1, skin.shadow) + px(x0 + len - 2, 61, 3, 3, skin.skin) + '</g>' +
-        '<g class="ev-bite" style="--dx:' + (-len) + 'px;' + delay + '">' + px(mx - 1, 60, 3, 2, '#8a3a1a') + px(mx - 1, 60, 2, 1, '#b8552a') + '</g>';
+      const mx = DX[ev.slot] - 10 + 3, ex = 43, ey = 63;
+      const c = Avatar.palette(cfg);
+      const len = mx - ex;
+      let arm = '';
+      for (let k = 0; k <= len; k++) {
+        const t = k / len, y = Math.round(ey - 2 - Math.sin(t * Math.PI) * 5);
+        arm += px(ex + k, y - 1, 1, 1, c.line) + px(ex + k, y, 1, 3, c.skin) + px(ex + k, y + 3, 1, 1, c.shadow) + px(ex + k, y + 4, 1, 1, c.line);
+      }
+      // Puño cerrado al final, con los nudillos
+      const fx = ex + len - 1, fy = ey - 3;
+      arm += px(fx, fy, 5, 5, c.skin) + px(fx + 4, fy, 1, 5, c.shadow) + px(fx + 1, fy, 1, 1, c.line) + px(fx + 3, fy, 1, 1, c.line) + px(fx, fy + 4, 5, 1, c.line);
+      // Líneas de velocidad
+      const lines = '<g class="ev-arm__lines">' + px(ex + 6, ey - 9, 6, 1, '#ffffff') + px(ex + 14, ey - 11, 8, 1, '#ffffff') + px(ex + 10, ey + 4, 7, 1, '#ffffff') + '</g>';
+      return '<g class="ev-arm" style="' + delay + '">' + arm + '</g>' + '<g class="ev-arm__fx" style="' + delay + '">' + lines + '</g>' +
+        '<g class="ev-bite" style="--dx:' + (ex - mx + 4) + 'px;' + delay + '">' + px(mx - 1, 59, 4, 3, '#8a3a1a') + px(mx - 1, 59, 3, 1, '#b8552a') + px(mx + 3, 60, 2, 1, '#f4efe6') + '</g>';
+    }
+    if (ev.kind === 'gear') {
+      // Puño gigante: el brazo derecho se hincha desde el hombro hasta un puño enorme
+      const c = Avatar.palette(cfg);
+      const P = rectsAt(0, 0);
+      // Brazo hinchado (del hombro al puño), con su brillo
+      for (let k = 0; k <= 22; k++) {
+        const t = k / 22, h = Math.round(6 + t * 10), y = Math.round(44 - t * 22 - h / 2);
+        P(40 + k, y, 1, h, c.skin); P(40 + k, y, 1, 1, c.line); P(40 + k, y + h - 2, 1, 2, c.shadow);
+        if (k % 4 === 2) P(40 + k, y + 2, 1, 2, '#ffffff33');
+      }
+      // Puño redondo enorme: dedos doblados, nudillos y pulgar
+      const fx = 60, fy = 6;
+      for (let y = 0; y < 26; y++) for (let x = 0; x < 28; x++) {
+        const d = Math.pow((x + 0.5 - 14) / 14, 2) + Math.pow((y + 0.5 - 13) / 13, 2);
+        if (d > 1) continue;
+        P(fx + x, fy + y, 1, 1, d > 0.82 ? c.line : (x > 18 || y > 19) ? c.shadow : (x < 9 && y < 9) ? '#ffffff55' : c.skin);
+      }
+      [4, 9, 14, 19].forEach(function (yy) { P(fx + 17, fy + yy, 9, 1, c.line); });
+      [[18, 3], [18, 8], [18, 13], [18, 18]].forEach(function (k) { P(fx + k[0], fy + k[1], 3, 2, '#ffffff44'); });
+      P(fx + 6, fy + 16, 12, 5, c.skin); P(fx + 6, fy + 20, 12, 1, c.line); P(fx + 17, fy + 16, 1, 5, c.line);   // pulgar
+      // Vapor alrededor
+      const puff = function (x, y, r2) { let o = ''; for (let yy = -r2; yy <= r2; yy++) for (let xx = -r2; xx <= r2; xx++) if (xx * xx + yy * yy <= r2 * r2) o += px(x + xx, y + yy, 1, 1, '#ffffff'); return o; };
+      const steam = '<g class="ev-gear__steam">' + puff(58, 8, 3) + puff(90, 14, 3) + puff(86, 32, 2) + puff(56, 30, 2) + '</g>';
+      return '<g class="ev-gear" style="' + delay + '">' + P.out() + '</g>' + '<g class="ev-gear__fx" style="' + delay + '">' + steam + '</g>';
     }
     return '';
+  }
+  /** Aparece por la ventana: dos manos agarran el marco y sale disparado hacia dentro. */
+  function rocketArt(cfg, el, mood) {
+    const c = Avatar.palette(cfg);
+    const vp = [12, 6];   // a lo lejos, por la ventana
+    let grip = '';
+    [[-4, 10], [26, 10]].forEach(function (h) {
+      // brazo estirado hacia lo lejos y la mano agarrada al marco
+      const n = Math.max(Math.abs(h[0] - vp[0]), Math.abs(h[1] - vp[1]));
+      for (let k = 0; k <= n; k++) {
+        const x = Math.round(vp[0] + (h[0] - vp[0]) * k / n), y = Math.round(vp[1] + (h[1] - vp[1]) * k / n);
+        const w = k < n / 2 ? 1 : 2;
+        grip += px(x, y - 1, w, 1, c.line) + px(x, y, w, 2, k < n / 3 ? c.shadow : c.skin) + px(x, y + 2, w, 1, c.line);
+      }
+      // Mano agarrada al marco: dedos por encima del borde
+      grip += px(h[0] - 2, h[1] - 2, 6, 6, c.skin) + px(h[0] - 2, h[1] + 3, 6, 1, c.line) + px(h[0] - 2, h[1] - 2, 6, 1, c.line) +
+        px(h[0] - 1, h[1], 1, 1, c.line) + px(h[0] + 1, h[1], 1, 1, c.line) + px(h[0] + 3, h[1], 1, 1, c.line);
+    });
+    const b = Avatar.bodyInner(cfg, 'win', mood);
+    const body = '<g class="rk-body">' + who(cfg, 'win', mood, 0, 0) +
+      '<g class="fly-wind">' + px(10, 70, 1, 8, '#ffffff') + px(24, 74, 1, 10, '#ffffff') + px(38, 70, 1, 8, '#ffffff') + '</g></g>';
+    const d = 'animation-delay:-' + el + 's';
+    return '<g class="rk-grip" style="' + d + '">' + grip + '</g><g class="rk-fly" style="' + d + ';--land:' + (UH - b.h) + 'px">' + body + '</g>';
   }
   /** Escoba voladora bajo los pies. */
   function broomArt(x, y) {
@@ -698,15 +772,17 @@
   const enter = { me: 0, peer: 0 };
   let enteredSession = null;
   let lastPeerSession;
-  function enterFrame(start, part, broom) {
+  function enterFrame(start, part, broom, rocket) {
     if (!start) return null;
     let t = Date.now() - start;
-    if (t < 0 || t > ENTER_MS + (broom ? FLY_MS - 1300 : 0)) return null;
+    if (t < 0 || t > ENTER_MS + (broom || rocket ? FLY_MS - 1300 : 0)) return null;
     const dark = part === 'evening' || part === 'night';
     // Con la escoba en el cuarto: entra volando por la ventana, de perfil y
     // con las manos en el mango; aterriza junto a la mesa y sigue como siempre
-    if (broom && t < FLY_MS) return { mode: 'fly', mood: 'happy', flyStart: start, lamp: dark ? false : undefined, noProps: true };
-    if (broom) t -= FLY_MS - 1300;
+    // Si hay escoba y cosas piratas, se alternan según la sesión
+    const how = broom && rocket ? (Math.floor(start / 1000) % 2 ? 'fly' : 'rocket') : broom ? 'fly' : rocket ? 'rocket' : '';
+    if (how && t < FLY_MS) return { mode: how, mood: 'happy', flyStart: start, lamp: dark ? false : undefined, noProps: true };
+    if (how) t -= FLY_MS - 1300;
     if (t < 1300) {
       // Entra andando desde la derecha, con pasos
       const k = t / 1300;
@@ -786,8 +862,9 @@
     const roomView0 = Game.settings().roomView && global.Rooms;
     const has = function (deco, id) { return !!(deco && Array.isArray(deco.items) && deco.items.indexOf(id) >= 0); };
     const myDeco = roomView0 ? Rooms.config() : null;
-    const meEnter = enterFrame(enter.me, part, roomView0 && has(myDeco, 'escoba'));
-    const peerEnter = fx ? null : enterFrame(enter.peer, part, roomView0 && ps && has(ps.roomDeco, 'escoba'));
+    const pirate = function (deco, cfg) { return !!(cfg && cfg.hat === 'paja') || has(deco, 'bandera') || has(deco, 'timon') || has(deco, 'figuras'); };
+    const meEnter = enterFrame(enter.me, part, roomView0 && has(myDeco, 'escoba'), roomView0 && pirate(myDeco, Avatar.config()));
+    const peerEnter = fx ? null : enterFrame(enter.peer, part, roomView0 && ps && has(ps.roomDeco, 'escoba'), roomView0 && ps && pirate(ps.roomDeco, ps.avatar));
     if (meEnter || peerEnter) setTimeout(function () { Scene.render(lastState); }, 130);
     // Cansancio: el avatar y la mesa lo reflejan (y tu pareja lo ve)
     const tired = global.Progress ? Progress.tired() : 0;

@@ -541,7 +541,7 @@
     const d = Rooms.normal(deco);
     const part = Scene.daypart();
     const wall = Rooms.WALLS[d.wall][0];
-    const flyEl = unit && unit.mode === 'fly' && unit.flyStart ? Math.max(0, (Date.now() - unit.flyStart) / 1000) : undefined;
+    const flyEl = unit && (unit.mode === 'fly' || unit.mode === 'rocket') && unit.flyStart ? Math.max(0, (Date.now() - unit.flyStart) / 1000) : undefined;
     let r = wallArt(wall) + windowArt(Rooms.CURTAINS[d.curtain][0], part, flyEl) + floorArt(Rooms.FLOORS[d.floor][0], wall);
     const items = d.items.filter(function (id) { return DECO[id]; });
     // Si dos objetos comparten sitio, gana el último que se puso

@@ -1835,3 +1835,23 @@ body > .gameover{position:fixed}
 .win-pane--r{transform-origin:37px 0}
 @keyframes winOpen{0%,6%{transform:scaleX(1)}24%,58%{transform:scaleX(.14)}80%,100%{transform:scaleX(1)}}
 @media (prefers-reduced-motion:reduce){ .win-pane{animation:none!important} }
+/* Brazo de goma, puño gigante y llegada pirata */
+.ev-arm{transform-box:view-box;transform-origin:43px 63px;animation:evArm2 8s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes evArm2{0%{transform:scaleX(0)}4%{transform:scaleX(0)}16%{transform:scaleX(1.06)}19%,25%{transform:scaleX(1)}36%{transform:scaleX(-.04)}38%{transform:scaleX(.08)}40%,100%{transform:scaleX(0)}}
+.ev-arm__fx{animation:evArmFx 8s steps(1) both}
+@keyframes evArmFx{0%,5%{opacity:0}6%,17%{opacity:.8}18%,26%{opacity:0}27%,36%{opacity:.8}37%,100%{opacity:0}}
+.ev-bite{animation:evBite2 8s ease-in both}
+@keyframes evBite2{0%,25%{transform:translateX(0);opacity:1}37%{transform:translateX(var(--dx));opacity:1}41%,100%{transform:translateX(var(--dx));opacity:0}}
+.ev-hand-away{animation:evHandAway 8s steps(1) both}
+@keyframes evHandAway{0%,4%{opacity:1}5%,39%{opacity:0}40%,100%{opacity:1}}
+.ev-hand-away--gear{animation-name:evHandAwayGear;animation-duration:9s}
+@keyframes evHandAwayGear{0%,17%{opacity:1}18%,80%{opacity:0}81%,100%{opacity:1}}
+.ev-gear{transform-box:view-box;transform-origin:42px 44px;animation:evGear 9s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes evGear{0%,17%{transform:scale(0);opacity:0}18%{transform:scale(.15);opacity:1}30%{transform:scale(1.08)}36%,70%{transform:scale(1)}74%{transform:scale(1.04)}80%{transform:scale(.1);opacity:1}81%,100%{transform:scale(0);opacity:0}}
+.ev-gear__fx{animation:evGearFx 9s ease-out both}
+@keyframes evGearFx{0%,24%{opacity:0;transform:translateY(0)}28%{opacity:.9}44%{opacity:0;transform:translateY(-4px)}74%{opacity:0;transform:translateY(0)}80%{opacity:.95}96%,100%{opacity:0;transform:translateY(-6px)}}
+.rk-grip{animation:rkGrip 2.6s steps(1) both}
+@keyframes rkGrip{0%,10%{opacity:0}11%,40%{opacity:1}41%,100%{opacity:0}}
+.rk-fly{transform-box:view-box;transform-origin:0 0;animation:rkFly 2.6s cubic-bezier(.2,.7,.4,1) both}
+@keyframes rkFly{0%,40%{opacity:0;transform:translate(6px,-6px) scale(.24)}41%{opacity:1;transform:translate(6px,-6px) scale(.24)}58%{transform:translate(18px,-14px) scale(.6)}74%{transform:translate(40px,-8px) scale(1)}86%{transform:translate(46px,var(--land)) scale(1)}90%{transform:translate(46px,calc(var(--land) + 4px)) scale(1.04,.95)}96%,100%{opacity:1;transform:translate(46px,var(--land)) scale(1)}}
+@media (prefers-reduced-motion:reduce){ .ev-arm,.ev-arm__fx,.ev-bite,.ev-hand-away,.ev-gear,.ev-gear__fx,.rk-grip,.rk-fly{animation:none!important} }
