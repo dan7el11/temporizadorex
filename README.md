@@ -527,7 +527,9 @@ abrigo largo y la camisa abierta; la foto de Mr Darcy de la mesa es esa misma es
 figuritas de la tripulación para la mesa (capitán con sombrero de paja, espadachín y navegante).
 
 **Objetos que se animan** (en el modo habitación):
-- **Escoba**: al empezar la sesión llegas volando en ella por la ventana y aterrizas junto a la mesa.
+- **Escoba**: al empezar la sesión la ventana se abre, llegas volando —de perfil, sentado de lado en el
+  mango y con las dos manos agarrándolo, el pelo y la bufanda al viento—, la ventana se cierra a tu espalda
+  y aterrizas junto a la mesa.
 - **Pelotita dorada**: cada 6 minutos cruza por delante y tu avatar se levanta a atraparla; una vez lo
   consigue («✨ ¡Atrapada!») y la siguiente se le escapa.
 - **Carne con hueso** (en la mesa auxiliar): cada 6 minutos el brazo se estira como si fuera de goma

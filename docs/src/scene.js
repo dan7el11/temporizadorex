@@ -572,12 +572,15 @@
       const b = Avatar.bodyInner(cfg, 'win', mood);
       behind += '<g class="who who--reach">' + who(cfg, 'win', mood, SEAT_X, UH - b.h - 4) + '</g>';
     } else if (cfg && mode === 'fly') {
-      // Llega volando en la escoba, desde la ventana
-      // Sentado en la escoba (de lado), bajando desde la ventana hasta la mesa
-      const b = Avatar.bodyInner(cfg, 'sit', mood);
-      const k = o.k || 0, e = 1 - Math.pow(1 - k, 2);
-      const x = Math.round(-55 + (STAND_X + 55) * k), y = Math.round(-70 + (UH - b.h - 6 + 70) * e);
-      front += '<g class="who who--fly">' + broomArt(x + 4, y + 57) + who(cfg, 'sit', mood, x, y) + '</g>';
+      // Jinete de perfil. Primero se ve pequeño tras el cristal (recortado a la
+      // ventana); luego cruza la ventana creciendo hacia ti y aterriza.
+      const el = Math.max(0, (Date.now() - (o.flyStart || Date.now())) / 1000).toFixed(2);
+      const rider = '<g class="fly-rider">' + Avatar.rider(cfg) + '<g class="fly-wind">' +
+        px(-6, 20, 5, 1, '#ffffff') + px(-10, 26, 7, 1, '#ffffff') + px(-5, 33, 4, 1, '#ffffff') + '</g></g>';
+      const id = 'flyclip' + Math.floor(Math.random() * 1e6);
+      front += '<clipPath id="' + id + '" clipPathUnits="userSpaceOnUse"><rect x="-3" y="-5" width="30" height="30"/></clipPath>' +
+        '<g clip-path="url(#' + id + ')"><g class="fly-out" style="animation-delay:-' + el + 's">' + rider + '</g></g>' +
+        '<g class="fly-in" style="animation-delay:-' + el + 's">' + rider + '</g>';
     } else if (cfg && mode === 'step') {
       const b = Avatar.bodyInner(cfg, 'walk', mood);
       front += '<g class="who who--step">' + who(cfg, 'walk', mood, sx, UH - b.h) + '</g>';
@@ -691,16 +694,19 @@
    * enciende el flexo, deja su bebida en la mesa y se sienta a estudiar.
    */
   const ENTER_MS = 3000;
+  const FLY_MS = 2600;
   const enter = { me: 0, peer: 0 };
   let enteredSession = null;
   let lastPeerSession;
   function enterFrame(start, part, broom) {
     if (!start) return null;
-    const t = Date.now() - start;
-    if (t < 0 || t > ENTER_MS) return null;
+    let t = Date.now() - start;
+    if (t < 0 || t > ENTER_MS + (broom ? FLY_MS - 1300 : 0)) return null;
     const dark = part === 'evening' || part === 'night';
-    // Con la escoba en el cuarto: entra volando por la ventana
-    if (broom && t < 1300) return { mode: 'fly', mood: 'happy', k: Math.round(t / 1300 * 20) / 20, lamp: dark ? false : undefined, noProps: true };
+    // Con la escoba en el cuarto: entra volando por la ventana, de perfil y
+    // con las manos en el mango; aterriza junto a la mesa y sigue como siempre
+    if (broom && t < FLY_MS) return { mode: 'fly', mood: 'happy', flyStart: start, lamp: dark ? false : undefined, noProps: true };
+    if (broom) t -= FLY_MS - 1300;
     if (t < 1300) {
       // Entra andando desde la derecha, con pasos
       const k = t / 1300;

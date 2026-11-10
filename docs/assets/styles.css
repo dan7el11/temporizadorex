@@ -1820,3 +1820,18 @@ body > .gameover{position:fixed}
 @keyframes evBite{0%,24%{transform:translateX(0);opacity:1}40%{transform:translateX(var(--dx));opacity:1}44%,100%{transform:translateX(var(--dx));opacity:0}}
 .who--fly{filter:drop-shadow(0 3px 0 rgba(0,0,0,.18))}
 @media (prefers-reduced-motion:reduce){ .pet-move,.pw-0,.pw-1,.pz-0,.pz-1,.ev-snitch,.ev-arm,.ev-bite{animation:none!important} .pw-1,.pz-1{opacity:0} }
+/* Llegada en escoba: tras el cristal (recortado) y luego dentro del cuarto */
+.fly-out,.fly-in{transform-box:view-box;transform-origin:0 0;animation-duration:2.6s;animation-timing-function:linear;animation-fill-mode:both}
+.fly-out{animation-name:flyOut}
+.fly-in{animation-name:flyIn}
+@keyframes flyOut{0%{transform:translate(-30px,2px) scale(.3);opacity:1}30%{transform:translate(2px,-2px) scale(.3)}42%{transform:translate(6px,-1px) scale(.36);opacity:1}43%,100%{opacity:0;transform:translate(6px,-1px) scale(.36)}}
+@keyframes flyIn{0%,42%{opacity:0;transform:translate(6px,-1px) scale(.36)}43%{opacity:1;transform:translate(6px,-1px) scale(.36)}58%{transform:translate(12px,-6px) scale(.6)}74%{transform:translate(24px,4px) scale(.85)}88%{transform:translate(32px,22px) scale(1)}96%{transform:translate(34px,30px) scale(1)}100%{transform:translate(34px,30px) scale(1);opacity:1}}
+.fly-rider{animation:flyBob .5s ease-in-out infinite alternate}
+@keyframes flyBob{from{transform:translateY(0)}to{transform:translateY(1px)}}
+.fly-wind{animation:pwStep .3s steps(1) infinite}
+@media (prefers-reduced-motion:reduce){ .fly-out,.fly-in,.fly-rider,.fly-wind{animation:none!important} .fly-out{opacity:0} }
+.win-pane{transform-box:view-box;animation:winOpen 2.6s ease-in-out both}
+.win-pane--l{transform-origin:7px 0}
+.win-pane--r{transform-origin:37px 0}
+@keyframes winOpen{0%,6%{transform:scaleX(1)}24%,58%{transform:scaleX(.14)}80%,100%{transform:scaleX(1)}}
+@media (prefers-reduced-motion:reduce){ .win-pane{animation:none!important} }

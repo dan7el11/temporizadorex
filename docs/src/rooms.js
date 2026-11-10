@@ -105,12 +105,23 @@
     return r;
   }
 
-  function windowArt(curtain, part) {
+  function windowArt(curtain, part, flyEl) {
     let r = '';
     // Marco, cristal con el cielo, cruceta y alféizar
     r += px(5, 7, 34, 34, '#f4efe6') + px(5, 40, 34, 1, '#cfc6b4');
     r += sky(part);
-    r += px(21, 9, 2, 30, '#f4efe6') + px(7, 23, 30, 2, '#f4efe6');
+    if (flyEl !== undefined) {
+      // Llegada en escoba: las dos hojas se abren hacia dentro, pasa y se cierran
+      const pane = function (x0, w) {
+        return px(x0, 9, w, 30, '#ffffff', ' opacity=".12"') + px(x0, 9, w, 1, '#f4efe6') + px(x0, 38, w, 1, '#f4efe6') +
+          px(x0, 9, 1, 30, '#f4efe6') + px(x0 + w - 1, 9, 1, 30, '#f4efe6') + px(x0, 23, w, 2, '#f4efe6') +
+          px(x0 + 2, 11, 1, 6, '#ffffff', ' opacity=".5"') + px(x0 + 3, 11, 1, 3, '#ffffff', ' opacity=".5"');
+      };
+      const d = ' style="animation-delay:-' + flyEl.toFixed(2) + 's"';
+      r += '<g class="win-pane win-pane--l"' + d + '>' + pane(7, 15) + '</g><g class="win-pane win-pane--r"' + d + '>' + pane(22, 15) + '</g>';
+    } else {
+      r += px(21, 9, 2, 30, '#f4efe6') + px(7, 23, 30, 2, '#f4efe6');
+    }
     r += px(3, 41, 38, 3, '#e8e0d0') + px(3, 43, 38, 1, '#bfb5a2');
     // Cortinas con pliegues
     const c = curtain, cd = shade(curtain, -0.25), cl = shade(curtain, 0.18);
@@ -530,7 +541,8 @@
     const d = Rooms.normal(deco);
     const part = Scene.daypart();
     const wall = Rooms.WALLS[d.wall][0];
-    let r = wallArt(wall) + windowArt(Rooms.CURTAINS[d.curtain][0], part) + floorArt(Rooms.FLOORS[d.floor][0], wall);
+    const flyEl = unit && unit.mode === 'fly' && unit.flyStart ? Math.max(0, (Date.now() - unit.flyStart) / 1000) : undefined;
+    let r = wallArt(wall) + windowArt(Rooms.CURTAINS[d.curtain][0], part, flyEl) + floorArt(Rooms.FLOORS[d.floor][0], wall);
     const items = d.items.filter(function (id) { return DECO[id]; });
     // Si dos objetos comparten sitio, gana el último que se puso
     const used = {};
@@ -588,7 +600,7 @@
       el.dataset.i = i;
       const frame = U.el('div', { class: 'room__frame' });
       const art = U.el('div', { class: 'room__art' + (i ? ' is-mirror' : '') });
-      art.innerHTML = Rooms.svg(it.mode === 'empty' ? null : it.cfg, it.deco, { mode: it.mode, mood: it.mood, x: it.x, y: it.y, k: it.k, lamp: it.lamp, noProps: it.noProps, placing: it.placing, mess: it.mess, event: it.event }, 400);
+      art.innerHTML = Rooms.svg(it.mode === 'empty' ? null : it.cfg, it.deco, { mode: it.mode, mood: it.mood, x: it.x, y: it.y, k: it.k, flyStart: it.flyStart, lamp: it.lamp, noProps: it.noProps, placing: it.placing, mess: it.mess, event: it.event }, 400);
       frame.appendChild(art);
       el.appendChild(frame);
       if (it.fx) el.appendChild(U.el('span', { class: 'room__tag room__tag--hit', text: it.fx.badge }));

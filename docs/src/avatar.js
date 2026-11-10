@@ -863,6 +863,122 @@
     return { skin: r.base, shadow: r.shadow, line: r.deep };
   };
 
+  /**
+   * Jinete de escoba, de perfil (mirando a la derecha), con las mismas
+   * proporciones que el avatar (cabeza grande): caja de 62 × 56. Sentado de lado
+   * sobre el mango, algo inclinado hacia delante, con las dos manos en el mango,
+   * las piernas dobladas y el pelo (y la bufanda) al viento. Rectángulos SVG.
+   */
+  Avatar.rider = function (cfg) {
+    const a = normal(cfg);
+    const skinR = ramp(Avatar.SKINS[a.skin] || Avatar.SKINS[1], true);
+    const hairR = ramp((Avatar.HAIRS[a.hair] || Avatar.HAIRS[1])[0]);
+    const eyeC = (Avatar.EYES[a.eyes] || Avatar.EYES[0])[0];
+    const raw = (Avatar.OUTFITS[a.outfit] || Avatar.OUTFITS[0])[0];
+    const coat = raw === 'coat' || raw === 'coatname';
+    const cloth = coat ? '#eef1f7' : raw === 'hearts' ? '#ef7aa1' : THEMED[raw] ? THEMED[raw].base : raw;
+    const clothR = ramp(cloth);
+    const pantsR = ramp(coat ? '#3f72e8' : THEMED[raw] ? THEMED[raw].pants : mix(cloth, '#000000', 0.12));
+    const dress = THEMED[raw] && THEMED[raw].dress;
+    const longHair = /^(melena|ondas|flequillo|media|coleta|trenzas|trenza|rizos|ondaslargas|rizosmedios|ondasmedias|rizosvolumen|afrof|largo)$/.test(a.style);
+    const curly = /afro|rizo|rizado/.test(a.style);
+    const bald = a.style === 'calvo' || a.style === 'rapado' || a.style === 'rapadof';
+    let r = '';
+    const P = function (x, y, w, h, c) { if (c) r += '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + c + '"/>'; };
+    const hy = function (x) { return 45 - Math.round((x - 10) * 0.08); };   // altura del mango
+    // Escoba: ramas detrás, atadura y mango largo hacia delante
+    for (let k = 0; k < 15; k++) {
+      const h = 5 + Math.round(k * 0.6);
+      P(k - 4, hy(10) - Math.round(h / 2) + 1, 1, h, k % 3 === 0 ? '#a8803a' : k % 2 ? '#e2bf66' : '#c99f48');
+    }
+    P(10, hy(10) - 3, 3, 7, '#7a5a3a'); P(10, hy(10) - 3, 3, 1, '#9a7a4a');
+    for (let x = 13; x <= 61; x++) { P(x, hy(x), 1, 2, '#8a5a34'); P(x, hy(x), 1, 1, '#b07c45'); }
+    // Piernas: la de detrás más oscura; muslo hacia delante y pierna doblada
+    const leg = function (dx, R, shoe) {
+      P(20 + dx, 40, 12, 5, R.base); P(20 + dx, 44, 12, 1, R.shadow); P(20 + dx, 40, 12, 1, R.light);
+      P(29 + dx, 44, 5, 8, R.base); P(33 + dx, 44, 1, 8, R.shadow);
+      P(28 + dx, 52, 8, 3, shoe); P(28 + dx, 52, 8, 1, mix(shoe, '#ffffff', 0.2)); P(35 + dx, 53, 1, 2, mix(shoe, '#000000', 0.3));
+    };
+    leg(-3, { base: pantsR.shadow, shadow: pantsR.deep, light: pantsR.shadow }, '#2f282d');
+    leg(0, pantsR, '#43363e');
+    if (dress) { P(15, 36, 20, 10, clothR.base); P(15, 45, 20, 2, clothR.shadow); for (let x = 17; x < 35; x += 4) P(x, 38, 1, 8, clothR.shadow); P(15, 36, 20, 1, '#7d9bd2'); }
+    // Tronco, algo inclinado hacia delante
+    for (let y = 26; y <= 42; y++) {
+      const x = 16 + Math.round((42 - y) * 0.3);
+      P(x, y, 13, 1, clothR.base); P(x, y, 2, 1, clothR.light); P(x + 11, y, 2, 1, clothR.shadow);
+    }
+    if (coat) for (let y = 28; y <= 42; y++) P(24 + Math.round((42 - y) * 0.3), y, 1, 1, '#3f72e8');
+    if (raw === 'banda') for (let k = 0; k < 13; k++) { const y = 28 + k; P(16 + Math.round((42 - y) * 0.3) + 10 - Math.floor(k * 0.75), y, 3, 1, '#d81e2c'); }
+    if (raw === 'tunica') { const hc = houseColors(a); for (let y = 28; y <= 40; y++) P(26 + Math.round((42 - y) * 0.3), y, 2, 1, (y >> 1) % 2 ? hc[1] : hc[0]); }
+    // Brazos: hombro → codo → manos cerradas sobre el mango
+    const arm = function (dy, R, sk, hx) {
+      // Del hombro a la mano, en línea recta: la mano agarra el mango
+      const x0 = 26, y0 = 29 + dy, x1 = hx, y1 = hy(hx) - 3;
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+      for (let k = 0; k <= n; k++) {
+        const t = k / n;
+        P(Math.round(x0 + (x1 - x0) * t), Math.round(y0 + (y1 - y0) * t), 3, 3, t < 0.55 ? R : sk);
+      }
+      P(hx, hy(hx) - 3, 4, 3, sk); P(hx, hy(hx) + 2, 4, 1, sk); P(hx + 1, hy(hx) - 3, 2, 1, skinR.light); P(hx + 3, hy(hx) - 2, 1, 4, skinR.shadow);
+    };
+    arm(-2, clothR.shadow, skinR.shadow, 44);
+    arm(0, clothR.base, skinR.base, 39);
+    // Pelo largo de detrás, al viento
+    if (longHair) {
+      // Melena ondeando hacia atrás, más fina hacia la punta
+      for (let k = 0; k < 20; k++) {
+        const y = 4 + Math.round(k * 0.55) + Math.round(Math.sin(k / 2.3) * 1.6);
+        const h = Math.max(3, 16 - Math.round(k * 0.65));
+        P(20 - k, y, 1, h, k % 3 === 0 ? hairR.shadow : hairR.base);
+        if (k % 4 === 1) P(20 - k, y + 2, 1, 2, hairR.light);
+        P(20 - k, y + h - 1, 1, 1, hairR.deep);
+      }
+      P(15, 6, 8, 16, hairR.base); P(16, 8, 2, 12, hairR.shadow);
+    }
+    // Cuello
+    P(26, 23, 5, 5, skinR.shadow);
+    // Cabeza de perfil: cráneo, cara, nariz y barbilla
+    P(20, 4, 20, 20, skinR.base); P(19, 7, 1, 14, skinR.base); P(40, 7, 1, 13, skinR.base);
+    P(22, 3, 16, 1, skinR.base); P(22, 24, 15, 1, skinR.shadow);
+    P(41, 12, 2, 3, skinR.base); P(42, 14, 1, 1, skinR.shadow);       // nariz
+    P(38, 20, 3, 3, skinR.base); P(36, 23, 4, 1, skinR.shadow);       // barbilla
+    P(20, 18, 4, 6, skinR.shadow);                                    // sombra de la nuca
+    // Ojo grande (como el avatar), ceja, mejilla y sonrisa
+    P(34, 10, 3, 4, '#1d1410'); P(35, 11, 2, 2, eyeC); P(35, 10, 1, 1, '#ffffff');
+    P(33, 8, 5, 1, hairR.deep);
+    P(32, 16, 3, 1, mix(skinR.base, '#ff7a8a', 0.35));
+    P(37, 19, 3, 1, mix(skinR.deep, '#7a3a34', 0.55)); P(36, 18, 1, 1, mix(skinR.deep, '#7a3a34', 0.55));
+    // Oreja
+    P(25, 12, 4, 5, skinR.base); P(26, 13, 2, 3, skinR.shadow); P(25, 12, 1, 5, skinR.deep);
+    // Vello facial
+    if (a.facial && a.facial !== 'ninguno' && a.facial !== 'tresdias') { P(30, 18, 11, 6, hairR.base); P(36, 18, 4, 1, skinR.base); P(37, 19, 3, 1, '#7a3a34'); }
+    // Pelo: casco por arriba y por detrás, flequillo por delante
+    if (!bald) {
+      P(19, 1, 20, 6, hairR.base); P(21, 0, 15, 1, hairR.base); P(22, 1, 12, 1, hairR.light);
+      P(17, 4, 6, 15, hairR.base); P(18, 6, 2, 10, hairR.shadow);
+      P(36, 4, 5, 4, hairR.base); P(39, 6, 2, 2, hairR.shadow);
+      P(28, 7, 6, 2, hairR.shadow);
+      if (curly) { for (let k = 0; k < 9; k++) P(16 + k * 3, (k % 2), 3, 3, k % 2 ? hairR.light : hairR.base); P(14, 6, 4, 14, hairR.base); }
+    } else {
+      P(21, 3, 16, 2, a.style === 'calvo' ? skinR.light : hairR.shadow); P(19, 6, 3, 10, a.style === 'calvo' ? skinR.base : hairR.shadow);
+    }
+    // Gafas de perfil
+    if (a.glasses || a.roundGlasses) { P(33, 9, 6, 1, '#2a2f40'); P(33, 14, 6, 1, '#2a2f40'); P(33, 9, 1, 6, '#2a2f40'); P(38, 9, 1, 6, '#2a2f40'); P(27, 11, 6, 1, '#2a2f40'); }
+    // Bufanda: vuelta al cuello y puntas ondeando hacia atrás
+    if (a.scarf) {
+      const cols = a.scarf === 'casa' ? houseColors(a) : ((Avatar.SCARVES.filter(function (x) { return x[0] === a.scarf; })[0] || [])[2] || ['#d81e2c', '#f6f6f2']);
+      for (let x = 23; x <= 33; x++) P(x, 24, 1, 4, Math.floor(x / 2) % 2 ? cols[1] : cols[0]);
+      for (let k = 0; k < 16; k++) P(22 - k, 25 + Math.round(Math.sin(k / 2) * 2), 1, 3, Math.floor(k / 3) % 2 ? cols[1] : cols[0]);
+    }
+    // Sombrero
+    if (a.hat === 'paja') { P(14, 3, 32, 2, '#e8c66a'); P(14, 5, 32, 1, '#c9a44a'); P(20, -4, 18, 7, '#e8c66a'); P(20, -1, 18, 3, '#d0202c'); P(22, -4, 4, 1, '#f4dc8a'); }
+    else if (a.hat === 'mago') { P(13, 3, 32, 2, '#3d3458'); P(17, -3, 20, 6, '#3d3458'); P(17, 0, 20, 2, '#b08a3e'); P(19, -9, 13, 6, '#3d3458'); P(15, -13, 8, 5, '#3d3458'); P(9, -14, 7, 3, '#3d3458'); P(26, -6, 1, 1, '#f2d06b'); }
+    else if (a.hat === 'copa') { P(15, 3, 28, 2, '#23232b'); P(20, -12, 18, 15, '#23232b'); P(20, -1, 18, 2, '#5a3a5a'); P(22, -10, 2, 8, '#3a3a46'); }
+    else if (a.hat === 'bonete') { P(18, -2, 22, 7, '#e6d3a3'); P(36, 0, 8, 14, '#e6d3a3'); P(18, 2, 22, 2, '#7d9bd2'); P(37, 20, 2, 5, '#7d9bd2'); P(34, 24, 6, 2, '#7d9bd2'); P(20, -2, 3, 2, '#e86a8a'); }
+    else if (a.hat === 'gorro') { P(18, -1, 22, 8, '#2fa59a'); P(14, 3, 5, 6, '#2fa59a'); for (let x = 19; x < 40; x += 3) P(x, 1, 1, 1, '#e8fff9'); }
+    return r;
+  };
+
   /* ── Cuerpo entero ──────────────────────────────────────── */
   /**
    * Articulaciones de cada pose: hombro → codo → mano, cadera → rodilla → pie.
