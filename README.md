@@ -490,6 +490,15 @@ El temporizador no te ata a lo planeado:
   (nivel 21) y **nombre** (sale junto a tu nombre en el modo habitación). Se eligen en el editor del
   avatar al escoger mascota.
 
+### Pantalla de inicio
+
+Las tarjetas de «Hoy» se reparten según el ancho: en móvil, una debajo de otra; en tablet, estudio y
+tiempo perdido lado a lado, y la sala y el modo juego a lo ancho; en pantallas grandes, tres columnas
+arriba y el modo juego a lo ancho debajo (tú y tus vidas · nivel y racha · misiones). Estudio y tiempo
+perdido llevan una gráfica de los **últimos 7 días** (con la línea del objetivo; en verde los días
+cumplidos). En pantallas estrechas el nombre de cada bloque ocupa su fila entera, sin partirse letra a
+letra.
+
 ### Tienda 🛍️
 
 Monedas 🪙 para gastar en objetos temáticos. **Salen de la experiencia ganada desde que se abrió la

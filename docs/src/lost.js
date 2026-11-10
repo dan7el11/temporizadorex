@@ -677,6 +677,10 @@
       }));
     }
     box.appendChild(lines);
+    // Últimos 7 días: tiempo perdido fuera del temporizador
+    if (global.App && App.weekChart) {
+      box.appendChild(App.weekChart('lost', function (k) { return k === U.dayKey() ? d.gapMs : Lost.daySummary(k).gapMs; }, 0, 'Perdido los últimos 7 días'));
+    }
 
     box.appendChild(U.el('div', { class: 'tile__actions' }, [
       U.el('button', {

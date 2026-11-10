@@ -182,7 +182,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .preset-chip:active{transform:translateY(1px)}
 .preset-chip__dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 12px currentColor}
 .preset-chip__body{min-width:0}
-.preset-chip__name{display:block;font-weight:560;font-size:.9rem;line-height:1.2;overflow-wrap:anywhere}
+.preset-chip__name{display:block;font-weight:560;font-size:.9rem;line-height:1.2;overflow-wrap:break-word;hyphens:auto}
 .preset-chip__time{display:block;color:var(--text-faint);font-size:.76rem}
 
 /* ── Queue ──────────────────────────────────────────────── */
@@ -229,7 +229,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
   font-size:.72rem;color:var(--text-faint);display:grid;place-items:center;
   font-variant-numeric:tabular-nums;
 }
-.qitem__label{overflow-wrap:anywhere;line-height:1.25}
+.qitem__label{overflow-wrap:break-word;hyphens:auto;line-height:1.25}
 .qitem__dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 10px currentColor}
 
 .qitem__actions{display:flex;gap:5px}
@@ -522,7 +522,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 }
 .pause-row__dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
 .pause-row__body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
-.pause-row__name{font-weight:560;overflow-wrap:anywhere}
+.pause-row__name{font-weight:560;overflow-wrap:break-word;hyphens:auto}
 .pause-row__meta{color:var(--text-faint);font-size:.78rem}
 .pause-picker{display:flex;flex-direction:column;gap:9px}
 .pause-picker__extra{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -555,7 +555,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
   display:flex;align-items:center;gap:9px;padding:7px 10px;font-size:.86rem;
   background:var(--card-2);border:1px solid var(--line);border-radius:10px;
 }
-.ex-row__text{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.ex-row__text{flex:1 1 auto;min-width:0;overflow-wrap:break-word;hyphens:auto}
 .ex-row__secs{color:var(--text-faint);font-variant-numeric:tabular-nums}
 
 /* Catálogo de razones */
@@ -565,7 +565,7 @@ input,select,textarea{font-family:inherit;font-size:inherit}
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   background:var(--card-2);border:1px solid var(--line);border-radius:11px;padding:8px 10px;
 }
-.reason-row__label{font-weight:550;overflow-wrap:anywhere}
+.reason-row__label{font-weight:550;overflow-wrap:break-word;hyphens:auto}
 .reason-picker{display:flex;flex-direction:column;gap:10px}
 .reason-note{
   background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;
@@ -714,7 +714,7 @@ input[type=range]{accent-color:var(--accent);width:150px}
 .qrow.is-current{border-color:var(--accent);background:rgba(91,140,255,.09)}
 .qrow__head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .qrow__dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
-.qrow__name{font-weight:560;flex:1 1 120px;min-width:0;overflow-wrap:anywhere}
+.qrow__name{font-weight:560;flex:1 1 120px;min-width:0;overflow-wrap:break-word;hyphens:auto}
 .qrow__state{color:var(--text-dim);font-size:.82rem;font-variant-numeric:tabular-nums;white-space:nowrap}
 .qrow__ctrls{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:8px}
 .qrow__ctrls input[type=number]{
@@ -937,7 +937,7 @@ dialog.modal.modal--wide{width:min(760px,calc(100vw - 24px))}
 .complist__row:last-child{border-bottom:0}
 .complist__key{width:12px;height:12px;border-radius:3px}
 .complist__label{min-width:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.complist__label > span{overflow-wrap:anywhere}
+.complist__label > span{overflow-wrap:break-word;hyphens:auto}
 .complist__label small{color:var(--text-faint);font-size:.75rem}
 .complist__ms{font-variant-numeric:tabular-nums;font-weight:600}
 .complist__pct{font-variant-numeric:tabular-nums;color:var(--text-faint);text-align:right;font-size:.8rem}
@@ -965,7 +965,7 @@ dialog.modal.modal--wide{width:min(760px,calc(100vw - 24px))}
 .daylist__when{font-variant-numeric:tabular-nums;color:var(--text-faint);font-size:.8rem}
 .daylist__dot{width:10px;height:10px;border-radius:50%}
 .daylist__what{min-width:0;display:flex;flex-direction:column}
-.daylist__name{font-weight:560;overflow-wrap:anywhere}
+.daylist__name{font-weight:560;overflow-wrap:break-word;hyphens:auto}
 .daylist__what small{color:var(--text-faint);font-size:.76rem}
 .daylist__ms{font-variant-numeric:tabular-nums;font-weight:600}
 @media (max-width:520px){
@@ -1710,3 +1710,83 @@ body > .gameover{position:fixed}
 .shop-card .btn[aria-disabled="true"]{opacity:.6}
 .chip--shop{font-weight:700}
 @media (max-width:520px){.shop__grid{grid-template-columns:1fr;max-height:65vh}}
+
+/* ── Inicio: distribución de las tarjetas de «Hoy» ──────────
+   Una columna en móvil; dos en tablet (sala y juego a lo ancho);
+   tres en pantallas grandes, con el modo juego a lo ancho debajo y
+   repartido en columnas para que no quede una tarjeta altísima. */
+.today{container:today / inline-size;display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:stretch;grid-template-areas:"study" "lost" "room" "game"}
+#todayStudy{grid-area:study}
+#lostToday{grid-area:lost}
+#roomStrip{grid-area:room}
+#gameTile{grid-area:game}
+@media (min-width:640px){
+  .today{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"study lost" "room room" "game game"}
+}
+@media (min-width:1080px){
+  .today{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-areas:"study lost room" "game game game"}
+}
+
+/* Mini gráfica de la semana dentro de las tarjetas */
+.week{display:flex;flex-direction:column;gap:5px;margin-top:auto;padding-top:10px;border-top:1px solid var(--line-soft)}
+.week + .tile__actions{margin-top:0}
+.week__head{display:flex;justify-content:space-between;gap:8px;font-size:.74rem;color:var(--text-faint)}
+.week__head strong{color:var(--text-dim);font-weight:600;font-variant-numeric:tabular-nums}
+.week__bars{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;height:52px;align-items:end}
+.week__col{height:100%;display:flex;align-items:flex-end;justify-content:center;border-radius:6px;background:rgba(255,255,255,.025)}
+.week__bar{display:block;width:100%;border-radius:5px;background:linear-gradient(180deg,#7e9cff,var(--accent));opacity:.55;transition:height .4s ease}
+.week__col.is-today .week__bar{opacity:1}
+.week__col.is-met .week__bar{background:linear-gradient(180deg,#5ce0a8,#1fae7a)}
+.week--lost .week__bar{background:linear-gradient(180deg,#ffcf7a,var(--warn))}
+.week__goal{position:absolute;left:0;right:0;height:0;border-top:1px dashed rgba(92,224,168,.55);pointer-events:none;z-index:1}
+.week__labels{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;font-size:.66rem;color:var(--text-faint);letter-spacing:.04em}
+.week__labels .is-today{color:var(--text);font-weight:700}
+
+/* Sala a lo ancho (tablet): la meta conjunta y el duelo, lado a lado */
+@container today (min-width:620px) and (max-width:1050px){
+  .roomstrip .coop{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:22px;align-items:start}
+  .roomstrip .coop > :not(.duel){grid-column:1}
+  .roomstrip .coop > .duel{grid-column:2;grid-row:1 / span 4;margin-top:0;padding-top:0;border-top:0;padding-left:20px;border-left:1px solid var(--line-soft)}
+}
+
+/* Modo juego a lo ancho: tú y tus vidas · nivel y racha · misiones */
+@container today (min-width:620px){
+  .tile--game{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);column-gap:22px;row-gap:10px;align-items:start;
+    grid-template-areas:"head head" "me lvl" "me row" "debt debt" "mh mh" "ms ms" "act act"}
+  .tile--game > .tile__head{grid-area:head}
+  .tile--game > .game-tile{grid-area:me;align-self:stretch}
+  .tile--game > .progress-tile{display:contents}
+  .tile--game .level-row{grid-area:lvl}
+  .tile--game .progress-tile__row{grid-area:row}
+  .tile--game .debt{grid-area:debt}
+  .tile--game .missions__head{grid-area:mh}
+  .tile--game .missions{grid-area:ms}
+  .tile--game > .tile__actions{grid-area:act;margin-top:0}
+}
+@container today (min-width:1050px){
+  .tile--game{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.25fr);
+    grid-template-areas:"head head head" "me lvl ms" "me row ms" "me debt ms" "act act ms"}
+  .tile--game > .tile__actions{align-self:end}
+  /* El título de las misiones y la lista comparten columna: título arriba, lista debajo */
+  .tile--game .missions__head{grid-area:ms;align-self:start}
+  .tile--game .missions{grid-area:ms;align-self:start;margin-top:22px}
+}
+.tile--game .game-tile{padding:10px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid var(--line-soft)}
+
+/* ── Cola de la sesión en pantallas estrechas ───────────────
+   El nombre del bloque ocupa su fila entera (nada de texto en vertical);
+   debajo, minutos y tema; y los botones, a la derecha del nombre. */
+@media (max-width:560px){
+  .qitem{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name actions" "ctrls ctrls";padding:10px 10px 12px}
+  .qitem__handle{display:none}
+  .qitem__name{grid-area:name;align-self:start;padding-top:4px}
+  .qitem__actions{grid-area:actions}
+  .qitem__ctrls{grid-area:ctrls}
+  .qitem .qbtn{width:34px;height:34px}
+  .qitem__ctrls select{flex:1 1 120px;min-width:0}
+  .qitem__ctrls input[type=number]{width:64px}
+}
+.qitem__label,.preset-chip__name{word-break:normal}
+
+/* Pantallas grandes: más ancho útil */
+@media (min-width:1500px){ .main{max-width:1380px} }

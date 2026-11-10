@@ -58,6 +58,55 @@
     });
   };
 
+  /**
+   * Barritas de los últimos 7 días (hoy a la derecha). valueOf(dayKey) → ms.
+   * Los días pasados se guardan en caché: solo cambia el de hoy.
+   */
+  const weekCache = {};
+  App.weekChart = function (kind, valueOf, goal, label) {
+    const days = [];
+    const today = U.dayKey();
+    const stamp = Store.data.sessions.length + ':' + (Store.data.lostTime || []).length + ':' + JSON.stringify(Store.data.settings.schedule || {}).length;
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - i);
+      const k = U.dayKey(d);
+      const ck = kind + ':' + k;
+      let v;
+      if (k !== today && weekCache[ck] && weekCache[ck].stamp === stamp) v = weekCache[ck].v;
+      else {
+        try { v = valueOf(k) || 0; } catch (e) { v = 0; }
+        if (k !== today) weekCache[ck] = { v: v, stamp: stamp };
+      }
+      days.push({ k: k, d: d, v: v });
+    }
+    const max = Math.max(goal || 0, 1, ...days.map(function (x) { return x.v; }));
+    const total = days.reduce(function (a, x) { return a + x.v; }, 0);
+    const bars = U.el('div', { class: 'week__bars' });
+    if (goal) {
+      const line = U.el('span', { class: 'week__goal', title: 'Objetivo: ' + U.fmtHuman(goal) });
+      line.style.bottom = (goal / max * 100) + '%';
+      bars.appendChild(line);
+    }
+    days.forEach(function (x) {
+      const col = U.el('div', { class: 'week__col' + (x.k === today ? ' is-today' : '') + (goal && x.v >= goal ? ' is-met' : ''),
+        title: U.dayLabel(x.d.getTime()) + ': ' + U.fmtHuman(x.v) });
+      const bar = U.el('span', { class: 'week__bar' });
+      bar.style.height = Math.max(x.v ? 4 : 0, x.v / max * 100) + '%';
+      col.appendChild(bar);
+      bars.appendChild(col);
+    });
+    const labels = U.el('div', { class: 'week__labels' }, days.map(function (x) {
+      return U.el('span', { class: x.k === today ? 'is-today' : '', text: 'DLMXJVS'[x.d.getDay()] });
+    }));
+    return U.el('div', { class: 'week week--' + kind }, [
+      U.el('div', { class: 'week__head' }, [
+        U.el('span', { text: label }),
+        U.el('strong', { text: U.fmtHuman(total) + (kind === 'study' ? ' · media ' + U.fmtHuman(total / 7) : '') })
+      ]),
+      bars, labels
+    ]);
+  };
+
   /** Tarjeta «Hoy»: lo estudiado (efectivo) frente al objetivo diario. */
   App.renderTodayStudy = function () {
     const box = document.getElementById('todayStudy');
@@ -102,6 +151,7 @@
         ]);
       })));
     }
+    box.appendChild(App.weekChart('study', function (k) { return k === key ? ms : Day.summary(k).totals.eff; }, goal, 'Últimos 7 días'));
     box.appendChild(U.el('div', { class: 'tile__actions' }, [
       U.el('button', {
         class: 'btn btn--ghost btn--sm', id: 'openDay',

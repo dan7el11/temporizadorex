@@ -1664,6 +1664,12 @@
   /** Tira superior con todos los bloques, a escala según su duración. */
   function renderTimeline() {
     const strip = document.getElementById('runnerTimeline');
+    // La tira va justo debajo de la barra superior, aunque esta ocupe dos filas
+    const hud = document.querySelector('.runner__hud');
+    if (hud && strip) {
+      const h = hud.getBoundingClientRect().height;
+      if (h) strip.style.top = Math.round(h + 6) + 'px';
+    }
     const sig = state.blocks.map(function (b) { return b.uid + ':' + b.plannedMs; }).join('|') + '#' + state.index;
 
     if (sig !== timelineSig) {
