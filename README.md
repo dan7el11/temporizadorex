@@ -508,19 +508,25 @@ avisa de cuántas has ganado. Se abre desde la tarjeta del modo juego (**🛍️
 editores del avatar y del cuarto. Al comprar algo te lo pones al momento; luego se quita y se pone
 desde la tienda o desde los editores (lo comprado aparece allí, sin candado).
 
-- **Orgullo y Prejuicio** 🌹: vestido de la Regencia (talle alto con cinta azul), bonete con lazo,
-  cuadro de Pemberley, rosas en la ventana y cartas con pluma y tintero.
-- **Mundo mágico** 🪄: túnica de mago (con camisa y corbata a rayas), sombrero de mago, gafas redondas,
-  bufandas de las cuatro casas (escarlata y oro, verde y plata, azul y bronce, amarillo y negro),
-  escoba voladora, estandarte de casa, pelotita dorada con alas que revolotea por el cuarto y chompa
-  de casa para la mascota.
-- **One Piece** 🏴‍☠️: chaleco rojo con pantalón corto azul, sombrero de paja, bandera pirata, cofre del
-  tesoro y timón.
-- **River Plate** ⚽: camiseta blanca con la banda roja, bufanda roja y blanca, banderín, pelota,
-  póster del estadio y camiseta de la banda para la mascota.
+- **Orgullo y Prejuicio** 🌹: vestido de la Regencia (escote cuadrado con encaje, mangas abullonadas,
+  cinta bajo el pecho y falda larga con pliegues), bonete de paja con forro, ramillete y lazo, levita de
+  caballero con corbatín, sombrero de copa, cuadro de Pemberley, rosas en la ventana y, para la mesa,
+  foto de Mr Darcy, juego de té y cartas con pluma y tintero.
+- **Mundo mágico** 🪄: eliges tu **casa** (escarlata y oro, verde y plata, azul y bronce o amarillo y
+  negro) y sus colores salen en la bufanda, la corbata de la túnica, el estandarte (con su animal) y
+  la chompa de la mascota. Además: sombrero de mago, gafas redondas, escoba voladora, pelotita dorada
+  con alas que revolotea por el cuarto y varita con libro de hechizos para la mesa.
+- **One Piece** 🏴‍☠️: chaleco rojo con pantalón corto azul, sombrero de paja con su cinta roja,
+  bandera pirata, cofre del tesoro, timón, mapa del tesoro y carne con hueso para la mesa.
+- **River Plate** ⚽: camiseta blanca con la banda roja (de arriba a la derecha a abajo a la izquierda,
+  vista de frente), bufanda roja y blanca, banderín, pelota, póster del Monumental de noche, camiseta
+  enmarcada, trofeo para la mesa y camiseta de la banda para la mascota.
+
+**Mesa auxiliar**: el cuarto tiene una mesita pegada al escritorio donde caben hasta 3 cosas (foto de
+Mr Darcy, té, cartas, varita, carne con hueso, trofeo); al poner una cuarta se quita la más antigua.
 
 Algunos objetos del cuarto comparten sitio en la pared (póster de anatomía, Pemberley, bandera pirata
-y estadio; diploma y estandarte): al poner uno se quita el otro. Las compras se guardan en los
+y Monumental; diploma, estandarte, mapa del tesoro y camiseta enmarcada): al poner uno se quita el otro. Las compras se guardan en los
 ajustes, así que viajan con la sincronización.
 
 ### Modo cooperativo (en la sala)

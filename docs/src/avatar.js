@@ -33,18 +33,26 @@
     ['hearts', 'Pijama de corazones', 'out:corazones'], ['#d4a531', 'Pijama dorado', 'out:dorado'],
     // De la tienda
     ['regencia', 'Vestido de la Regencia', 'shop:out-regencia'], ['tunica', 'Túnica de mago', 'shop:out-tunica'],
-    ['chaleco', 'Chaleco rojo pirata', 'shop:out-chaleco'], ['banda', 'Camiseta de la banda roja', 'shop:out-banda']
+    ['chaleco', 'Chaleco rojo pirata', 'shop:out-chaleco'], ['banda', 'Camiseta de la banda roja', 'shop:out-banda'],
+    ['levita', 'Levita de caballero (Regencia)', 'shop:out-levita']
   ];
   // Ropa temática: color de base, color del pantalón (cuerpo entero) y muestra.
   const THEMED = {
-    regencia: { base: '#f1e6cf', pants: '#e6d8b8', sw: 'linear-gradient(180deg,#f1e6cf 45%,#6f8fc4 45%,#6f8fc4 62%,#f1e6cf 62%)' },
+    regencia: { base: '#f3ead8', pants: '#e9dcc0', dress: true, sw: 'linear-gradient(180deg,#f3ead8 40%,#7d9bd2 40%,#7d9bd2 56%,#f3ead8 56%)' },
+    levita: { base: '#1f2b4a', pants: '#e3d6b4', sw: 'linear-gradient(90deg,#1f2b4a 36%,#efe2bf 36%,#efe2bf 64%,#1f2b4a 64%)' },
     tunica: { base: '#26262f', pants: '#2c2c35', sw: 'linear-gradient(90deg,#26262f 38%,#f4f4f0 38%,#f4f4f0 44%,#8e1b23 44%,#d4a531 56%,#f4f4f0 56%,#f4f4f0 62%,#26262f 62%)' },
     chaleco: { base: '#c8232f', pants: '#3a5fa8', sw: 'linear-gradient(90deg,#c8232f 38%,#efc29b 38%,#efc29b 62%,#c8232f 62%)' },
-    banda: { base: '#f4f4f2', pants: '#24242a', sw: 'linear-gradient(45deg,#f4f4f2 38%,#d81e2c 38%,#d81e2c 62%,#f4f4f2 62%)' }
+    banda: { base: '#f4f4f2', pants: '#24242a', sw: 'linear-gradient(135deg,#f4f4f2 38%,#d81e2c 38%,#d81e2c 62%,#f4f4f2 62%)' }
   };
   Avatar.THEMED = THEMED;
   // Bufandas: [clave, nombre, colores, id de la tienda]
+  // Casas del colegio de magia: [clave, nombre, colores, emoji]
+  Avatar.HOUSES = [
+    ['leon', 'Escarlata y oro', ['#8e1b23', '#d4a531'], '🦁'], ['serpiente', 'Verde y plata', ['#1f5b3a', '#c0c4c8'], '🐍'],
+    ['aguila', 'Azul y bronce', ['#1e3a7a', '#b07a3c'], '🦅'], ['tejon', 'Amarillo y negro', ['#e3b52a', '#2a2a2a'], '🦡']
+  ];
   Avatar.SCARVES = [
+    ['casa', 'De tu casa', null, 'shop:scarf-casas'],
     ['leon', 'Escarlata y oro', ['#8e1b23', '#d4a531'], 'shop:scarf-casas'], ['serpiente', 'Verde y plata', ['#1f5b3a', '#c0c4c8'], 'shop:scarf-casas'],
     ['aguila', 'Azul y bronce', ['#1e3a7a', '#b07a3c'], 'shop:scarf-casas'], ['tejon', 'Amarillo y negro', ['#e3b52a', '#2a2a2a'], 'shop:scarf-casas'],
     ['river', 'Roja y blanca', ['#d81e2c', '#f6f6f2'], 'shop:scarf-river']
@@ -698,7 +706,7 @@
       }
       // Pliegues y bolsillo con bolígrafo
       [[12, 44], [12, 45], [13, 46], [13, 47], [36, 44], [36, 45], [35, 46], [35, 47]].forEach(function (p) { put(px, p[0], p[1], clothR.shadow); });
-      if (THEMED[a.pattern]) themedPattern(px, body, a.pattern, clothR, neckR, false);
+      if (THEMED[a.pattern]) themedPattern(px, body, a.pattern, clothR, neckR, false, a);
     }
 
     // 3. Cuello, con la sombra de la barbilla
@@ -745,7 +753,7 @@
     }
 
     // 6c. Bufanda (de la tienda)
-    if (a.scarf && !pose) scarf(px, a.scarf, false);
+    if (a.scarf && !pose) scarf(px, a.scarf, false, a);
 
     // 7. Pelo de delante, con su sombra sobre la frente
     if (st.scalp) {
@@ -904,52 +912,102 @@
   }
 
   /* ── Ropa y complementos de la tienda ───────────────────── */
+  /** Colores de la casa elegida: [principal, secundario]. */
+  function houseColors(a) {
+    const h = Avatar.HOUSES.filter(function (x) { return x[0] === (a && a.house); })[0] || Avatar.HOUSES[0];
+    return h[2];
+  }
+  Avatar.houseColors = function (house) { return houseColors({ house: house }); };
   /** Dibujo encima de la ropa temática. full: cuerpo entero (otro encuadre). */
-  function themedPattern(px, mask, kind, clothR, neckR, full) {
+  function themedPattern(px, mask, kind, clothR, neckR, full, a) {
     const top = full ? 38 : 37, bot = full ? 56 : 52;
     const at = function (x, y, c) { if (inM(mask, x, y)) put(px, x, y, c); };
     if (kind === 'regencia') {
-      // Talle alto: cinta azul bajo el pecho con lazo, y encaje en el escote
-      const yb = full ? 45 : 43;
-      const rib = ramp('#6f8fc4');
-      for (let x = 0; x < W; x++) { at(x, yb, rib.base); at(x, yb + 1, rib.shadow); }
-      [[22, yb - 1], [23, yb], [25, yb], [26, yb - 1], [22, yb + 1], [26, yb + 1]].forEach(function (p) { put(px, p[0], p[1], rib.light); });
-      put(px, 24, yb, rib.deep); put(px, 23, yb + 2, rib.base); put(px, 25, yb + 2, rib.base);
-      for (let x = 0; x < W; x += 2) at(x, top + 1, '#fffaf0');
-      // Mangas abullonadas: brillos en los hombros
-      if (!full) { [[7, 41], [8, 40], [9, 40], [39, 40], [40, 40], [41, 41]].forEach(function (p) { at(p[0], p[1], clothR.hi); }); }
-    } else if (kind === 'tunica') {
-      // Camisa blanca y corbata a rayas bajo la túnica abierta
-      const y0 = top, y1 = full ? 55 : 51;
-      for (let y = y0; y <= y1; y++) for (let x = 21; x <= 27; x++) {
-        const half = 1.5 + (y - y0) * 0.12;
-        if (Math.abs(x - 24) <= half) at(x, y, Math.abs(x - 24) <= 0.6 + (y > y0 + 2 ? 0.6 : 0) ? ((y >> 1) % 2 ? '#8e1b23' : '#d4a531') : '#f1f1ec');
+      // Vestido de talle alto: escote cuadrado con encaje, mangas abullonadas,
+      // cinta bajo el pecho con lazo y falda con pliegues
+      const neckY = full ? 41 : 41, yb = full ? 44 : 44;
+      const rib = ramp('#7d9bd2');
+      for (let y = top; y <= neckY; y++) for (let x = 17; x <= 31; x++) {
+        const half = 6.2 + (y - top) * 0.15;
+        if (Math.abs(x + 0.5 - 24) <= half) at(x, y, (y === neckY || Math.abs(x + 0.5 - 24) > half - 1) ? neckR.shadow : neckR.base);
       }
-      for (let y = y0; y <= y1; y++) { const half = Math.round(2.2 + (y - y0) * 0.12); at(24 - half, y, clothR.line); at(24 + half, y, clothR.line); at(24 - half - 1, y, '#8e1b23'); }
+      for (let x = 16; x <= 32; x++) at(x, neckY + 1, x % 2 ? '#ffffff' : '#ece4d2');   // encaje
+      put(px, 24, neckY - 1, '#c9a227'); put(px, 24, neckY, '#e8d08a');                  // colgante
+      for (let x = 0; x < W; x++) { at(x, yb, rib.light); at(x, yb + 1, rib.base); at(x, yb + 2, rib.shadow); }
+      // Lazo con caídas
+      [[21, yb - 1], [22, yb], [22, yb + 2], [21, yb + 3], [27, yb - 1], [26, yb], [26, yb + 2], [27, yb + 3]].forEach(function (p) { put(px, p[0], p[1], rib.light); });
+      put(px, 24, yb + 1, rib.deep); put(px, 23, yb + 3, rib.base); put(px, 23, yb + 4, rib.base); put(px, 25, yb + 3, rib.shadow); put(px, 25, yb + 4, rib.shadow);
+      // Pliegues de la falda
+      for (let y = yb + 3; y <= bot; y++) for (let x = 0; x < W; x++) if ((x + 1) % 4 === 0 && Math.abs(x - 24) > 1) at(x, y, clothR.shadow);
+      // Mangas abullonadas con su cinta
+      if (!full) {
+        [[3, 41, 5], [37, 41, 5]].forEach(function (m) {
+          for (let y = m[1] - 3; y <= m[1] + 3; y++) for (let x = m[0]; x < m[0] + 8; x++) {
+            const d = Math.hypot((x + 0.5 - (m[0] + 4)) / 4.2, (y + 0.5 - m[1]) / 3.4);
+            if (d <= 1) at(x, y, d > 0.8 ? clothR.shadow : (x + y) % 3 === 0 ? clothR.hi : clothR.light);
+          }
+          for (let x = m[0]; x < m[0] + 8; x++) at(x, m[1] + 3, rib.base);
+        });
+      }
+    } else if (kind === 'levita') {
+      // Levita azul noche, chaleco marfil y corbatín blanco anudado
+      const y0 = top, y1 = bot;
+      for (let y = y0; y <= y1; y++) {
+        const half = Math.round(2.6 + (y - y0) * 0.25);
+        for (let x = 24 - half; x <= 24 + half; x++) at(x, y, y < y0 + 4 ? (Math.abs(x - 24) <= 2 ? '#fbfbf6' : '#e8e4d8') : (Math.abs(x - 24) <= half - 1 ? '#efe2bf' : '#c9b78a'));
+        at(24 - half - 1, y, clothR.hi); at(24 + half + 1, y, clothR.deep);
+      }
+      // Corbatín: pliegues y nudo
+      put(px, 23, y0 + 1, '#d9d6cc'); put(px, 25, y0 + 1, '#d9d6cc'); put(px, 24, y0 + 2, '#ffffff'); put(px, 24, y0 + 3, '#d9d6cc');
+      // Botones del chaleco
+      for (let y = y0 + 6; y <= y1; y += 3) put(px, 24, y, '#b08a3e');
+      // Solapas altas
+      for (let k = 0; k < 6; k++) { at(18 - k, y0 + k, clothR.light); at(30 + k, y0 + k, clothR.shadow); }
+    } else if (kind === 'tunica') {
+      // Camisa blanca, corbata a rayas con los colores de tu casa y forro de la túnica
+      const hc = houseColors(a);
+      const y0 = top, y1 = full ? 55 : 51;
+      for (let y = y0; y <= y1; y++) for (let x = 20; x <= 28; x++) {
+        const half = 1.6 + (y - y0) * 0.14;
+        if (Math.abs(x + 0.5 - 24.5) <= half) at(x, y, '#f1f1ec');
+      }
+      for (let y = y0 + 1; y <= y1; y++) {
+        const w = y < y0 + 3 ? 1 : 2;
+        const c = Math.floor((y - y0) / 2) % 2 ? hc[1] : hc[0];
+        for (let x = 24; x < 24 + w; x++) at(x, y, c);
+        if (w === 1) at(25, y, c);
+      }
+      put(px, 24, y0 + 1, hc[0]); put(px, 25, y0 + 1, hc[0]);
+      for (let y = y0; y <= y1; y++) { const half = Math.round(2.4 + (y - y0) * 0.14); at(24 - half, y, clothR.line); at(25 + half, y, clothR.line); at(24 - half - 1, y, hc[0]); at(26 + half, y, hc[0]); }
+      // Escudo genérico bordado en el pecho
+      const ex = full ? 17 : 13, ey = full ? 45 : 44;
+      [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [1, 2]].forEach(function (p) { at(ex + p[0], ey + p[1], p[1] === 0 ? hc[1] : hc[0]); });
     } else if (kind === 'chaleco') {
       // Chaleco abierto: se ve el pecho
       const y0 = top + 2;
       for (let y = y0; y <= bot; y++) for (let x = 22; x <= 26; x++) at(x, y, x === 22 || x === 26 ? neckR.shadow : neckR.base);
       for (let y = y0; y <= bot; y++) { at(21, y, clothR.hi); at(27, y, clothR.deep); }
     } else if (kind === 'banda') {
-      // Banda roja en diagonal: del hombro derecho de quien la lleva a la cadera izquierda
+      // Banda roja en diagonal: de arriba a la derecha a abajo a la izquierda (vista de frente)
       const red = ramp('#d81e2c');
       const x0 = full ? 15 : 8, y0 = full ? 39 : 38, k = full ? 1.2 : 1.55;
       for (let y = y0; y <= bot; y++) for (let x = 0; x < W; x++) {
-        const d = (x - x0) - (y - y0) * k;
-        if (d >= 0 && d < (full ? 4 : 5.5)) at(x, y, d < 1 ? red.light : d > (full ? 3 : 4.5) ? red.shadow : red.base);
+        const xm = 47 - x;   // en espejo
+        const d = (xm - x0) - (y - y0) * k;
+        if (d >= 0 && d < (full ? 4 : 5.5)) at(x, y, d < 1 ? red.shadow : d > (full ? 3 : 4.5) ? red.light : red.base);
       }
     }
   }
-  function scarf(px, kind, full) {
-    const sc = Avatar.SCARVES.filter(function (s) { return s[0] === kind; })[0];
-    if (!sc) return;
-    const c1 = ramp(sc[2][0]), c2 = ramp(sc[2][1]);
+  function scarf(px, kind, full, a) {
+    let cols;
+    if (kind === 'casa') cols = houseColors(a);
+    else { const sc = Avatar.SCARVES.filter(function (s) { return s[0] === kind; })[0]; if (!sc) return; cols = sc[2]; }
+    const c1 = ramp(cols[0]), c2 = ramp(cols[1]);
     const y0 = full ? 35 : 34.6, y1 = full ? 39.4 : 39.6, xl = full ? 19.6 : 18.6, xr = full ? 28.4 : 29.4;
     const band = fill(poly([[xl, y0], [xr, y0], [xr + 1, y1], [xl - 1, y1]]));
     for (let i = 0; i < W * H; i++) if (band[i]) { const x = i % W, y = Math.floor(i / W); px[i] = (Math.floor(x / 2) % 2 ? c2 : c1)[y === Math.ceil(y0) ? 'light' : y >= y1 - 1 ? 'shadow' : 'base']; }
     // Extremo que cae por el pecho, a rayas horizontales y con flecos
-    const ex = full ? 26 : 27, ey = full ? 39 : 39, eh = full ? 9 : 10;
+    const ex = full ? 26 : 27, ey = 39, eh = full ? 9 : 10;
     for (let y = ey; y < ey + eh; y++) for (let x = ex; x < ex + 4; x++) {
       const r = (Math.floor((y - ey) / 2) % 2 ? c2 : c1);
       put(px, x, y, x === ex ? r.light : x === ex + 3 ? r.shadow : r.base);
@@ -958,45 +1016,69 @@
   }
   function themedHat(px, kind) {
     if (kind === 'bonete') {
-      // Bonete de la Regencia: copa, ala que enmarca la cara y lazo bajo la barbilla
-      const strawR = ramp('#eadbb4');
-      const rib = ramp('#6f8fc4');
-      const brim = fill(and(ell(CX, 18.5, 16.4, 12), not(ell(CX, 22, 12.4, 10)), function (x, y) { return y < 25.5; }));
-      const crown = fill(and(ell(CX, 13.4, 12.6, 9), function (x, y) { return y < 18; }));
-      castShadow(px, crown, 0, 1, 0.25);
-      shade(px, crown, strawR, { texture: function (x, y, t) { return (x + y * 2) % 5 === 0 && t === 'base' ? 'light' : null; } });
-      shade(px, brim, strawR, { bias: 0.1 });
-      for (let x = 12; x <= 36; x++) { if (inM(crown, x, 15)) put(px, x, 15, rib.base); if (inM(crown, x, 16)) put(px, x, 16, rib.shadow); }
-      // Cintas hasta la barbilla y lazo
-      // (bajan por fuera de la cara, junto a las orejas, y se juntan bajo la barbilla)
-      for (let y = 25; y <= 31; y++) { put(px, 11, y, rib.base); put(px, 37, y, rib.shadow); }
-      [[12, 32], [13, 33], [14, 33], [15, 34], [16, 34], [17, 35], [18, 35], [19, 35], [20, 35]].forEach(function (p) { put(px, p[0], p[1], rib.base); put(px, 48 - p[0], p[1], rib.shadow); });
-      [[21, 34], [22, 35], [21, 36], [27, 34], [26, 35], [27, 36], [23, 35], [25, 35]].forEach(function (p) { put(px, p[0], p[1], rib.light); });
-      put(px, 24, 35, rib.deep);
-      // Florecilla a un lado
-      put(px, 33, 14, '#e86a8a'); put(px, 34, 15, '#e86a8a'); put(px, 32, 15, '#e86a8a'); put(px, 33, 16, '#e86a8a'); put(px, 33, 15, '#ffe27a');
-    } else if (kind === 'mago') {
-      // Sombrero de mago, puntiagudo y con la punta doblada
-      const hatR = ramp('#3b3352');
-      const cone = fill(or(poly([[14.6, 15.2], [33.4, 15.2], [28.6, 6], [33.6, 1.2], [27.4, 2.6], [23, 4.4]])));
-      const brimM = fill(ell(CX, 15.4, 17.4, 2.8));
+      // Bonete de la Regencia: ala de paja que enmarca la cara, forro azul,
+      // copa detrás, cinta, ramillete de flores y lazo bajo la barbilla
+      const strawR = ramp('#e6d3a3');
+      const rib = ramp('#7d9bd2');
+      const outer = and(ell(CX, 19.5, 17, 12.6), function (x, y) { return y < 26.5; });
+      const inner = ell(CX, 22.4, 12.2, 10.2);
+      const brim = fill(and(outer, not(inner)));
+      const lining = fill(and(ell(CX, 21.8, 13.2, 11), not(inner), function (x, y) { return y < 17.5; }));
+      const crown = fill(and(ell(CX, 12.6, 11.6, 8.6), function (x, y) { return y < 16.5; }));
+      castShadow(px, brim, 0, 1, 0.25);
+      shade(px, crown, strawR, { texture: function (x, y, t) { return y % 2 === 0 && t === 'base' ? 'light' : null; } });
+      shade(px, brim, strawR, { bias: 0.12, texture: function (x, y, t) { return (x + y) % 3 === 0 && (t === 'base' || t === 'light') ? 'shadow' : null; } });
+      for (let i = 0; i < W * H; i++) if (lining[i] && brim[i]) { const y = Math.floor(i / W); px[i] = y > 21 ? rib.shadow : rib.light; }
+      // Cinta sobre la copa
+      for (let x = 12; x <= 36; x++) { if (inM(crown, x, 14)) put(px, x, 14, rib.light); if (inM(crown, x, 15)) put(px, x, 15, rib.base); }
+      // Cintas por fuera de la cara y lazo bajo la barbilla, ladeado
+      [[24, 35], [25, 34], [26, 34], [25, 36], [26, 36], [22, 34], [21, 34], [22, 36], [21, 36], [23, 37], [22, 38], [25, 37], [26, 38]].forEach(function (p) { put(px, p[0], p[1], rib.light); });
+      put(px, 23, 35, rib.deep); put(px, 24, 36, rib.deep);
+      // Ramillete: rosas y hojas a un lado
+      [[32, 12, '#e86a8a'], [33, 13, '#f49ab0'], [34, 12, '#e86a8a'], [33, 11, '#ffd0dc'], [30, 13, '#fff4c8'], [29, 14, '#ffe27a'], [35, 14, '#c43a5a'], [31, 15, '#5f9a4a'], [34, 15, '#5f9a4a'], [36, 13, '#4e7a3c']]
+        .forEach(function (p) { put(px, p[0], p[1], p[2]); });
+    } else if (kind === 'copa') {
+      // Sombrero de copa alta, con cinta
+      const hatR = ramp('#23232b');
+      const crown = fill(rect(15.5, 1.5, 32.5, 14.5));
+      const brimM = fill(ell(CX, 15.2, 15.5, 2.4));
       castShadow(px, brimM, 0, 1, 0.3);
-      shade(px, cone, hatR, {});
-      shade(px, brimM, hatR, { bias: 0.1 });
-      for (let x = 15; x <= 33; x++) { if (inM(cone, x, 13)) put(px, x, 13, '#8e6b2a'); if (inM(cone, x, 12)) put(px, x, 12, '#b08a3e'); }
-      // Remiendos y estrellitas
-      put(px, 20, 10, hatR.light); put(px, 21, 10, hatR.light); put(px, 20, 9, hatR.shadow);
-      put(px, 26, 8, '#f2d06b'); put(px, 25, 9, '#f2d06b'); put(px, 27, 9, '#f2d06b'); put(px, 26, 10, '#f2d06b');
+      shade(px, crown, hatR, {});
+      for (let x = 16; x <= 32; x++) { put(px, x, 11, '#5a3a5a'); put(px, x, 12, '#3f2840'); }
+      for (let y = 2; y <= 10; y++) put(px, 18, y, hatR.light);
+      shade(px, brimM, hatR, { bias: 0.15 });
+    } else if (kind === 'mago') {
+      // Sombrero de mago: ala ancha, cono arrugado con la punta caída, cinta y estrellas
+      const hatR = ramp('#3d3458');
+      const cone = fill(poly([[14.4, 15.4], [33.6, 15.4], [30.2, 9], [28.6, 5.4], [32.2, 3.2], [35.4, 4.4], [33.6, 1.2], [27.4, 1.4], [23.8, 3.8], [19.4, 9.4]]));
+      const brimM = fill(and(ell(CX, 15.6, 18.6, 3.2), function (x, y) { return true; }));
+      castShadow(px, brimM, 0, 1, 0.32);
+      shade(px, cone, hatR, { texture: function (x, y, t) { return (x - y * 0.6) % 5 < 0.8 && t === 'base' ? 'shadow' : null; } });
+      shade(px, brimM, hatR, { bias: 0.12 });
+      for (let x = 13; x <= 35; x++) put(px, x, 17, hatR.deep);   // ala por debajo
+      for (let x = 15; x <= 33; x++) { if (inM(cone, x, 12)) put(px, x, 12, '#b08a3e'); if (inM(cone, x, 13)) put(px, x, 13, '#7d5f26'); }
+      put(px, 23, 12, '#f2d06b'); put(px, 24, 12, '#f2d06b'); put(px, 23, 13, '#f2d06b'); put(px, 24, 13, '#c9a227');   // hebilla
+      [[21, 8], [27, 6], [26, 10], [31, 3]].forEach(function (p, i) { put(px, p[0], p[1], i % 2 ? '#fff2b0' : '#f2d06b'); });
+      put(px, 20, 8, '#c9a227'); put(px, 22, 8, '#c9a227'); put(px, 21, 7, '#c9a227'); put(px, 21, 9, '#c9a227');
     } else if (kind === 'paja') {
-      // Sombrero de paja con cinta roja
+      // Sombrero de paja con su cinta roja
       const strawR = ramp('#e8c66a');
-      const crown = fill(and(ell(CX, 13.2, 10.4, 7.4), function (x, y) { return y < 15.4; }));
-      const brimM = fill(and(ell(CX, 15.6, 19.6, 3.4), not(rect(0, 0, W, 13.4))));
+      const crown = fill(and(ell(CX, 12.4, 10.6, 8), function (x, y) { return y < 15; }));
+      const brimM = fill(and(ell(CX, 15.8, 19.8, 3.6), not(and(ell(CX, 12.4, 10.6, 8), function (x, y) { return y < 14.6; }))));
       castShadow(px, brimM, 0, 2, 0.3);
       const tex = function (x, y, t) { return (x * 3 + y) % 4 === 0 && (t === 'base' || t === 'light') ? 'shadow' : null; };
       shade(px, crown, strawR, { texture: tex });
-      for (let x = 13; x <= 35; x++) { if (inM(crown, x, 13)) put(px, x, 13, '#c8232f'); if (inM(crown, x, 14)) put(px, x, 14, '#9a1620'); }
       shade(px, brimM, strawR, { texture: tex, bias: 0.15 });
+      // Cinta roja ancha justo encima del ala
+      const red = ramp('#d0202c');
+      for (let x = 12; x <= 36; x++) {
+        if (inM(crown, x, 11)) put(px, x, 11, red.light);
+        if (inM(crown, x, 12)) put(px, x, 12, red.base);
+        if (inM(crown, x, 13)) put(px, x, 13, red.base);
+        if (inM(crown, x, 14)) put(px, x, 14, red.shadow);
+      }
+      // Borde del ala deshilachado
+      for (let x = 6; x <= 42; x += 3) if (get(px, x, 19)) put(px, x, 19, strawR.deep);
     }
   }
   function roundGlasses(px) {
@@ -1023,6 +1105,13 @@
         const f = leg[2];
         shade(px, fill(ell(f[0] + (f[0] < 24 ? -0.6 : 0.6), f[1] + 2, 3.3, 1.9)), ramp(coat ? '#f2f4f8' : '#4a3a44'), {});
       });
+      // Vestido largo hasta los tobillos
+      if (THEMED[a.pattern] && THEMED[a.pattern].dress) {
+        const sk = fill(poly([[16.2, 46], [31.8, 46], [35.6, 74.5], [12.4, 74.5]]));
+        shade(px, sk, clothR, {});
+        for (let y = 50; y <= 74; y++) for (let x = 12; x <= 36; x++) if (inM(sk, x, y) && (x + 1) % 4 === 0) put(px, x, y, clothR.shadow);
+        for (let x = 12; x <= 36; x++) if (inM(sk, x, 73)) put(px, x, 73, '#ffffff');
+      }
       // Tronco (y el faldón de la bata)
       const torso = or(capsule([[16.8, 40.6], [31.2, 40.6]], 2.8), poly([[14.4, 41], [33.6, 41], [32.2, 56.5], [15.8, 56.5]]));
       const skirt = coat ? poly([[15.6, 53], [32.4, 53], [34.4, 64.5], [13.6, 64.5]]) : null;
@@ -1030,7 +1119,7 @@
       shade(px, torsoM, clothR, coat ? { bias: 0.1 } : {});
       if (a.pattern === 'hearts') heartsPattern(px, torsoM, 1);
       if (a.pattern === 'name') embroidery(px, 17, 47);
-      if (THEMED[a.pattern]) themedPattern(px, torsoM, a.pattern, clothR, neckR, true);
+      if (THEMED[a.pattern]) themedPattern(px, torsoM, a.pattern, clothR, neckR, true, a);
       if (!coat) {
         for (let x = 17; x <= 31; x++) put(px, x, 56, pantsR.deep);   // cinturilla
       } else {
@@ -1059,7 +1148,7 @@
     put(px, 18, 46, '#ffffff');
     shade(px, fill(or(capsule([[28.6, 44], [27.8, 46]], 0.6), capsule([[28.6, 44], [29.6, 46]], 0.6))), metalR, { outline: false });
     if (a.pin) heartPin(px, 23, 45);
-    if (a.scarf) scarf(px, a.scarf, true);
+    if (a.scarf) scarf(px, a.scarf, true, a);
     P.arms.forEach(function (arm) {
       const sh = arm[0], el = arm[1], hd = arm[2];
       const mid = [el[0] + (hd[0] - el[0]) * 0.55, el[1] + (hd[1] - el[1]) * 0.55];
@@ -1329,11 +1418,26 @@
         ['hat', 'bonete', '', '👒 Bonete con lazo', 'shop:hat-bonete'],
         ['hat', 'mago', '', '🧙 Sombrero de mago', 'shop:hat-mago'],
         ['hat', 'paja', '', '👒 Sombrero de paja', 'shop:hat-paja'],
+        ['hat', 'copa', '', '🎩 Sombrero de copa', 'shop:hat-copa'],
         ['roundGlasses', true, false, '👓 Gafas redondas', 'shop:glasses-redondas']
       ]);
       if (shopAcc.length) rows.appendChild(row('De la tienda', lockChips(shopAcc, true)));
-      const scarves = owned(Avatar.SCARVES.map(function (s) { return ['scarf', s[0], '', '🧣 ' + s[1], s[3]]; }));
+      const scarves = owned(Avatar.SCARVES.filter(function (s) { return s[0] === 'casa' || s[0] === 'river'; }).map(function (s) { return ['scarf', s[0], '', '🧣 ' + s[1], s[3]]; }));
       if (scarves.length) rows.appendChild(row('Bufanda', lockChips(scarves, true)));
+      // Casa del colegio de magia: colores de la bufanda, la corbata, el estandarte y la chompa
+      const hp = ['shop:scarf-casas', 'shop:out-tunica', 'shop:room-estandarte', 'shop:pet-casa'].some(function (id) { return Avatar.unlocked(id); });
+      if (hp) {
+        const hb = U.el('div', { class: 'chips' });
+        Avatar.HOUSES.forEach(function (h) {
+          const on = (cfg.house || 'leon') === h[0];
+          const chip = U.el('button', { class: 'chip chip--house' + (on ? ' is-active' : ''), type: 'button', 'aria-pressed': on ? 'true' : 'false',
+            onclick: function () { cfg.house = h[0]; if (/^(leon|serpiente|aguila|tejon)$/.test(cfg.scarf || '')) cfg.scarf = 'casa'; save(); if (global.Rooms && global.Scene) Scene.invalidate(); } });
+          chip.appendChild(U.el('span', { class: 'chip__swatch', style: { background: 'linear-gradient(90deg,' + h[2][0] + ' 50%,' + h[2][1] + ' 50%)' } }));
+          chip.appendChild(document.createTextNode(h[3] + ' ' + h[1]));
+          hb.appendChild(chip);
+        });
+        rows.appendChild(row('Casa', hb));
+      }
       if (global.Shop) {
         rows.appendChild(row('Tienda', U.el('button', { class: 'chip chip--shop', type: 'button', text: '🛍️ Abrir la tienda · ' + Shop.points().toLocaleString('es-ES') + ' 🪙',
           onclick: function () { Shop.open({ onChange: reload }); } })));
