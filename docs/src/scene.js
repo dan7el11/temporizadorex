@@ -643,8 +643,6 @@
     const items = deco && Array.isArray(deco.items) ? deco.items : [];
     const t = ((now || Date.now()) / 1000) % EV_PERIOD;
     const round = Math.floor((now || Date.now()) / 1000 / EV_PERIOD);
-    // Con el sombrero de paja puesto: el puño gigante (se sopla el pulgar y el brazo se hincha)
-    if (cfg && cfg.hat === 'paja' && t >= 150 && t < 159) return { kind: 'gear', el: t - 150 };
     if (items.indexOf('snitch') >= 0 && t >= 60 && t < 68) return { kind: 'snitch', el: t - 60, caught: round % 2 === 0 };
     if (items.indexOf('carne') >= 0 && t >= 240 && t < 248) {
       const desk = items.filter(function (id) { return global.Rooms && Rooms.DESK.indexOf(id) >= 0; }).slice(-3);

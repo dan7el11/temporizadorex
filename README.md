@@ -535,10 +535,6 @@ figuritas de la tripulación para la mesa (capitán con sombrero de paja, espada
 - **Carne con hueso** (en la mesa auxiliar): cada 6 minutos el avatar separa el brazo derecho hacia el
   lado (abducción), desde ahí lo estira como goma hasta la carne, cierra el puño y vuelve de golpe; se
   queda un momento con la carne en la mano y luego come («🍖»).
-- **Sombrero de paja puesto**: cada 6 minutos, el puño gigante (Gear Third): flexiona el hombro para
-  llevarse el pulgar a la boca y soplar («👍💨»), sube el brazo y este se hincha —antebrazo inflado y una
-  mano enorme con los dedos doblados, nudillos y el pulgar por delante— con un rebote y vapor («💪»);
-  luego se desinfla y vuelve a la mesa.
 - **Llegada pirata** (con el sombrero de paja, la bandera, el timón o las figuritas): la ventana se abre,
   dos manos estiradas desde lejos agarran el marco y el avatar entra **de cabeza, volando como un
   superhéroe** —de perfil, con los dos puños por delante y las piernas estiradas detrás—, toca suelo con
