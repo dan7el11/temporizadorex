@@ -131,11 +131,17 @@
   Scene.CAT_BREEDS = [['naranja', 'Naranja'], ['negro', 'Negro', 'pet:gato-negro'], ['gris', 'Gris atigrado', 'pet:gato-gris'], ['siames', 'Siamés', 'pet:siames'], ['calico', 'Calicó', 'pet:calico']];
   Scene.DOG_BREEDS = [['dorado', 'Dorado'], ['dalmata', 'Dálmata', 'pet:dalmata'], ['carlino', 'Carlino', 'pet:carlino'], ['husky', 'Husky', 'pet:husky']];
   Scene.PET_COLLARS = [['', 'Sin collar'], ['#e0365a', 'Rojo'], ['#3f72e8', 'Azul'], ['#2e9a5a', 'Verde'], ['#ff7ab0', 'Rosa']];
-  Scene.PET_SWEATERS = [['', 'Sin chompa'], ['#c4405a', 'Granate'], ['#3f72e8', 'Azul'], ['#2e9a5a', 'Verde'], ['stripes', 'A rayas']];
+  // [valor, nombre, id de la tienda, muestra]
+  Scene.PET_SWEATERS = [['', 'Sin chompa'], ['#c4405a', 'Granate'], ['#3f72e8', 'Azul'], ['#2e9a5a', 'Verde'], ['stripes', 'A rayas'],
+    ['casa', 'De casa: escarlata y oro', 'shop:pet-casa', 'repeating-linear-gradient(180deg,#8e1b23 0 4px,#d4a531 4px 8px)'],
+    ['banda', 'Blanca con banda roja', 'shop:pet-banda', 'linear-gradient(45deg,#f4f4f2 38%,#d81e2c 38%,#d81e2c 62%,#f4f4f2 62%)']];
   function sweaterRows(P, x, y, w, h, c) {
-    for (let k = 0; k < h; k++) P(x, y + k, w, 1, c === 'stripes' ? (k % 2 ? '#f4efe6' : '#c4405a') : c);
+    for (let k = 0; k < h; k++) {
+      P(x, y + k, w, 1, c === 'stripes' ? (k % 2 ? '#f4efe6' : '#c4405a') : c === 'casa' ? (k % 2 ? '#d4a531' : '#8e1b23') : c === 'banda' ? '#f4f4f2' : c);
+      if (c === 'banda') P(x + Math.min(w - 2, 1 + k * 2), y + k, 2, 1, '#d81e2c');
+    }
     // Puntos de punto (textura de lana)
-    if (c !== 'stripes') for (let i = 1; i < w; i += 2) P(x + i, y + h - 1, 1, 1, '#ffffff33');
+    if (c !== 'stripes' && c !== 'banda') for (let i = 1; i < w; i += 2) P(x + i, y + h - 1, 1, 1, '#ffffff33');
   }
 
   // Gato: duerme hecho una bola sobre los libros, mueve una oreja, se despierta,

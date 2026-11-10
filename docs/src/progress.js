@@ -323,6 +323,7 @@
   ];
   Progress.UNLOCKS = UNLOCKS;
   Progress.unlocked = function (id) {
+    if (/^shop:/.test(id || '')) return !!(global.Shop && Shop.owns(id));
     const u = UNLOCKS.filter(function (x) { return x.id === id; })[0];
     if (!u) return true;
     if (u.level) return Progress.levelInfo().level >= u.level;
@@ -330,6 +331,7 @@
     return !!(b && b.unlocked);
   };
   Progress.unlockLabel = function (id) {
+    if (/^shop:/.test(id || '')) { const it = global.Shop && Shop.item(id); return 'la tienda' + (it ? ' (' + it.price + ' 🪙)' : ''); }
     const u = UNLOCKS.filter(function (x) { return x.id === id; })[0];
     if (!u) return '';
     if (u.level) return 'el nivel ' + u.level;
@@ -555,6 +557,7 @@
     const got = Progress.badges().filter(function (b) { return b.unlocked; }).length;
     return [
       U.el('button', { class: 'btn btn--ghost btn--sm', type: 'button', text: '🏅 Logros ' + got + '/' + BADGES.length, onclick: Progress.openBadges }),
+      global.Shop ? Shop.button() : null,
       U.el('button', { class: 'btn btn--ghost btn--sm', type: 'button', text: '🌙 Cerrar el día', onclick: function () { Progress.openDayEnd(); } }),
       t.kind ? null : U.el('button', { class: 'btn btn--ghost btn--sm', type: 'button', text: '🌱 Día amable', title: 'Hoy todo cuesta la mitad', onclick: Game.setKind })
     ];
@@ -638,10 +641,18 @@
     }).then(function () { timers.forEach(clearTimeout); });
   };
 
+  let coinsSeen = null;
+  Progress.coinsBaseline = function () { if (global.Shop) coinsSeen = Shop.earned(); };
   /** Al cerrar el resumen de una sesión: misiones, logros y, de noche, el fin de jornada. */
   Progress.afterSession = function () {
     if (!global.Game || !Game.enabled()) return;
     Progress.check();
+    // Monedas ganadas en la sesión
+    if (global.Shop) {
+      const before = coinsSeen, now = Shop.earned();
+      coinsSeen = now;
+      if (before !== null && now > before) UI.toast('🪙 +' + (now - before).toLocaleString('es-ES') + ' monedas · tienes ' + Shop.points().toLocaleString('es-ES'));
+    }
     const k = U.dayKey();
     if (new Date().getHours() >= 21 && read(DAYEND_KEY, '') !== k) {
       write(DAYEND_KEY, k);

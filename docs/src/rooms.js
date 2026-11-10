@@ -24,10 +24,30 @@
     ['poster', '🦴 Póster de anatomía', 'room:poster'], ['diploma', '🎓 Diploma', 'room:diploma'],
     ['alfombra', '🟫 Alfombra', 'room:alfombra'], ['lampara', '💡 Lámpara de pie', 'room:lampara'],
     ['pizarra', '📝 Pizarra con apuntes', 'room:pizarra'], ['luces', '✨ Guirnalda de luces', 'room:luces'],
-    ['pecera', '🐠 Pecera', 'room:pecera'], ['foto', '💞 Foto de los dos', 'room:foto']
+    ['pecera', '🐠 Pecera', 'room:pecera'], ['foto', '💞 Foto de los dos', 'room:foto'],
+    // De la tienda (solo aparecen cuando son tuyos)
+    ['pemberley', '🖼️ Cuadro de Pemberley', 'shop:room-pemberley'], ['rosas', '🌹 Rosas en la ventana', 'shop:room-rosas'],
+    ['cartas', '✒️ Cartas, pluma y tintero', 'shop:room-cartas'], ['escoba', '🧹 Escoba voladora', 'shop:room-escoba'],
+    ['estandarte', '🚩 Estandarte de casa', 'shop:room-estandarte'], ['snitch', '✨ Pelotita dorada con alas', 'shop:room-snitch'],
+    ['bandera', '🏴‍☠️ Bandera pirata', 'shop:room-bandera'], ['cofre', '💰 Cofre del tesoro', 'shop:room-cofre'],
+    ['timon', '☸️ Timón de barco', 'shop:room-timon'], ['banderin', '🚩 Banderín rojo y blanco', 'shop:room-banderin'],
+    ['pelota', '⚽ Pelota de fútbol', 'shop:room-pelota'], ['estadio', '🏟️ Póster del estadio', 'shop:room-estadio']
   ];
+  // Objetos que comparten sitio en la pared: poner uno quita el otro.
+  Rooms.SLOT = { poster: 'a', pemberley: 'a', bandera: 'a', estadio: 'a', diploma: 'b', estandarte: 'b' };
+  // Recorte de cada objeto para verlo suelto (en la tienda): [x, y, ancho, alto]
+  const BOX = {
+    pemberley: [45, 6, 22, 18], rosas: [7, 28, 12, 15], cartas: [15, 29, 16, 14], escoba: [0, 46, 16, 52], estandarte: [64, 15, 18, 22],
+    snitch: [62, 18, 18, 12], bandera: [45, 5, 22, 18], cofre: [74, 78, 22, 20], timon: [72, 50, 20, 20], banderin: [43, 26, 24, 13],
+    pelota: [88, 84, 19, 16], estadio: [46, 5, 20, 25]
+  };
   const DEFAULT = { wall: 0, floor: 0, curtain: 0, items: ['estanteria', 'planta', 'reloj'] };
 
+  /** Añade un objeto; si su sitio en la pared está ocupado, quita el que había. */
+  Rooms.place = function (items, id) {
+    const sl = Rooms.SLOT[id];
+    return items.filter(function (x) { return x !== id && (!sl || Rooms.SLOT[x] !== sl); }).concat([id]);
+  };
   Rooms.config = function () { return Rooms.normal(Store.data.settings.room); };
   Rooms.normal = function (c) {
     const r = Object.assign({}, DEFAULT, c || {});
@@ -204,10 +224,138 @@
       r += px(73, 42, 3, 3, '#c9875e') + px(73, 41, 3, 1, '#2b2326') + px(73, 45, 3, 2, '#9a3256');
       r += px(71, 39, 1, 1, '#ff4d6d') + px(72, 39, 1, 1, '#ff4d6d') + px(71, 40, 2, 1, '#ff4d6d');
       return r;
-    }
+    },
+
+    /* Orgullo y Prejuicio */
+    pemberley: function () {
+      // Paisaje con la casa grande junto al lago, en marco dorado
+      let r = px(46, 7, 20, 15, '#9a6e22') + px(47, 8, 18, 13, '#d9b45a') + px(48, 9, 16, 11, '#a9c8e8');
+      r += px(50, 10, 4, 1, '#ffffff') + px(58, 11, 3, 1, '#eef6ff');
+      r += px(48, 14, 16, 6, '#5f8a4a') + px(48, 13, 5, 1, '#6f9a55') + px(59, 13, 5, 1, '#4e7a3c');
+      r += px(52, 12, 9, 1, '#7d6a58') + px(53, 13, 7, 3, '#e3d3ac') + px(56, 11, 1, 1, '#7d6a58');
+      r += px(54, 14, 1, 1, '#4a5a70') + px(56, 14, 1, 1, '#4a5a70') + px(58, 14, 1, 1, '#4a5a70');
+      r += px(48, 17, 16, 2, '#6a9fd0') + px(50, 17, 4, 1, '#bcd8f0') + px(53, 18, 7, 1, '#cbbf9c', ' opacity=".55"');
+      r += px(49, 13, 2, 3, '#3d6a32') + px(62, 12, 2, 4, '#3d6a32');
+      r += px(54, 22, 4, 1, '#e8d08a');
+      return r;
+    },
+    rosas: function () {
+      // Jarrón con rosas inglesas en el alféizar
+      let r = px(10, 36, 5, 5, '#e9e3f4') + px(10, 36, 1, 5, '#ffffff') + px(14, 36, 1, 5, '#bdb3d4') + px(11, 35, 3, 1, '#d6cde8');
+      r += px(11, 32, 1, 4, '#3d7a3c') + px(13, 31, 1, 5, '#3d7a3c') + px(9, 33, 2, 1, '#4e9a4a') + px(14, 33, 2, 1, '#4e9a4a');
+      r += px(9, 30, 3, 2, '#d64a6a') + px(10, 30, 1, 1, '#f08aa0') + px(12, 29, 3, 2, '#f2a0b4') + px(13, 29, 1, 1, '#ffd0dc') + px(15, 31, 2, 2, '#c43a5a');
+      return r;
+    },
+    cartas: function () {
+      // Cartas atadas con lacre, tintero y pluma
+      let r = px(17, 38, 8, 3, '#f4ecd8') + px(17, 38, 8, 1, '#fffaf0') + px(18, 37, 6, 1, '#e8dcc0') + px(17, 40, 8, 1, '#d8c8a4');
+      r += px(20, 38, 1, 3, '#b08a5a') + px(21, 39, 1, 1, '#c4303a');
+      r += px(26, 38, 3, 3, '#2b2f3a') + px(26, 37, 3, 1, '#4a5068') + px(27, 38, 1, 1, '#5a6890');
+      [[28, 36], [28, 35], [29, 34], [29, 33], [30, 32], [30, 31]].forEach(function (p, i) { r += px(p[0], p[1], 1, 1, '#9a8a70') + (i > 1 ? px(p[0] - 1, p[1], 1, 1, '#f4f4f0') + px(p[0] + 1, p[1] + 1, 1, 1, '#dcdcd4') : ''); });
+      return r;
+    },
+    /* Mundo mágico */
+    escoba: function () {
+      // Escoba apoyada en la pared, junto al escritorio
+      let r = '';
+      for (let k = 0; k <= 34; k++) r += px(Math.round(12 - k * 0.15), 50 + k, 2, 1, k % 6 === 0 ? '#6e4426' : '#8a5a34');
+      r += px(5, 84, 7, 2, '#7a5a3a') + px(5, 85, 7, 1, '#c9a227');
+      // Ramas: en abanico, más anchas abajo
+      for (let y = 86; y <= 97; y++) {
+        const w = 2 + (y - 86) * 0.42, c = 8.4 - (y - 86) * 0.12;
+        for (let x = Math.round(c - w); x <= Math.round(c + w); x++) r += px(x, y, 1, 1, (x + (y > 92 ? 1 : 0)) % 3 === 0 ? '#9a7430' : x % 2 ? '#d9b45a' : '#c7a04a');
+      }
+      r += px(6, 89, 6, 1, '#7a5a3a');
+      r += '<rect class="room-sway" x="1" y="96" width="14" height="1" fill="#000" opacity=".12"/>';
+      return r;
+    },
+    estandarte: function () {
+      // Estandarte con los colores de una casa y una estrella
+      let r = px(66, 16, 15, 1, '#7a5a3a') + px(65, 15, 2, 3, '#c9a227') + px(80, 15, 2, 3, '#c9a227');
+      r += px(68, 17, 11, 14, '#8e1b23') + px(68, 17, 11, 1, '#d4a531') + px(68, 17, 1, 14, '#d4a531') + px(78, 17, 1, 14, '#d4a531');
+      r += px(69, 18, 2, 12, '#a82a33');
+      r += px(68, 31, 4, 2, '#8e1b23') + px(75, 31, 4, 2, '#8e1b23') + px(68, 33, 2, 1, '#8e1b23') + px(77, 33, 2, 1, '#8e1b23');
+      r += px(73, 20, 1, 7, '#d4a531') + px(70, 23, 7, 1, '#d4a531') + px(72, 22, 3, 3, '#f2d06b') + px(73, 23, 1, 1, '#fff2b0');
+      return r;
+    },
+    snitch: function () {
+      // Pelotita dorada que revolotea por el cuarto
+      return '<g class="room-snitch"><g class="room-snitch__wings">' + px(66, 22, 3, 1, '#ffffff', ' opacity=".85"') + px(73, 22, 3, 1, '#ffffff', ' opacity=".85"') +
+        px(65, 21, 2, 1, '#e8f0ff', ' opacity=".7"') + px(75, 21, 2, 1, '#e8f0ff', ' opacity=".7"') + '</g>' +
+        px(69, 22, 4, 4, '#e0b43a') + px(70, 21, 2, 1, '#f2d06b') + px(69, 22, 2, 2, '#f8e08a') + px(72, 25, 1, 1, '#a8801e') + '</g>';
+    },
+    /* Piratas */
+    bandera: function () {
+      // Bandera negra con calavera, huesos cruzados y sombrero de paja
+      let r = px(47, 6, 1, 17, '#7a5a3a') + px(48, 7, 17, 13, '#1d1d22') + px(48, 19, 3, 1, '#1d1d22') + px(53, 20, 4, 1, '#1d1d22') + px(60, 19, 5, 1, '#1d1d22');
+      [[50, 11], [51, 12], [52, 13], [58, 15], [59, 16], [60, 17], [60, 11], [59, 12], [58, 13], [52, 15], [51, 16], [50, 17]].forEach(function (p) { r += px(p[0], p[1], 2, 1, '#f4f4f0'); });
+      r += px(53, 11, 6, 4, '#f4f4f0') + px(54, 15, 4, 2, '#f4f4f0') + px(54, 12, 1, 2, '#1d1d22') + px(57, 12, 1, 2, '#1d1d22') + px(55, 16, 1, 1, '#1d1d22') + px(56, 16, 1, 1, '#1d1d22');
+      r += px(52, 10, 8, 1, '#e8c66a') + px(54, 8, 4, 2, '#e8c66a') + px(54, 9, 4, 1, '#c8232f');
+      return r;
+    },
+    cofre: function () {
+      // Cofre del tesoro entreabierto, con monedas que brillan
+      let r = px(76, 87, 18, 9, '#8a5a34') + px(76, 87, 18, 1, '#5c3820') + px(76, 95, 18, 1, '#5c3820');
+      r += px(76, 81, 18, 5, '#a86d3c') + px(77, 80, 16, 1, '#a86d3c') + px(77, 81, 16, 1, '#c4864c');
+      r += px(77, 86, 16, 1, '#f2d06b') + px(79, 85, 3, 1, '#f2d06b') + px(85, 85, 4, 1, '#e0b43a');
+      r += px(79, 80, 2, 16, '#c9a227') + px(89, 80, 2, 16, '#c9a227') + px(84, 88, 2, 3, '#f2d06b') + px(84, 89, 2, 1, '#5c3820');
+      r += '<rect class="room-glint" x="86" y="85" width="1" height="1" fill="#ffffff"/>';
+      return r;
+    },
+    timon: function () {
+      // Timón de barco colgado en la pared
+      const cx = 82, cy = 60;
+      let r = '';
+      for (let y = cy - 8; y <= cy + 8; y++) for (let x = cx - 8; x <= cx + 8; x++) {
+        const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy), a = Math.atan2(y + 0.5 - cy, x + 0.5 - cx);
+        const spoke = Math.abs(Math.sin(a * 4)) < 0.28 / Math.max(1, d / 2.4);
+        if (d >= 4 && d < 5.4) r += px(x, y, 1, 1, y < cy ? '#a86d3c' : '#7a4d2c');
+        else if (d < 1.8) r += px(x, y, 1, 1, '#c9a227');
+        else if (spoke && d < 6.6) r += px(x, y, 1, 1, '#8a5a34');
+        else if (spoke && d < 8) r += px(x, y, 1, 1, '#5c3820');
+      }
+      return r;
+    },
+    /* Fútbol */
+    banderin: function () {
+      // Banderín blanco con banda roja
+      let r = px(45, 28, 1, 11, '#7a5a3a');
+      for (let y = 29; y <= 37; y++) {
+        const len = Math.round(19 * (1 - Math.abs(y - 33) / 4.6));
+        for (let x = 46; x < 46 + len; x++) {
+          const d = (x - 46) - (y - 29) * 1.4;
+          r += px(x, y, 1, 1, d >= 3 && d < 7 ? (d < 4 ? '#ff4a55' : '#d81e2c') : y === 29 ? '#ffffff' : '#ecece6');
+        }
+      }
+      return r;
+    },
+    pelota: function () {
+      // Pelota clásica: blanca con parches negros, sombreada a la derecha
+      let r = '<ellipse cx="97" cy="98" rx="4" ry="1" fill="#000" opacity=".15"/>';
+      const dark = { '97,92': 1, '96,93': 1, '97,93': 1, '98,93': 1, '96,94': 1, '98,94': 1, '93,92': 1, '93,93': 1, '100,91': 1, '101,92': 1, '95,96': 1, '96,97': 1, '99,96': 1, '100,96': 1, '97,90': 1 };
+      for (let y = 89; y <= 97; y++) for (let x = 92; x <= 102; x++) {
+        const d = Math.hypot(x + 0.5 - 97.5, y + 0.5 - 93.5);
+        if (d > 4.4) continue;
+        r += px(x, y, 1, 1, dark[x + ',' + y] ? '#26262c' : d > 3.6 ? '#9a9aa6' : (x > 98 && y > 93) ? '#d4d4dc' : (x < 96 && y < 92) ? '#ffffff' : '#ececf0');
+      }
+      return r;
+    },
+    estadio: function () {
+      // Póster de un estadio lleno de noche, con bengalas rojas y blancas
+      let r = px(47, 6, 18, 23, '#5c3820') + px(48, 7, 16, 21, '#16213e');
+      r += px(49, 9, 1, 5, '#9aa3b5') + px(48, 8, 3, 1, '#fff6c0') + px(62, 9, 1, 5, '#9aa3b5') + px(61, 8, 3, 1, '#fff6c0');
+      r += px(48, 14, 16, 8, '#e8e8ea');
+      for (let x = 48; x < 64; x++) for (let y = 14; y < 22; y++) if (((x - 48) - (y - 14)) % 4 === 0 || ((x - 48) - (y - 14)) % 4 === 1) r += px(x, y, 1, 1, '#d81e2c');
+      r += px(50, 19, 12, 3, '#3f9a4a') + px(55, 19, 1, 3, '#e8f6e8') + px(50, 19, 12, 1, '#57b062');
+      r += px(48, 23, 16, 4, '#d81e2c') + px(49, 24, 14, 1, '#ffffff') + px(51, 25, 10, 1, '#ffb0b6');
+      [[52, 11], [57, 10], [59, 12]].forEach(function (p) { r += px(p[0], p[1], 1, 1, '#ff8a3c') + px(p[0], p[1] - 1, 1, 1, '#ffd27a'); });
+      return r;
+    },
   };
   // Orden de pintado: lo de la pared antes que lo del suelo
-  const ORDER = ['luces', 'poster', 'reloj', 'diploma', 'foto', 'estanteria', 'pecera', 'pizarra', 'alfombra', 'lampara', 'planta'];
+  const ORDER = ['luces', 'poster', 'pemberley', 'bandera', 'estadio', 'reloj', 'diploma', 'estandarte', 'foto', 'banderin', 'estanteria', 'pecera', 'pizarra',
+    'timon', 'rosas', 'cartas', 'alfombra'];
+  const FLOOR = ['escoba', 'lampara', 'cofre', 'planta', 'pelota'];
 
   /**
    * El cuarto entero, con el puesto de estudio dentro. unit: opciones para
@@ -219,13 +367,19 @@
     const wall = Rooms.WALLS[d.wall][0];
     let r = wallArt(wall) + windowArt(Rooms.CURTAINS[d.curtain][0], part) + floorArt(Rooms.FLOORS[d.floor][0], wall);
     const items = d.items.filter(function (id) { return DECO[id]; });
-    ORDER.forEach(function (id) { if (items.indexOf(id) >= 0 && id !== 'planta' && id !== 'lampara') r += DECO[id](part); });
-    // La lámpara de pie y la planta, en el suelo, detrás del puesto
-    if (items.indexOf('lampara') >= 0) r += DECO.lampara(part);
-    if (items.indexOf('planta') >= 0) r += DECO.planta(part);
+    // Si dos objetos comparten sitio, gana el último que se puso
+    const used = {};
+    for (let i = items.length - 1; i >= 0; i--) {
+      const sl = Rooms.SLOT[items[i]];
+      if (sl && used[sl]) items.splice(i, 1); else if (sl) used[sl] = true;
+    }
+    ORDER.forEach(function (id) { if (items.indexOf(id) >= 0) r += DECO[id](part); });
+    // Lo que va en el suelo, detrás del puesto
+    FLOOR.forEach(function (id) { if (items.indexOf(id) >= 0) r += DECO[id](part); });
     // Sombra del puesto en el suelo
     r += '<ellipse cx="54" cy="98" rx="46" ry="3" fill="#000" opacity=".12"/>';
     r += Scene.unit(cfg, Object.assign({ part: part }, unit, { nest: { x: 10, y: 14, w: 100 } }));
+    if (items.indexOf('snitch') >= 0) r += DECO.snitch(part);
     // De noche, el cuarto se oscurece un poco (salvo la luz de las lámparas)
     // (más oscuro si la luz aún está apagada: alguien está entrando)
     const off = unit && unit.lamp === false;
@@ -233,6 +387,16 @@
     if (part === 'evening') r += px(0, 0, RW, RH, '#3b2c6e', ' opacity="' + (off ? '.35' : '.1') + '"');
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + RW + ' ' + RH + '" width="' + (size || 360) + '" height="' + Math.round((size || 360) * RH / RW) +
       '" shape-rendering="crispEdges" class="room-art room-art--' + part + '" aria-hidden="true">' + r + '</svg>';
+  };
+
+  /** Un objeto suelto, sobre un trozo de pared (para la tienda). */
+  Rooms.itemSvg = function (id, size) {
+    const b = BOX[id];
+    if (!b || !DECO[id]) return '';
+    const wall = Rooms.WALLS[Rooms.config().wall][0];
+    const bg = wallArt(wall) + (b[1] + b[3] > 70 ? floorArt('madera', wall) : '') + (id === 'rosas' || id === 'cartas' ? px(3, 41, 38, 3, '#e8e0d0') + px(3, 43, 38, 1, '#bfb5a2') : '');
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + b.join(' ') + '" width="' + size + '" height="' + Math.round(size * b[3] / b[2]) +
+      '" shape-rendering="crispEdges" aria-hidden="true">' + bg + DECO[id]('midday') + '</svg>';
   };
 
   /* ── En el temporizador ─────────────────────────────────── */
@@ -303,6 +467,7 @@
       rows.appendChild(row('Cortinas', swatches(Rooms.CURTAINS, 'curtain')));
       const it = U.el('div', { class: 'chips' });
       Rooms.ITEMS.forEach(function (o) {
+        if (/^shop:/.test(o[2] || '') && !Avatar.unlocked(o[2])) return;   // de la tienda: solo si es tuyo
         const on = cfg.items.indexOf(o[0]) >= 0;
         const lock = o[2] && !Avatar.unlocked(o[2]) ? o[2] : null;
         it.appendChild(U.el('button', {
@@ -312,12 +477,16 @@
           onclick: function () {
             if (lock) { UI.toast('🔒 ' + o[1].replace(/^\S+ /, '') + ': se desbloquea con ' + Progress.unlockLabel(lock)); return; }
             if (on) cfg.items = cfg.items.filter(function (x) { return x !== o[0]; });
-            else cfg.items = cfg.items.concat([o[0]]);
+            else cfg.items = Rooms.place(cfg.items, o[0]);
             save();
           }
         }));
       });
       rows.appendChild(row('Decoración', it));
+      if (global.Shop) {
+        rows.appendChild(row('Tienda', U.el('button', { class: 'chip chip--shop', type: 'button', text: '🛍️ Más objetos en la tienda · ' + Shop.points().toLocaleString('es-ES') + ' 🪙',
+          onclick: function () { Shop.open({ onChange: function () { Object.assign(cfg, Rooms.config()); paint(); } }); } })));
+      }
     }
     paint();
     return wrap;

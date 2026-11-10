@@ -30,7 +30,24 @@
     ['coat', 'Bata blanca'], ['#363b4a', 'Negro'], ['#6a4fc4', 'Pijama morado'],
     // Desbloqueables (se ganan subiendo de nivel)
     ['#1fb5a8', 'Pijama turquesa', 'out:turquesa'], ['coatname', 'Bata con nombre bordado', 'out:bordada'],
-    ['hearts', 'Pijama de corazones', 'out:corazones'], ['#d4a531', 'Pijama dorado', 'out:dorado']
+    ['hearts', 'Pijama de corazones', 'out:corazones'], ['#d4a531', 'Pijama dorado', 'out:dorado'],
+    // De la tienda
+    ['regencia', 'Vestido de la Regencia', 'shop:out-regencia'], ['tunica', 'Túnica de mago', 'shop:out-tunica'],
+    ['chaleco', 'Chaleco rojo pirata', 'shop:out-chaleco'], ['banda', 'Camiseta de la banda roja', 'shop:out-banda']
+  ];
+  // Ropa temática: color de base, color del pantalón (cuerpo entero) y muestra.
+  const THEMED = {
+    regencia: { base: '#f1e6cf', pants: '#e6d8b8', sw: 'linear-gradient(180deg,#f1e6cf 45%,#6f8fc4 45%,#6f8fc4 62%,#f1e6cf 62%)' },
+    tunica: { base: '#26262f', pants: '#2c2c35', sw: 'linear-gradient(90deg,#26262f 38%,#f4f4f0 38%,#f4f4f0 44%,#8e1b23 44%,#d4a531 56%,#f4f4f0 56%,#f4f4f0 62%,#26262f 62%)' },
+    chaleco: { base: '#c8232f', pants: '#3a5fa8', sw: 'linear-gradient(90deg,#c8232f 38%,#efc29b 38%,#efc29b 62%,#c8232f 62%)' },
+    banda: { base: '#f4f4f2', pants: '#24242a', sw: 'linear-gradient(45deg,#f4f4f2 38%,#d81e2c 38%,#d81e2c 62%,#f4f4f2 62%)' }
+  };
+  Avatar.THEMED = THEMED;
+  // Bufandas: [clave, nombre, colores, id de la tienda]
+  Avatar.SCARVES = [
+    ['leon', 'Escarlata y oro', ['#8e1b23', '#d4a531'], 'shop:scarf-casas'], ['serpiente', 'Verde y plata', ['#1f5b3a', '#c0c4c8'], 'shop:scarf-casas'],
+    ['aguila', 'Azul y bronce', ['#1e3a7a', '#b07a3c'], 'shop:scarf-casas'], ['tejon', 'Amarillo y negro', ['#e3b52a', '#2a2a2a'], 'shop:scarf-casas'],
+    ['river', 'Roja y blanca', ['#d81e2c', '#f6f6f2'], 'shop:scarf-river']
   ];
   /** Clase CSS del fondo elegido para el retrato. */
   Avatar.bgClass = function (cfg) {
@@ -632,8 +649,8 @@
     hairR.skin = mix(skinR.shadow, hairR.base, 0.35);   // para el rapado: piel entre el pelo
     const rawOutfit = (Avatar.OUTFITS[a.outfit] || Avatar.OUTFITS[0])[0];
     const coat = rawOutfit === 'coat' || rawOutfit === 'coatname';
-    a.pattern = rawOutfit === 'hearts' ? 'hearts' : rawOutfit === 'coatname' ? 'name' : '';
-    const outfit = coat ? 'coat' : rawOutfit === 'hearts' ? '#ef7aa1' : rawOutfit;
+    a.pattern = THEMED[rawOutfit] ? rawOutfit : rawOutfit === 'hearts' ? 'hearts' : rawOutfit === 'coatname' ? 'name' : '';
+    const outfit = coat ? 'coat' : rawOutfit === 'hearts' ? '#ef7aa1' : THEMED[rawOutfit] ? THEMED[rawOutfit].base : rawOutfit;
     const head = a.sex === 'f' ? HEADF : HEADM;
     const st = styleShapes(a.style, a.sex);
     const hairOpts = { texture: hairTexture(a.style, st) };
@@ -681,6 +698,7 @@
       }
       // Pliegues y bolsillo con bolígrafo
       [[12, 44], [12, 45], [13, 46], [13, 47], [36, 44], [36, 45], [35, 46], [35, 47]].forEach(function (p) { put(px, p[0], p[1], clothR.shadow); });
+      if (THEMED[a.pattern]) themedPattern(px, body, a.pattern, clothR, neckR, false);
     }
 
     // 3. Cuello, con la sombra de la barbilla
@@ -726,6 +744,9 @@
       }
     }
 
+    // 6c. Bufanda (de la tienda)
+    if (a.scarf && !pose) scarf(px, a.scarf, false);
+
     // 7. Pelo de delante, con su sombra sobre la frente
     if (st.scalp) {
       // Calvo: brillo en la coronilla
@@ -767,7 +788,7 @@
     }
 
     // 7b. Pelo revuelto cuando el día está siendo duro
-    if ((a.tired || 0) >= 2 && !st.scalp && a.hat !== 'gorro') {
+    if ((a.tired || 0) >= 2 && !st.scalp && !a.hat) {
       const hR2 = hairR;
       [[18, 5], [19, 4], [26, 5], [27, 4], [28, 3], [22, 4]].slice(0, a.tired >= 3 ? 6 : 3).forEach(function (p) {
         if (!get(px, p[0], p[1])) { put(px, p[0], p[1], hR2.base); put(px, p[0], p[1] + 1, hR2.shadow); }
@@ -789,8 +810,12 @@
       shade(px, fill(or(capsule([[35.4, 15.4], [37.6, 19.6]], 0.8), capsule([[35, 16], [36.2, 20.6]], 0.7))), hR, {});
     }
 
-    // 8. Gafas
-    if (a.glasses) {
+    // 7d. Sombreros de la tienda
+    if (a.hat && a.hat !== 'gorro') themedHat(px, a.hat);
+
+    // 8. Gafas (las redondas, de la tienda, sustituyen a las normales)
+    if (a.roundGlasses) roundGlasses(px);
+    else if (a.glasses) {
       const g = '#2a2f40';
       [[15.5, 21.5], [25.5, 31.5]].forEach(function (r) {
         for (let x = Math.ceil(r[0]); x <= Math.floor(r[1]); x++) { put(px, x, 22, g); put(px, x, 27, g); }
@@ -878,11 +903,119 @@
     put(px, x, y, '#ffb3c1'); put(px, x + 1, y + 2, '#c91f43');
   }
 
+  /* ── Ropa y complementos de la tienda ───────────────────── */
+  /** Dibujo encima de la ropa temática. full: cuerpo entero (otro encuadre). */
+  function themedPattern(px, mask, kind, clothR, neckR, full) {
+    const top = full ? 38 : 37, bot = full ? 56 : 52;
+    const at = function (x, y, c) { if (inM(mask, x, y)) put(px, x, y, c); };
+    if (kind === 'regencia') {
+      // Talle alto: cinta azul bajo el pecho con lazo, y encaje en el escote
+      const yb = full ? 45 : 43;
+      const rib = ramp('#6f8fc4');
+      for (let x = 0; x < W; x++) { at(x, yb, rib.base); at(x, yb + 1, rib.shadow); }
+      [[22, yb - 1], [23, yb], [25, yb], [26, yb - 1], [22, yb + 1], [26, yb + 1]].forEach(function (p) { put(px, p[0], p[1], rib.light); });
+      put(px, 24, yb, rib.deep); put(px, 23, yb + 2, rib.base); put(px, 25, yb + 2, rib.base);
+      for (let x = 0; x < W; x += 2) at(x, top + 1, '#fffaf0');
+      // Mangas abullonadas: brillos en los hombros
+      if (!full) { [[7, 41], [8, 40], [9, 40], [39, 40], [40, 40], [41, 41]].forEach(function (p) { at(p[0], p[1], clothR.hi); }); }
+    } else if (kind === 'tunica') {
+      // Camisa blanca y corbata a rayas bajo la túnica abierta
+      const y0 = top, y1 = full ? 55 : 51;
+      for (let y = y0; y <= y1; y++) for (let x = 21; x <= 27; x++) {
+        const half = 1.5 + (y - y0) * 0.12;
+        if (Math.abs(x - 24) <= half) at(x, y, Math.abs(x - 24) <= 0.6 + (y > y0 + 2 ? 0.6 : 0) ? ((y >> 1) % 2 ? '#8e1b23' : '#d4a531') : '#f1f1ec');
+      }
+      for (let y = y0; y <= y1; y++) { const half = Math.round(2.2 + (y - y0) * 0.12); at(24 - half, y, clothR.line); at(24 + half, y, clothR.line); at(24 - half - 1, y, '#8e1b23'); }
+    } else if (kind === 'chaleco') {
+      // Chaleco abierto: se ve el pecho
+      const y0 = top + 2;
+      for (let y = y0; y <= bot; y++) for (let x = 22; x <= 26; x++) at(x, y, x === 22 || x === 26 ? neckR.shadow : neckR.base);
+      for (let y = y0; y <= bot; y++) { at(21, y, clothR.hi); at(27, y, clothR.deep); }
+    } else if (kind === 'banda') {
+      // Banda roja en diagonal: del hombro derecho de quien la lleva a la cadera izquierda
+      const red = ramp('#d81e2c');
+      const x0 = full ? 15 : 8, y0 = full ? 39 : 38, k = full ? 1.2 : 1.55;
+      for (let y = y0; y <= bot; y++) for (let x = 0; x < W; x++) {
+        const d = (x - x0) - (y - y0) * k;
+        if (d >= 0 && d < (full ? 4 : 5.5)) at(x, y, d < 1 ? red.light : d > (full ? 3 : 4.5) ? red.shadow : red.base);
+      }
+    }
+  }
+  function scarf(px, kind, full) {
+    const sc = Avatar.SCARVES.filter(function (s) { return s[0] === kind; })[0];
+    if (!sc) return;
+    const c1 = ramp(sc[2][0]), c2 = ramp(sc[2][1]);
+    const y0 = full ? 35 : 34.6, y1 = full ? 39.4 : 39.6, xl = full ? 19.6 : 18.6, xr = full ? 28.4 : 29.4;
+    const band = fill(poly([[xl, y0], [xr, y0], [xr + 1, y1], [xl - 1, y1]]));
+    for (let i = 0; i < W * H; i++) if (band[i]) { const x = i % W, y = Math.floor(i / W); px[i] = (Math.floor(x / 2) % 2 ? c2 : c1)[y === Math.ceil(y0) ? 'light' : y >= y1 - 1 ? 'shadow' : 'base']; }
+    // Extremo que cae por el pecho, a rayas horizontales y con flecos
+    const ex = full ? 26 : 27, ey = full ? 39 : 39, eh = full ? 9 : 10;
+    for (let y = ey; y < ey + eh; y++) for (let x = ex; x < ex + 4; x++) {
+      const r = (Math.floor((y - ey) / 2) % 2 ? c2 : c1);
+      put(px, x, y, x === ex ? r.light : x === ex + 3 ? r.shadow : r.base);
+    }
+    for (let x = ex; x < ex + 4; x += 1) if ((x - ex) % 2 === 0) put(px, x, ey + eh, c1.deep);
+  }
+  function themedHat(px, kind) {
+    if (kind === 'bonete') {
+      // Bonete de la Regencia: copa, ala que enmarca la cara y lazo bajo la barbilla
+      const strawR = ramp('#eadbb4');
+      const rib = ramp('#6f8fc4');
+      const brim = fill(and(ell(CX, 18.5, 16.4, 12), not(ell(CX, 22, 12.4, 10)), function (x, y) { return y < 25.5; }));
+      const crown = fill(and(ell(CX, 13.4, 12.6, 9), function (x, y) { return y < 18; }));
+      castShadow(px, crown, 0, 1, 0.25);
+      shade(px, crown, strawR, { texture: function (x, y, t) { return (x + y * 2) % 5 === 0 && t === 'base' ? 'light' : null; } });
+      shade(px, brim, strawR, { bias: 0.1 });
+      for (let x = 12; x <= 36; x++) { if (inM(crown, x, 15)) put(px, x, 15, rib.base); if (inM(crown, x, 16)) put(px, x, 16, rib.shadow); }
+      // Cintas hasta la barbilla y lazo
+      // (bajan por fuera de la cara, junto a las orejas, y se juntan bajo la barbilla)
+      for (let y = 25; y <= 31; y++) { put(px, 11, y, rib.base); put(px, 37, y, rib.shadow); }
+      [[12, 32], [13, 33], [14, 33], [15, 34], [16, 34], [17, 35], [18, 35], [19, 35], [20, 35]].forEach(function (p) { put(px, p[0], p[1], rib.base); put(px, 48 - p[0], p[1], rib.shadow); });
+      [[21, 34], [22, 35], [21, 36], [27, 34], [26, 35], [27, 36], [23, 35], [25, 35]].forEach(function (p) { put(px, p[0], p[1], rib.light); });
+      put(px, 24, 35, rib.deep);
+      // Florecilla a un lado
+      put(px, 33, 14, '#e86a8a'); put(px, 34, 15, '#e86a8a'); put(px, 32, 15, '#e86a8a'); put(px, 33, 16, '#e86a8a'); put(px, 33, 15, '#ffe27a');
+    } else if (kind === 'mago') {
+      // Sombrero de mago, puntiagudo y con la punta doblada
+      const hatR = ramp('#3b3352');
+      const cone = fill(or(poly([[14.6, 15.2], [33.4, 15.2], [28.6, 6], [33.6, 1.2], [27.4, 2.6], [23, 4.4]])));
+      const brimM = fill(ell(CX, 15.4, 17.4, 2.8));
+      castShadow(px, brimM, 0, 1, 0.3);
+      shade(px, cone, hatR, {});
+      shade(px, brimM, hatR, { bias: 0.1 });
+      for (let x = 15; x <= 33; x++) { if (inM(cone, x, 13)) put(px, x, 13, '#8e6b2a'); if (inM(cone, x, 12)) put(px, x, 12, '#b08a3e'); }
+      // Remiendos y estrellitas
+      put(px, 20, 10, hatR.light); put(px, 21, 10, hatR.light); put(px, 20, 9, hatR.shadow);
+      put(px, 26, 8, '#f2d06b'); put(px, 25, 9, '#f2d06b'); put(px, 27, 9, '#f2d06b'); put(px, 26, 10, '#f2d06b');
+    } else if (kind === 'paja') {
+      // Sombrero de paja con cinta roja
+      const strawR = ramp('#e8c66a');
+      const crown = fill(and(ell(CX, 13.2, 10.4, 7.4), function (x, y) { return y < 15.4; }));
+      const brimM = fill(and(ell(CX, 15.6, 19.6, 3.4), not(rect(0, 0, W, 13.4))));
+      castShadow(px, brimM, 0, 2, 0.3);
+      const tex = function (x, y, t) { return (x * 3 + y) % 4 === 0 && (t === 'base' || t === 'light') ? 'shadow' : null; };
+      shade(px, crown, strawR, { texture: tex });
+      for (let x = 13; x <= 35; x++) { if (inM(crown, x, 13)) put(px, x, 13, '#c8232f'); if (inM(crown, x, 14)) put(px, x, 14, '#9a1620'); }
+      shade(px, brimM, strawR, { texture: tex, bias: 0.15 });
+    }
+  }
+  function roundGlasses(px) {
+    const g = '#3a3026';
+    [[18.5, 24.5], [29.5, 24.5]].forEach(function (c) {
+      for (let y = 19; y <= 30; y++) for (let x = 13; x <= 35; x++) {
+        const d = Math.hypot(x + 0.5 - c[0], y + 0.5 - c[1]);
+        if (d >= 3.1 && d < 4.1) put(px, x, y, g);
+      }
+      put(px, Math.round(c[0] - 2), 22, '#dff1ff');
+    });
+    put(px, 23, 24, g); put(px, 24, 24, g); put(px, 13, 23, g); put(px, 34, 23, g);
+  }
+
   function figure(px, a, pose, skinR, neckR, outfit, layer) {
     const P = POSES[pose] || POSES.idle;
     const coat = outfit === 'coat';
     const clothR = ramp(coat ? '#eef1f7' : outfit);
-    const pantsR = coat ? ramp('#3f72e8') : ramp(mix(outfit, '#000000', 0.12));
+    const pantsR = coat ? ramp('#3f72e8') : THEMED[a.pattern] ? ramp(THEMED[a.pattern].pants) : ramp(mix(outfit, '#000000', 0.12));
     if (layer === 'under') {
       // Piernas y zapatos
       P.legs.forEach(function (leg) {
@@ -897,6 +1030,7 @@
       shade(px, torsoM, clothR, coat ? { bias: 0.1 } : {});
       if (a.pattern === 'hearts') heartsPattern(px, torsoM, 1);
       if (a.pattern === 'name') embroidery(px, 17, 47);
+      if (THEMED[a.pattern]) themedPattern(px, torsoM, a.pattern, clothR, neckR, true);
       if (!coat) {
         for (let x = 17; x <= 31; x++) put(px, x, 56, pantsR.deep);   // cinturilla
       } else {
@@ -925,6 +1059,7 @@
     put(px, 18, 46, '#ffffff');
     shade(px, fill(or(capsule([[28.6, 44], [27.8, 46]], 0.6), capsule([[28.6, 44], [29.6, 46]], 0.6))), metalR, { outline: false });
     if (a.pin) heartPin(px, 23, 45);
+    if (a.scarf) scarf(px, a.scarf, true);
     P.arms.forEach(function (arm) {
       const sh = arm[0], el = arm[1], hd = arm[2];
       const mid = [el[0] + (hd[0] - el[0]) * 0.55, el[1] + (hd[1] - el[1]) * 0.55];
@@ -1110,7 +1245,7 @@
           'aria-pressed': on ? 'true' : 'false',
           onclick: function () { cfg.style = o[0]; save(); }
         });
-        b.innerHTML = Avatar.svg(Object.assign({}, cfg, { style: o[0], facial: 'ninguno', glasses: false, hat: '', mask: false }), 'neutral', 44, true);
+        b.innerHTML = Avatar.svg(Object.assign({}, cfg, { style: o[0], facial: 'ninguno', glasses: false, hat: '', mask: false, scarf: '', roundGlasses: false }), 'neutral', 44, true);
         b.appendChild(U.el('span', { text: o[1] }));
         box.appendChild(b);
       });
@@ -1143,10 +1278,12 @@
     function swatchRow(label, list, key, title) {
       const sw = U.el('div', { class: 'swatches' });
       list.forEach(function (c, i) {
+        // Lo de la tienda solo aparece cuando ya es tuyo
+        if (Array.isArray(c) && /^shop:/.test(c[2] || '') && !Avatar.unlocked(c[2])) return;
         const color = Array.isArray(c) ? c[0] : c;
         const name = Array.isArray(c) ? c[1] : title + ' ' + (i + 1);
         const lock = Array.isArray(c) && c[2] && !Avatar.unlocked(c[2]) ? c[2] : null;
-        const bg = color === 'coat' ? '#f2f4f8' : color === 'coatname' ? '' : color === 'hearts' ? '' : color;
+        const bg = color === 'coat' ? '#f2f4f8' : color === 'coatname' ? '' : color === 'hearts' ? '' : THEMED[color] ? THEMED[color].sw : color;
         sw.appendChild(U.el('button', {
           class: 'swatch' + (cfg[key] === i ? ' is-active' : '') + (color === 'coat' ? ' swatch--coat' : '') +
             (color === 'coatname' ? ' swatch--coatname' : '') + (color === 'hearts' ? ' swatch--hearts' : '') + (lock ? ' is-locked' : ''),
@@ -1186,6 +1323,21 @@
         ['pin', true, false, '💗 Pin de corazón', 'acc:pin'],
         ['steth', 'oro', '', '🩺 Fonendo dorado', 'acc:fonendo']
       ], true)));
+      // Lo comprado en la tienda
+      const owned = function (list) { return list.filter(function (o) { return Avatar.unlocked(o[4]); }); };
+      const shopAcc = owned([
+        ['hat', 'bonete', '', '👒 Bonete con lazo', 'shop:hat-bonete'],
+        ['hat', 'mago', '', '🧙 Sombrero de mago', 'shop:hat-mago'],
+        ['hat', 'paja', '', '👒 Sombrero de paja', 'shop:hat-paja'],
+        ['roundGlasses', true, false, '👓 Gafas redondas', 'shop:glasses-redondas']
+      ]);
+      if (shopAcc.length) rows.appendChild(row('De la tienda', lockChips(shopAcc, true)));
+      const scarves = owned(Avatar.SCARVES.map(function (s) { return ['scarf', s[0], '', '🧣 ' + s[1], s[3]]; }));
+      if (scarves.length) rows.appendChild(row('Bufanda', lockChips(scarves, true)));
+      if (global.Shop) {
+        rows.appendChild(row('Tienda', U.el('button', { class: 'chip chip--shop', type: 'button', text: '🛍️ Abrir la tienda · ' + Shop.points().toLocaleString('es-ES') + ' 🪙',
+          onclick: function () { Shop.open({ onChange: reload }); } })));
+      }
       rows.appendChild(row('Mascota', lockChips([
         ['pet', '', '', 'Ninguna'], ['pet', 'gato', '', '🐈 Gato', 'pet:gato'], ['pet', 'perro', '', '🐕 Perro', 'pet:perro'], ['pet', 'buho', '', '🦉 Búho', 'pet:buho']
       ])));
@@ -1196,10 +1348,11 @@
         const swPet = function (list, key, lockId) {
           const sw = U.el('div', { class: 'swatches' });
           list.forEach(function (c) {
+            if (c[2] && !Avatar.unlocked(c[2])) return;   // de la tienda y aún no es tuyo
             const lock = c[0] && lockId && !Avatar.unlocked(lockId) ? lockId : null;
             sw.appendChild(U.el('button', {
               class: 'swatch' + ((cfg[key] || '') === c[0] ? ' is-active' : '') + (!c[0] ? ' swatch--none' : '') + (c[0] === 'stripes' ? ' swatch--stripes' : '') + (lock ? ' is-locked' : ''),
-              type: 'button', style: c[0] && c[0] !== 'stripes' ? { background: c[0] } : {}, title: lock ? c[1] + ' · 🔒 ' + Progress.unlockLabel(lock) : c[1], 'aria-label': c[1],
+              type: 'button', style: c[3] ? { background: c[3] } : c[0] && c[0] !== 'stripes' ? { background: c[0] } : {}, title: lock ? c[1] + ' · 🔒 ' + Progress.unlockLabel(lock) : c[1], 'aria-label': c[1],
               onclick: function () { if (lock) { UI.toast('🔒 Chompas: se desbloquean con ' + Progress.unlockLabel(lock)); return; } cfg[key] = c[0]; save(); }
             }));
           });
@@ -1215,6 +1368,12 @@
       rows.appendChild(row('Fondo', lockChips([
         ['bg', '', '', 'Ninguno'], ['bg', 'biblioteca', '', '📚 Biblioteca', 'bg:biblioteca'], ['bg', 'hospital', '', '🏥 Hospital de noche', 'bg:hospital'], ['bg', 'habitacion', '', '🪟 Habitación', 'bg:habitacion']
       ])));
+    }
+    /** Tras comprar o ponerse algo en la tienda: recoge lo guardado. */
+    function reload() {
+      Object.assign(cfg, Store.data.settings.avatar || {});
+      paintAll();
+      if (onChange) onChange(cfg);
     }
     paintAll();
     return wrap;

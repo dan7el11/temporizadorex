@@ -490,6 +490,30 @@ El temporizador no te ata a lo planeado:
   (nivel 21) y **nombre** (sale junto a tu nombre en el modo habitación). Se eligen en el editor del
   avatar al escoger mascota.
 
+### Tienda 🛍️
+
+Monedas 🪙 para gastar en objetos temáticos. **Salen de la experiencia ganada desde que se abrió la
+tienda** (1 XP = 1 moneda); la experiencia de antes no cuenta. Si la experiencia baja (porque borras
+una sesión o se recorta el historial antiguo), no pierdes monedas. Al cerrar el resumen de una sesión
+avisa de cuántas has ganado. Se abre desde la tarjeta del modo juego (**🛍️ Tienda**) y desde los
+editores del avatar y del cuarto. Al comprar algo te lo pones al momento; luego se quita y se pone
+desde la tienda o desde los editores (lo comprado aparece allí, sin candado).
+
+- **Orgullo y Prejuicio** 🌹: vestido de la Regencia (talle alto con cinta azul), bonete con lazo,
+  cuadro de Pemberley, rosas en la ventana y cartas con pluma y tintero.
+- **Mundo mágico** 🪄: túnica de mago (con camisa y corbata a rayas), sombrero de mago, gafas redondas,
+  bufandas de las cuatro casas (escarlata y oro, verde y plata, azul y bronce, amarillo y negro),
+  escoba voladora, estandarte de casa, pelotita dorada con alas que revolotea por el cuarto y chompa
+  de casa para la mascota.
+- **One Piece** 🏴‍☠️: chaleco rojo con pantalón corto azul, sombrero de paja, bandera pirata, cofre del
+  tesoro y timón.
+- **River Plate** ⚽: camiseta blanca con la banda roja, bufanda roja y blanca, banderín, pelota,
+  póster del estadio y camiseta de la banda para la mascota.
+
+Algunos objetos del cuarto comparten sitio en la pared (póster de anatomía, Pemberley, bandera pirata
+y estadio; diploma y estandarte): al poner uno se quita el otro. Las compras se guardan en los
+ajustes, así que viajan con la sincronización.
+
 ### Modo cooperativo (en la sala)
 - **Meta conjunta**: horas de estudio efectivo entre los dos cada día (12 h por defecto; se cambia en
   *Ajustes → Avatar y vidas*). En la tira *Estudiar acompañado* hay una barra a dos colores con lo de

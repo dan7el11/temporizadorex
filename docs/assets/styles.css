@@ -1606,8 +1606,13 @@ body > .gameover{position:fixed}
 .room-fish{animation:roomFish 6s ease-in-out infinite}
 @keyframes roomFish{0%,100%{transform:translateX(0)}50%{transform:translateX(7px)}}
 .room-plant{transform-box:fill-box;transform-origin:50% 100%;animation:roomPlant 5s ease-in-out infinite}
+.room-snitch{animation:roomSnitch 9s ease-in-out infinite}
+@keyframes roomSnitch{0%,100%{transform:translate(0,0)}15%{transform:translate(-14px,5px)}30%{transform:translate(-26px,-4px)}45%{transform:translate(-10px,-12px)}60%{transform:translate(14px,-6px)}75%{transform:translate(30px,4px)}88%{transform:translate(12px,8px)}}
+.room-snitch__wings{animation:roomWings .25s steps(2) infinite}
+@keyframes roomWings{50%{opacity:.25}}
+.room-glint{animation:roomBulb 1.4s steps(2) infinite}
 @keyframes roomPlant{0%,100%{transform:none}50%{transform:skewX(-2deg)}}
-@media (prefers-reduced-motion:reduce){ .room-star,.room-bulb,.room-fish,.room-plant,.room{animation:none!important} }
+@media (prefers-reduced-motion:reduce){ .room-star,.room-bulb,.room-fish,.room-plant,.room-snitch,.room-snitch__wings,.room-glint,.room{animation:none!important} }
 
 /* Editor del cuarto */
 .room-editor{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
@@ -1682,3 +1687,26 @@ body > .gameover{position:fixed}
 .study-scene.is-corner-right{left:auto;right:16px;align-items:flex-end}
 .study-scene.is-mini .study-station__art > svg{width:64px}
 .study-scene.is-mini .study-station__name,.study-scene.is-mini .study-scene__coop{display:none}
+
+/* ── Tienda ─────────────────────────────────────────────── */
+.shop__head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.shop__coins{font-size:1.6rem;font-weight:800;color:#b8892c;font-variant-numeric:tabular-nums}
+.shop__hint{color:var(--text-faint);flex:1 1 220px;line-height:1.35}
+.shop__tabs{margin-bottom:12px}
+.shop__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;max-height:min(60vh,560px);overflow:auto;padding:2px}
+.shop-card{display:grid;grid-template-columns:84px 1fr;grid-template-rows:1fr auto;gap:6px 10px;padding:10px;border-radius:12px;border:1px solid rgba(127,127,127,.25);background:rgba(127,127,127,.06)}
+.shop-card.is-mine{border-color:rgba(184,137,44,.55)}
+.shop-card.is-on{background:rgba(184,137,44,.12)}
+.shop-card__art{grid-row:1/3;width:84px;height:84px;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:rgba(127,127,127,.12);position:relative}
+.shop-card__art > svg{display:block;max-width:84px;max-height:84px;image-rendering:pixelated}
+.shop-card__swatch{width:46px;height:30px;border-radius:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.shop-card__emoji{position:absolute;font-size:1.6rem;bottom:4px;right:6px}
+.shop-card__body{display:flex;flex-direction:column;gap:3px;min-width:0}
+.shop-card__body strong{font-size:.92rem;line-height:1.2}
+.shop-card__body small{color:var(--text-faint);line-height:1.3;font-size:.78rem}
+.shop-card__tag{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#b8892c}
+.shop-card .btn{grid-column:2;justify-self:start;white-space:nowrap}
+.shop-card__art .room-snitch,.shop-card__art .room-snitch__wings{animation:none}
+.shop-card .btn[aria-disabled="true"]{opacity:.6}
+.chip--shop{font-weight:700}
+@media (max-width:520px){.shop__grid{grid-template-columns:1fr;max-height:65vh}}

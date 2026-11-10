@@ -430,7 +430,7 @@
     // El alta push se renueva al abrir: el navegador puede cambiar la suscripción.
     setTimeout(Push.refresh, 4000);
     // Modo juego: misiones cumplidas y logros nuevos (la primera vez, sin fiesta).
-    setTimeout(function () { if (window.Progress) Progress.check(); }, 2500);
+    setTimeout(function () { if (window.Progress) Progress.check(); if (window.Shop) { Shop.init(); Progress.coinsBaseline(); } }, 2500);
     // Cada minuto: la cuenta atrás del examen y la tarjeta de tiempo perdido,
     // que así sigue lo que vas haciendo sin tener que recargar.
     setInterval(function () {
