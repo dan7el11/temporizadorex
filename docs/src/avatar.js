@@ -841,6 +841,7 @@
 
     // 9. Fonendo con volumen: el tubo asoma a los dos lados del cuello y cae
     //    por el pecho; campana a la izquierda, olivas a la derecha.
+    if (a.nosteth) { if (a.pin) heartPin(px, 31, 44); return px; }   // sin fonendo
     const tubeR = stethTube(a);
     const tube = fill(or(capsule([[19.4, 37.2], [18.2, 40.5], [17.5, 44.5]], 1.05), capsule([[28.6, 37.2], [29.8, 40.5], [30.4, 43.2]], 1.05)));
     shade(px, tube, tubeR, { outline: false });
@@ -1345,13 +1346,15 @@
       }
       return;
     }
-    // Encima: fonendo y brazos
-    const tubeR = stethTube(a);
-    shade(px, fill(or(capsule([[21, 38.2], [19.8, 41], [19.4, 45]], 0.9), capsule([[27, 38.2], [28.2, 41], [28.6, 44]], 0.9))), tubeR, { outline: false });
-    const metalR = stethMetal(a);
-    shade(px, fill(ell(19.4, 46.8, 2, 1.9)), metalR, {});
-    put(px, 18, 46, '#ffffff');
-    shade(px, fill(or(capsule([[28.6, 44], [27.8, 46]], 0.6), capsule([[28.6, 44], [29.6, 46]], 0.6))), metalR, { outline: false });
+    // Encima: fonendo (si lo llevas) y brazos
+    if (!a.nosteth) {
+      const tubeR = stethTube(a);
+      shade(px, fill(or(capsule([[21, 38.2], [19.8, 41], [19.4, 45]], 0.9), capsule([[27, 38.2], [28.2, 41], [28.6, 44]], 0.9))), tubeR, { outline: false });
+      const metalR = stethMetal(a);
+      shade(px, fill(ell(19.4, 46.8, 2, 1.9)), metalR, {});
+      put(px, 18, 46, '#ffffff');
+      shade(px, fill(or(capsule([[28.6, 44], [27.8, 46]], 0.6), capsule([[28.6, 44], [29.6, 46]], 0.6))), metalR, { outline: false });
+    }
     if (a.pin) heartPin(px, 23, 45);
     if (a.scarf) scarf(px, a.scarf, true, a);
     P.arms.forEach(function (arm) {
@@ -1611,6 +1614,7 @@
       if (cfg.sex === 'm') rows.appendChild(row('Vello facial', chips(Avatar.FACIAL, 'facial', a.facial)));
       swatchRow('Ropa', Avatar.OUTFITS, 'outfit');
       rows.appendChild(row('Gafas', chips([[false, 'Sin gafas'], [true, 'Con gafas']], 'glasses', !!cfg.glasses)));
+      rows.appendChild(row('Fonendo', chips([[false, '🩺 Con fonendo'], [true, 'Sin fonendo']], 'nosteth', !!cfg.nosteth)));
       rows.appendChild(row('Accesorios', lockChips([
         ['hat', 'gorro', '', '🧢 Gorro de quirófano', 'acc:gorro'],
         ['mask', true, false, '😷 Mascarilla al cuello', 'acc:mascarilla'],

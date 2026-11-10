@@ -1,11 +1,11 @@
 /*
  * Tienda: monedas 🪙 que salen de la experiencia ganada desde que se abrió la
- * tienda (la experiencia de antes no cuenta). 1 XP nueva = 1 moneda.
+ * tienda (la experiencia de antes no cuenta). 2 XP nuevas = 1 moneda.
  *
  * Objetos temáticos para el avatar, el cuarto y la mascota, en cuatro
  * colecciones. Lo comprado se guarda en los ajustes (viaja con la sincronización).
  *
- * Ajuste «shop»: { lastXp, earned, spent, owned: [ids], since: fecha }
+ * Ajuste «shop»: { lastXp, earned, spent, lost (por quedarte sin vidas), ko: { day, n }, owned: [ids], since }
  * Se cuenta lo que sube la XP desde la última vez (lastXp). Si la XP baja (se
  * borra una sesión o el historial antiguo se recorta), no se quitan monedas.
  */
@@ -13,6 +13,7 @@
   'use strict';
 
   const Shop = {};
+  Shop.RATE = 0.5;   // monedas por punto de experiencia
 
   Shop.THEMES = [
     ['oyp', 'Orgullo y Prejuicio', '🌹'],
@@ -81,20 +82,50 @@
       s = { lastXp: xp, earned: 0, spent: 0, owned: [], since: U.dayKey() };
       Store.setSetting('shop', s);
     } else if (xp !== s.lastXp) {
-      s = Object.assign({}, s, { earned: (s.earned || 0) + Math.max(0, xp - s.lastXp), lastXp: xp });
+      // 1 moneda por cada 2 XP (lo que ya tenías se queda como estaba)
+      s = Object.assign({}, s, { earned: Math.round(((s.earned || 0) + Math.max(0, xp - s.lastXp) * Shop.RATE) * 100) / 100, lastXp: xp });
+      Store.setSetting('shop', s);
+    }
+    return checkKo(s);
+  }
+  Shop.init = function () { state(); };
+
+  /**
+   * Quedarte sin vidas cuesta 100 monedas (cada vez que llegas a 0 en el día;
+   * si tienes menos, pierdes las que tengas). Se cuenta con el registro de
+   * vidas, que se sincroniza: no se cobra dos veces aunque uses dos dispositivos.
+   */
+  Shop.KO_COST = 100;
+  function checkKo(s) {
+    if (!global.Game || !Game.today || s.pending) return s;
+    const t = Game.today();
+    const day = t.day;
+    // La primera vez (al estrenar esto) no se cobra lo que ya hubiera pasado hoy
+    if (!s.ko) { s = Object.assign({}, s, { ko: { day: day, n: t.kos } }); Store.setSetting('shop', s); return s; }
+    const seen = s.ko.day === day ? s.ko.n : 0;
+    if (t.kos > seen) {
+      let lost = 0;
+      for (let i = seen; i < t.kos; i++) {
+        const have = Math.max(0, Math.floor((s.earned || 0) - (s.spent || 0) - (s.lost || 0) - lost));
+        lost += Math.min(Shop.KO_COST, have);
+      }
+      s = Object.assign({}, s, { lost: (s.lost || 0) + lost, ko: { day: day, n: t.kos } });
+      Store.setSetting('shop', s);
+      if (lost > 0) setTimeout(function () { UI.toast('💸 Sin vidas: −' + lost + ' monedas'); }, 1800);
+    } else if (s.ko.day !== day) {
+      s = Object.assign({}, s, { ko: { day: day, n: 0 } });
       Store.setSetting('shop', s);
     }
     return s;
   }
-  Shop.init = function () { state(); };
 
   /** Monedas disponibles. */
   Shop.points = function () {
     const s = state();
-    return Math.max(0, (s.earned || 0) - (s.spent || 0));
+    return Math.max(0, Math.floor((s.earned || 0) - (s.spent || 0) - (s.lost || 0)));
   };
   /** Monedas ganadas en total desde que abrió la tienda. */
-  Shop.earned = function () { return state().earned || 0; };
+  Shop.earned = function () { return Math.floor(state().earned || 0); };
   Shop.owns = function (id) { const s = state(); return (s.owned || []).indexOf(id) >= 0; };
 
   function save(s) {
@@ -227,8 +258,8 @@
           head.appendChild(U.el('span', { class: 'shop__coins', text: '🪙 ' + Shop.points().toLocaleString('es-ES') }));
           head.appendChild(U.el('small', { class: 'shop__hint', text: s.pending
             ? 'Las monedas empiezan a contar con tu primera sesión.'
-            : '1 moneda por cada punto de experiencia que ganes desde el ' + U.fmtDate(new Date(s.since + 'T12:00').getTime()) + ' (la experiencia de antes no cuenta). Llevas ' +
-              (s.earned || 0).toLocaleString('es-ES') + ' ganadas.' }));
+            : '1 moneda por cada 2 puntos de experiencia que ganes desde el ' + U.fmtDate(new Date(s.since + 'T12:00').getTime()) + ' (la experiencia de antes no cuenta). Llevas ' +
+              Math.floor(s.earned || 0).toLocaleString('es-ES') + ' ganadas' + (s.lost ? ' y ' + s.lost.toLocaleString('es-ES') + ' perdidas por quedarte sin vidas' : '') + '. Quedarte sin vidas cuesta ' + Shop.KO_COST + ' monedas.' }));
           U.clear(tabs);
           Shop.THEMES.forEach(function (t) {
             const n = Shop.ITEMS.filter(function (x) { return x.theme === t[0]; });

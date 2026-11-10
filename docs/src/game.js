@@ -186,7 +186,7 @@
       pulse('lose');
       Sound.hurt();
       pushHit({ kind: 'pause', lost: lost, ko: before.left > 0 && after.left <= 0 });
-      if (before.left > 0 && after.left <= 0) UI.toast('¡Sin vidas! La pausa sigue restando: vuelve cuando puedas');
+      if (before.left > 0 && after.left <= 0) { UI.toast('¡Sin vidas! La pausa sigue restando: vuelve cuando puedas'); if (global.Shop) Shop.init(); }
       Game.renderHud(state);
       hudTag('−½');
       Game.renderTile();
@@ -230,6 +230,7 @@
     if (global.Room) Room.pushNow();
 
     const ko = before.left > 0 && after.left <= 0;
+    if (ko && global.Shop) Shop.init();   // quedarte sin vidas cuesta monedas
     const kind = why === 'pausa' ? 'pause' : 'hit';
     const icon = kind === 'hit' ? (PROJECTILES[o.cause] || (why === 'declarada' ? '💢' : '⚡')) : null;
     pushHit({ kind: kind, lost: before.left - after.left, ko: ko, icon: icon });

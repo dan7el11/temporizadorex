@@ -7,7 +7,7 @@
  * VERSION debe coincidir con el ?v= de index.html: así una versión nueva pide
  * URLs distintas y no puede reutilizar nada de la caché anterior.
  */
-const VERSION = '43';
+const VERSION = '44';
 const CACHE = 'mir2027-v' + VERSION;
 
 const ASSETS = [

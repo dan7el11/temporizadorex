@@ -502,7 +502,8 @@ letra.
 ### Tienda 🛍️
 
 Monedas 🪙 para gastar en objetos temáticos. **Salen de la experiencia ganada desde que se abrió la
-tienda** (1 XP = 1 moneda); la experiencia de antes no cuenta. Si la experiencia baja (porque borras
+tienda** (2 XP = 1 moneda); la experiencia de antes no cuenta. **Quedarte sin vidas cuesta 100 monedas**
+(cada vez que llegas a 0 en el día; si tienes menos, pierdes las que tengas, sin quedarte en negativo). Si la experiencia baja (porque borras
 una sesión o se recorta el historial antiguo), no pierdes monedas. Al cerrar el resumen de una sesión
 avisa de cuántas has ganado. Se abre desde la tarjeta del modo juego (**🛍️ Tienda**) y desde los
 editores del avatar y del cuarto. Al comprar algo te lo pones al momento; luego se quita y se pone
