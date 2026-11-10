@@ -600,7 +600,7 @@
       el.dataset.i = i;
       const frame = U.el('div', { class: 'room__frame' });
       const art = U.el('div', { class: 'room__art' + (i ? ' is-mirror' : '') });
-      art.innerHTML = Rooms.svg(it.mode === 'empty' ? null : it.cfg, it.deco, { mode: it.mode, mood: it.mood, x: it.x, y: it.y, k: it.k, flyStart: it.flyStart, lamp: it.lamp, noProps: it.noProps, placing: it.placing, mess: it.mess, event: it.event }, 400);
+      art.innerHTML = Rooms.svg(it.mode === 'empty' ? null : it.cfg, it.deco, { mode: it.mode, mood: it.mood, x: it.x, y: it.y, k: it.k, flyStart: it.flyStart, armPose: it.armPose, lamp: it.lamp, noProps: it.noProps, placing: it.placing, mess: it.mess, event: it.event }, 400);
       frame.appendChild(art);
       el.appendChild(frame);
       if (it.fx) el.appendChild(U.el('span', { class: 'room__tag room__tag--hit', text: it.fx.badge }));

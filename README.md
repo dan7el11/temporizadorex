@@ -532,14 +532,17 @@ figuritas de la tripulación para la mesa (capitán con sombrero de paja, espada
   y aterrizas junto a la mesa.
 - **Pelotita dorada**: cada 6 minutos cruza por delante y tu avatar se levanta a atraparla; una vez lo
   consigue («✨ ¡Atrapada!») y la siguiente se le escapa.
-- **Carne con hueso** (en la mesa auxiliar): cada 6 minutos el antebrazo derecho sale del codo (la mano
-  deja el libro), se estira como goma en curva con líneas de velocidad, cierra el puño sobre la carne y
-  vuelve de golpe con un rebote y el bocado («🍖»).
-- **Sombrero de paja puesto**: cada 6 minutos, el puño gigante (Gear Third): se sopla el pulgar («👍💨»),
-  el brazo se hincha desde el hombro en un puño enorme con vapor («💪») y luego se desinfla («💨»).
+- **Carne con hueso** (en la mesa auxiliar): cada 6 minutos el avatar separa el brazo derecho hacia el
+  lado (abducción), desde ahí lo estira como goma hasta la carne, cierra el puño y vuelve de golpe; se
+  queda un momento con la carne en la mano y luego come («🍖»).
+- **Sombrero de paja puesto**: cada 6 minutos, el puño gigante (Gear Third): flexiona el hombro para
+  llevarse el pulgar a la boca y soplar («👍💨»), sube el brazo y este se hincha —antebrazo inflado y una
+  mano enorme con los dedos doblados, nudillos y el pulgar por delante— con un rebote y vapor («💪»);
+  luego se desinfla y vuelve a la mesa.
 - **Llegada pirata** (con el sombrero de paja, la bandera, el timón o las figuritas): la ventana se abre,
-  dos manos estiradas desde lejos agarran el marco y el avatar sale disparado hacia dentro como un
-  cohete, aterriza con un bote y la ventana se cierra. Si también tienes la escoba, se alternan.
+  dos manos estiradas desde lejos agarran el marco y el avatar entra **de cabeza, volando como un
+  superhéroe** —de perfil, con los dos puños por delante y las piernas estiradas detrás—, toca suelo con
+  un bote y la ventana se cierra. Si también tienes la escoba, se alternan.
 
 **Mascotas que pasean**: cada una sigue un horario de 20–25 minutos. El gato duerme y se acicala en la
 mesa, baja, se echa en la alfombra, se va del cuarto, vuelve cruzando por delante, se sienta junto a la

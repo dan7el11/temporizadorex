@@ -1855,3 +1855,25 @@ body > .gameover{position:fixed}
 .rk-fly{transform-box:view-box;transform-origin:0 0;animation:rkFly 2.6s cubic-bezier(.2,.7,.4,1) both}
 @keyframes rkFly{0%,40%{opacity:0;transform:translate(6px,-6px) scale(.24)}41%{opacity:1;transform:translate(6px,-6px) scale(.24)}58%{transform:translate(18px,-14px) scale(.6)}74%{transform:translate(40px,-8px) scale(1)}86%{transform:translate(46px,var(--land)) scale(1)}90%{transform:translate(46px,calc(var(--land) + 4px)) scale(1.04,.95)}96%,100%{opacity:1;transform:translate(46px,var(--land)) scale(1)}}
 @media (prefers-reduced-motion:reduce){ .ev-arm,.ev-arm__fx,.ev-bite,.ev-hand-away,.ev-gear,.ev-gear__fx,.rk-grip,.rk-fly{animation:none!important} }
+
+/* One Piece, limpio: brazo que se separa y se estira; pulgar a la boca y puño gigante; llegada de cabeza */
+.ev-stretch{transform-box:view-box;animation:evStretch 2s cubic-bezier(.25,1.3,.5,1) both}
+@keyframes evStretch{0%{transform:scaleX(0)}34%{transform:scaleX(1.08)}42%,58%{transform:scaleX(1)}84%{transform:scaleX(.06)}86%,100%{transform:scaleX(0)}}
+.ev-stretch__fx{animation:evStretchFx 2s steps(1) both}
+@keyframes evStretchFx{0%{opacity:.85}34%{opacity:0}62%{opacity:.85}86%,100%{opacity:0}}
+.ev-bite2{animation:evBite3 2s ease-in both}
+@keyframes evBite3{0%,58%{transform:translateX(0)}86%,100%{transform:translateX(var(--dx))}}
+.ev-blow{animation:evBlow .55s ease-out infinite}
+@keyframes evBlow{from{transform:translateX(0);opacity:1}to{transform:translateX(-5px);opacity:0}}
+.ev-gear2{transform-box:view-box;animation:evGear2 6.4s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes evGear2{0%{transform:scale(.06)}6%{transform:scale(.35,.3)}10%{transform:scale(.3,.36)}16%{transform:scale(1.1)}21%{transform:scale(.97)}25%,80%{transform:scale(1)}84%{transform:scale(1.04)}96%{transform:scale(.08)}100%{transform:scale(0)}}
+.ev-gear2__fx{animation:evGearFx2 6.4s ease-out both}
+@keyframes evGearFx2{0%,12%{opacity:0}16%{opacity:.9}30%{opacity:0}84%{opacity:0}90%{opacity:.95}100%{opacity:.4}}
+.ev-gear__steam2{animation:evSteam2 1s ease-out both}
+@keyframes evSteam2{from{opacity:.9;transform:translateY(0)}to{opacity:0;transform:translateY(-6px)}}
+.rk-flyer,.rk-land{transform-box:view-box;transform-origin:0 0;animation-duration:2.6s;animation-fill-mode:both}
+.rk-flyer{animation-name:rkFlyer;animation-timing-function:cubic-bezier(.3,.6,.4,1)}
+@keyframes rkFlyer{0%,36%{opacity:0;transform:translate(2px,2px) rotate(12deg) scale(.22)}37%{opacity:1;transform:translate(2px,2px) rotate(12deg) scale(.22)}56%{transform:translate(12px,6px) rotate(16deg) scale(.55)}72%{transform:translate(26px,26px) rotate(20deg) scale(.85)}80%{opacity:1;transform:translate(34px,44px) rotate(10deg) scale(1)}81%,100%{opacity:0;transform:translate(34px,44px) rotate(10deg) scale(1)}}
+.rk-land{animation-name:rkLand;animation-timing-function:ease-out}
+@keyframes rkLand{0%,80%{opacity:0;transform:translate(46px,calc(var(--land) - 6px)) scale(1.02,.96)}81%{opacity:1;transform:translate(46px,calc(var(--land) - 6px)) scale(1)}88%{transform:translate(46px,calc(var(--land) + 4px)) scale(1.05,.94)}95%,100%{opacity:1;transform:translate(46px,var(--land)) scale(1)}}
+@media (prefers-reduced-motion:reduce){ .ev-stretch,.ev-stretch__fx,.ev-bite2,.ev-blow,.ev-gear2,.ev-gear2__fx,.ev-gear__steam2,.rk-flyer,.rk-land{animation:none!important} .rk-flyer{opacity:0} }

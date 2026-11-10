@@ -533,14 +533,13 @@
   }
 
   /** Manos sobre el libro (por encima de él); la derecha acompaña a la página. */
-  function hands(cfg, ev) {
+  function hands(cfg, rightAway) {
     const c = Avatar.palette(cfg);
     const hand = function (x) {
       return px(x, 64, 3, 2, c.skin) + px(x, 66, 3, 1, c.shadow) + px(x - 1, 64, 1, 2, c.shadow) + px(x + 3, 64, 1, 2, c.line);
     };
-    // Mientras el brazo derecho se estira (o se hincha), su mano no está en el libro
-    const away = ev && (ev.kind === 'carne' || ev.kind === 'gear');
-    const right = away ? '<g class="ev-hand-away ev-hand-away--' + ev.kind + '" style="animation-delay:-' + ev.el.toFixed(2) + 's">' + hand(36) + '</g>' : '<g class="scene-hand scene-hand--r">' + hand(36) + '</g>';
+    // Cuando el brazo derecho está en otra postura, su mano no está en el libro
+    const right = rightAway ? '' : '<g class="scene-hand scene-hand--r">' + hand(36) + '</g>';
     return '<g class="scene-hand scene-hand--l">' + hand(26) + '</g>' + right;
   }
 
@@ -592,9 +591,10 @@
       front += '<g class="who who--step">' + who(cfg, 'walk', mood, sx, UH - b.h) + '</g>';
     } else if (cfg && mode === 'desk') {
       // Dos versiones de la cara (normal y parpadeo); el CSS alterna.
+      const dp = o.armPose || 'desk';   // postura del brazo derecho en las animaciones
       body += '<g class="who who--desk">' +
-        '<g class="who__open">' + who(cfg, 'desk', mood, SEAT_X, SEAT_Y, 50) + '</g>' +
-        '<g class="who__blink">' + who(cfg, 'desk', mood === 'ko' ? 'ko' : 'blink', SEAT_X, SEAT_Y, 50) + '</g></g>';
+        '<g class="who__open">' + who(cfg, dp, mood, SEAT_X, SEAT_Y, 50) + '</g>' +
+        '<g class="who__blink">' + who(cfg, dp, mood === 'ko' ? 'ko' : 'blink', SEAT_X, SEAT_Y, 50) + '</g></g>';
     } else if (cfg && mode === 'ko') {
       const b = Avatar.bodyInner(cfg, 'idle', 'ko');
       front += '<g class="who who--ko" transform="translate(' + (STAND_X + 36 + b.h / 2) + ',' + (UH - 37) + ') rotate(90)">' + who(cfg, 'idle', 'ko', 0, 0) + '</g>';
@@ -611,7 +611,7 @@
     const svg = open +
       behind + desk(lamp, part) +
       // Sentado: el libro, las manos y lo de la mesa van por delante del cuerpo
-      (mode === 'desk' && cfg ? body + book(true) + hands(cfg, o.room && o.event) + propsOf(part, o) : book(false) + propsOf(part, o) + body) +
+      (mode === 'desk' && cfg ? body + book(true) + hands(cfg, !!o.armPose) + propsOf(part, o) : book(false) + propsOf(part, o) + body) +
       pet(cfg, o) + front + (o.room ? eventArt(cfg, o.event) : '') + '</svg>';
     return svg;
   };
@@ -663,14 +663,22 @@
       if (ev.caught && ev.el >= 4.4) out.bubble = '✨ ¡Atrapada!';
       out.ev = 'snitch' + (reach ? 1 : 0) + (out.bubble ? 1 : 0);
     } else if (ev.kind === 'gear') {
-      // 0–1,6 s: se sopla el pulgar · 1,6–6,8: puño gigante · luego se desinfla
-      const ph = ev.el < 1.6 ? 0 : ev.el < 6.8 ? 1 : 2;
-      out.bubble = ph === 0 ? '👍💨' : ph === 1 ? '💪' : '💨';
-      out.mood = 'happy';
-      out.ev = 'gear' + ph;
+      // 0–1,6 s: flexiona el hombro y se sopla el pulgar · 1,6–8: brazo en alto
+      // que se hincha en un puño gigante y luego se desinfla · 8–9: vuelve a la mesa
+      const ph = ev.el < 1.6 ? 0 : ev.el < 8 ? 1 : 2;
+      ev.ph = ph;
+      out.armPose = ph === 0 ? 'deskThumb' : ph === 1 ? 'deskGear' : undefined;
+      out.mood = ph === 0 ? 'neutral' : 'happy';
+      out.bubble = ph === 0 ? '👍💨' : ph === 1 && ev.el < 7 ? '💪' : '💨';
+      out.ev = 'gear' + ph + (out.bubble === '💪' ? 1 : 0);
     } else {
-      if (ev.el >= 3.2) { out.bubble = '🍖'; out.mood = 'happy'; }
-      out.ev = 'carne' + (ev.el >= 3.2 ? 1 : 0);
+      // 0–1 s: separa el brazo hacia el lado · 1–3: lo estira hasta la carne y
+      // vuelve con el bocado · 3–4: con la carne en la mano · 4–8: come
+      const ph = ev.el < 1 ? 0 : ev.el < 3 ? 1 : ev.el < 4 ? 2 : 3;
+      ev.ph = ph;
+      if (ph < 3) out.armPose = 'deskAbd';
+      if (ph === 3) { out.bubble = '🍖'; out.mood = 'happy'; }
+      out.ev = 'carne' + ph;
     }
     return out;
   }
@@ -683,74 +691,96 @@
       return '<g class="ev-snitch' + (ev.caught ? ' ev-snitch--catch' : '') + '" style="' + delay + '">' + ball + '</g>';
     }
     if (ev.kind === 'carne') {
-      // El antebrazo derecho sale del codo y se estira como goma (con una curva
-      // que se tensa), cierra el puño sobre la carne y vuelve de golpe con el bocado
       const DX = [75, 83, 91];
-      const mx = DX[ev.slot] - 10 + 3, ex = 43, ey = 63;
+      const mx = DX[ev.slot] - 10 + 3;
       const c = Avatar.palette(cfg);
-      const len = mx - ex;
+      const meat = function (x, y) { return px(x, y, 4, 3, '#8a3a1a') + px(x, y, 3, 1, '#b8552a') + px(x + 4, y + 1, 2, 1, '#f4efe6') + px(x - 1, y + 1, 1, 1, '#f4efe6'); };
+      if (ev.ph === 2) return meat(52, 51);   // la carne en la mano, con el brazo aún separado
+      if (ev.ph !== 1) return '';
+      // Desde la mano del brazo separado, se estira como goma hasta la carne
+      const ex = 55, ey = 54, len = Math.max(8, mx - ex);
+      const d1 = 'animation-delay:-' + Math.max(0, ev.el - 1).toFixed(2) + 's';
       let arm = '';
       for (let k = 0; k <= len; k++) {
-        const t = k / len, y = Math.round(ey - 2 - Math.sin(t * Math.PI) * 5);
-        arm += px(ex + k, y - 1, 1, 1, c.line) + px(ex + k, y, 1, 3, c.skin) + px(ex + k, y + 3, 1, 1, c.shadow) + px(ex + k, y + 4, 1, 1, c.line);
+        const t = k / len, y = Math.round(ey + t * 4 - Math.sin(t * Math.PI) * 3);
+        arm += px(ex + k, y - 1, 1, 1, c.line) + px(ex + k, y, 1, 3, c.skin) + px(ex + k, y + 2, 1, 1, c.shadow) + px(ex + k, y + 3, 1, 1, c.line);
       }
-      // Puño cerrado al final, con los nudillos
-      const fx = ex + len - 1, fy = ey - 3;
+      const fx = ex + len - 1, fy = ey + 2;
       arm += px(fx, fy, 5, 5, c.skin) + px(fx + 4, fy, 1, 5, c.shadow) + px(fx + 1, fy, 1, 1, c.line) + px(fx + 3, fy, 1, 1, c.line) + px(fx, fy + 4, 5, 1, c.line);
-      // Líneas de velocidad
-      const lines = '<g class="ev-arm__lines">' + px(ex + 6, ey - 9, 6, 1, '#ffffff') + px(ex + 14, ey - 11, 8, 1, '#ffffff') + px(ex + 10, ey + 4, 7, 1, '#ffffff') + '</g>';
-      return '<g class="ev-arm" style="' + delay + '">' + arm + '</g>' + '<g class="ev-arm__fx" style="' + delay + '">' + lines + '</g>' +
-        '<g class="ev-bite" style="--dx:' + (ex - mx + 4) + 'px;' + delay + '">' + px(mx - 1, 59, 4, 3, '#8a3a1a') + px(mx - 1, 59, 3, 1, '#b8552a') + px(mx + 3, 60, 2, 1, '#f4efe6') + '</g>';
+      const lines = px(ex + 4, ey - 6, 6, 1, '#ffffff') + px(ex + 10, ey - 8, 7, 1, '#ffffff') + px(ex + 7, ey + 7, 6, 1, '#ffffff');
+      return '<g class="ev-stretch" style="transform-origin:' + ex + 'px ' + (ey + 1) + 'px;' + d1 + '">' + arm + '</g>' +
+        '<g class="ev-stretch__fx" style="' + d1 + '">' + lines + '</g>' +
+        '<g class="ev-bite2" style="--dx:' + (ex - mx + 2) + 'px;' + d1 + '">' + meat(mx - 1, 59) + '</g>';
     }
     if (ev.kind === 'gear') {
-      // Puño gigante: el brazo derecho se hincha desde el hombro hasta un puño enorme
       const c = Avatar.palette(cfg);
+      const puff = function (x, y, r2, col) { let o = ''; for (let yy = -r2; yy <= r2; yy++) for (let xx = -r2; xx <= r2; xx++) if (xx * xx + yy * yy <= r2 * r2 + 0.5) o += px(x + xx, y + yy, 1, 1, col || '#ffffff'); return o; };
+      if (ev.ph === 0) {
+        // Soplando en el pulgar: bocanadas de aire que salen de la boca
+        return '<g class="ev-blow" style="animation-delay:-' + ev.el.toFixed(2) + 's">' + puff(29, 46, 1) + puff(25, 44, 1) + puff(21, 45, 2) + '</g>';
+      }
+      if (ev.ph === 2) return '<g class="ev-gear__steam2">' + puff(52, 40, 3) + puff(60, 34, 2) + puff(46, 34, 2) + '</g>';
+      // El brazo en alto se hincha: antebrazo inflado y un puño enorme
       const P = rectsAt(0, 0);
-      // Brazo hinchado (del hombro al puño), con su brillo
-      for (let k = 0; k <= 22; k++) {
-        const t = k / 22, h = Math.round(6 + t * 10), y = Math.round(44 - t * 22 - h / 2);
-        P(40 + k, y, 1, h, c.skin); P(40 + k, y, 1, 1, c.line); P(40 + k, y + h - 2, 1, 2, c.shadow);
-        if (k % 4 === 2) P(40 + k, y + 2, 1, 2, '#ffffff33');
+      const wx = 50, wy = 46;   // la muñeca (mano del brazo en alto)
+      for (let k = 0; k <= 16; k++) {
+        const t = k / 16, h = Math.round(5 + t * 9), cx = wx + k, cy = Math.round(wy - t * 16);
+        const y0 = cy - Math.round(h / 2);
+        P(cx, y0 - 1, 1, 1, c.line); P(cx, y0, 1, h, c.skin); P(cx, y0 + 1, 1, 2, '#ffffff40'); P(cx, y0 + h - 2, 1, 2, c.shadow); P(cx, y0 + h, 1, 1, c.line);
       }
-      // Puño redondo enorme: dedos doblados, nudillos y pulgar
-      const fx = 60, fy = 6;
-      for (let y = 0; y < 26; y++) for (let x = 0; x < 28; x++) {
-        const d = Math.pow((x + 0.5 - 14) / 14, 2) + Math.pow((y + 0.5 - 13) / 13, 2);
+      // Puño: cuatro dedos doblados con sus nudillos a la derecha, pulgar por delante
+      const fx = 62, fy = 2, FW = 34, FH = 32;
+      for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) {
+        const d = Math.pow(Math.abs(x + 0.5 - FW / 2) / (FW / 2), 2.6) + Math.pow(Math.abs(y + 0.5 - FH / 2) / (FH / 2), 2.6);
         if (d > 1) continue;
-        P(fx + x, fy + y, 1, 1, d > 0.82 ? c.line : (x > 18 || y > 19) ? c.shadow : (x < 9 && y < 9) ? '#ffffff55' : c.skin);
+        let col = c.skin;
+        if (d > 0.84) col = c.line;
+        else if (x + y > FW + FH - 22) col = c.shadow;
+        else if (x + y < 14) col = mix2(c.skin, '#ffffff', 0.35);
+        P(fx + x, fy + y, 1, 1, col);
       }
-      [4, 9, 14, 19].forEach(function (yy) { P(fx + 17, fy + yy, 9, 1, c.line); });
-      [[18, 3], [18, 8], [18, 13], [18, 18]].forEach(function (k) { P(fx + k[0], fy + k[1], 3, 2, '#ffffff44'); });
-      P(fx + 6, fy + 16, 12, 5, c.skin); P(fx + 6, fy + 20, 12, 1, c.line); P(fx + 17, fy + 16, 1, 5, c.line);   // pulgar
-      // Vapor alrededor
-      const puff = function (x, y, r2) { let o = ''; for (let yy = -r2; yy <= r2; yy++) for (let xx = -r2; xx <= r2; xx++) if (xx * xx + yy * yy <= r2 * r2) o += px(x + xx, y + yy, 1, 1, '#ffffff'); return o; };
-      const steam = '<g class="ev-gear__steam">' + puff(58, 8, 3) + puff(90, 14, 3) + puff(86, 32, 2) + puff(56, 30, 2) + '</g>';
-      return '<g class="ev-gear" style="' + delay + '">' + P.out() + '</g>' + '<g class="ev-gear__fx" style="' + delay + '">' + steam + '</g>';
+      // Separación de los dedos y nudillos redondeados
+      [8, 14, 20].forEach(function (yy) { for (let x = 15; x < FW - 2; x++) P(fx + x, fy + yy + (x > 28 ? 1 : 0), 1, 1, c.line); });
+      [[2, 7], [8, 13], [14, 19], [20, 26]].forEach(function (f) {
+        P(fx + FW - 6, fy + f[0] + 1, 3, f[1] - f[0] - 1, mix2(c.skin, '#ffffff', 0.3));
+        P(fx + FW - 3, fy + f[0] + 2, 1, f[1] - f[0] - 2, c.shadow);
+      });
+      // Pulgar cruzado por delante, con su uña
+      P(fx + 6, fy + 21, 20, 7, c.skin); P(fx + 6, fy + 21, 20, 1, c.line); P(fx + 6, fy + 27, 20, 1, c.line); P(fx + 5, fy + 22, 1, 5, c.line);
+      P(fx + 7, fy + 22, 18, 1, mix2(c.skin, '#ffffff', 0.3)); P(fx + 20, fy + 23, 5, 3, mix2(c.skin, '#ffffff', 0.55)); P(fx + 26, fy + 22, 1, 5, c.line);
+      // Brillo de globo
+      P(fx + 6, fy + 5, 3, 1, '#ffffffaa'); P(fx + 5, fy + 6, 1, 3, '#ffffffaa');
+      const d1 = 'animation-delay:-' + Math.max(0, ev.el - 1.6).toFixed(2) + 's';
+      const steam = puff(fx - 2, fy + 4, 3) + puff(fx + FW, fy + 10, 3) + puff(fx + FW - 4, fy + FH, 2) + puff(fx + 2, fy + FH - 2, 2);
+      return '<g class="ev-gear2" style="transform-origin:' + wx + 'px ' + wy + 'px;' + d1 + '">' + P.out() + '</g>' +
+        '<g class="ev-gear2__fx" style="' + d1 + '">' + steam + '</g>';
     }
     return '';
   }
-  /** Aparece por la ventana: dos manos agarran el marco y sale disparado hacia dentro. */
+  function mix2(a, b, t) {
+    const x = parseInt(a.slice(1, 7), 16), y = parseInt(b.slice(1, 7), 16);
+    return '#' + [16, 8, 0].map(function (sh) { return Math.round(((x >> sh) & 255) * (1 - t) + ((y >> sh) & 255) * t).toString(16).padStart(2, '0'); }).join('');
+  }
+  /** Llegada pirata: dos manos agarran el marco y entra volando de cabeza, con los puños por delante. */
   function rocketArt(cfg, el, mood) {
     const c = Avatar.palette(cfg);
     const vp = [12, 6];   // a lo lejos, por la ventana
     let grip = '';
     [[-4, 10], [26, 10]].forEach(function (h) {
-      // brazo estirado hacia lo lejos y la mano agarrada al marco
       const n = Math.max(Math.abs(h[0] - vp[0]), Math.abs(h[1] - vp[1]));
       for (let k = 0; k <= n; k++) {
         const x = Math.round(vp[0] + (h[0] - vp[0]) * k / n), y = Math.round(vp[1] + (h[1] - vp[1]) * k / n);
         const w = k < n / 2 ? 1 : 2;
         grip += px(x, y - 1, w, 1, c.line) + px(x, y, w, 2, k < n / 3 ? c.shadow : c.skin) + px(x, y + 2, w, 1, c.line);
       }
-      // Mano agarrada al marco: dedos por encima del borde
       grip += px(h[0] - 2, h[1] - 2, 6, 6, c.skin) + px(h[0] - 2, h[1] + 3, 6, 1, c.line) + px(h[0] - 2, h[1] - 2, 6, 1, c.line) +
         px(h[0] - 1, h[1], 1, 1, c.line) + px(h[0] + 1, h[1], 1, 1, c.line) + px(h[0] + 3, h[1], 1, 1, c.line);
     });
-    const b = Avatar.bodyInner(cfg, 'win', mood);
-    const body = '<g class="rk-body">' + who(cfg, 'win', mood, 0, 0) +
-      '<g class="fly-wind">' + px(10, 70, 1, 8, '#ffffff') + px(24, 74, 1, 10, '#ffffff') + px(38, 70, 1, 8, '#ffffff') + '</g></g>';
+    const b = Avatar.bodyInner(cfg, 'idle', mood);
     const d = 'animation-delay:-' + el + 's';
-    return '<g class="rk-grip" style="' + d + '">' + grip + '</g><g class="rk-fly" style="' + d + ';--land:' + (UH - b.h) + 'px">' + body + '</g>';
+    return '<g class="rk-grip" style="' + d + '">' + grip + '</g>' +
+      '<g class="rk-flyer" style="' + d + '">' + Avatar.flyer(cfg) + '</g>' +
+      '<g class="rk-land" style="' + d + ';--land:' + (UH - b.h) + 'px">' + who(cfg, 'idle', mood, 0, 0) + '</g>';
   }
   /** Escoba voladora bajo los pies. */
   function broomArt(x, y) {

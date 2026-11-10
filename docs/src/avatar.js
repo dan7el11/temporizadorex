@@ -979,6 +979,86 @@
     return r;
   };
 
+  /**
+   * Volando de cabeza (como un superhéroe), de perfil hacia la derecha: los dos
+   * puños por delante, el cuerpo en horizontal y las piernas estiradas detrás.
+   * Caja de 76 × 30, con las proporciones del avatar.
+   */
+  Avatar.flyer = function (cfg) {
+    const a = normal(cfg);
+    const skinR = ramp(Avatar.SKINS[a.skin] || Avatar.SKINS[1], true);
+    const hairR = ramp((Avatar.HAIRS[a.hair] || Avatar.HAIRS[1])[0]);
+    const eyeC = (Avatar.EYES[a.eyes] || Avatar.EYES[0])[0];
+    const raw = (Avatar.OUTFITS[a.outfit] || Avatar.OUTFITS[0])[0];
+    const coat = raw === 'coat' || raw === 'coatname';
+    const cloth = coat ? '#eef1f7' : raw === 'hearts' ? '#ef7aa1' : THEMED[raw] ? THEMED[raw].base : raw;
+    const clothR = ramp(cloth);
+    const pantsR = ramp(coat ? '#3f72e8' : THEMED[raw] ? THEMED[raw].pants : mix(cloth, '#000000', 0.12));
+    const longHair = /^(melena|ondas|flequillo|media|coleta|trenzas|trenza|rizos|ondaslargas|rizosmedios|ondasmedias|rizosvolumen|afrof|largo)$/.test(a.style);
+    const bald = a.style === 'calvo' || a.style === 'rapado' || a.style === 'rapadof';
+    let r = '';
+    const P = function (x, y, w, h, c) { if (c) r += '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + c + '"/>'; };
+    // Piernas estiradas detrás (la de detrás, más oscura) y zapatos
+    P(0, 15, 20, 4, pantsR.shadow); P(-5, 14, 6, 4, '#2f282d');
+    P(2, 19, 19, 5, pantsR.base); P(2, 19, 19, 1, pantsR.light); P(2, 23, 19, 1, pantsR.shadow); P(-4, 19, 7, 4, '#43363e'); P(-4, 19, 7, 1, '#5a4a54');
+    // Tronco en horizontal
+    P(19, 13, 20, 12, clothR.base); P(19, 13, 20, 2, clothR.light); P(19, 23, 20, 2, clothR.shadow);
+    if (raw === 'chaleco') P(26, 21, 13, 4, skinR.base);
+    if (raw === 'banda') for (let k = 0; k < 10; k++) P(22 + k * 1.6, 13 + k, 3, 1, '#d81e2c');
+    if (coat) P(19, 18, 20, 1, '#3f72e8');
+    // Brazo de detrás (más oscuro), estirado hacia delante por encima de la cabeza
+    // (por encima de la cabeza: entra por detrás del pelo y sale por delante de la frente)
+    for (let x = 40; x <= 72; x++) {
+      const y = Math.round(9 - (x - 40) * 0.17);
+      const sk = x >= 54;
+      P(x, y - 1, 1, 1, sk ? skinR.deep : clothR.deep); P(x, y, 1, 3, sk ? skinR.shadow : clothR.shadow); P(x, y + 3, 1, 1, sk ? skinR.deep : clothR.deep);
+    }
+    P(72, 0, 6, 7, skinR.shadow); P(72, 0, 6, 1, skinR.base); P(77, 1, 1, 5, skinR.deep); P(72, 6, 6, 1, skinR.deep);
+    // Pelo largo al viento, sobre la espalda
+    if (longHair) {
+      for (let k = 0; k < 22; k++) { const y = 3 + Math.round(Math.sin(k / 2.4) * 1.5) + Math.round(k * 0.18); P(38 - k, y, 1, Math.max(3, 9 - Math.round(k * 0.3)), k % 3 === 0 ? hairR.shadow : hairR.base); }
+    }
+    // Cabeza de perfil, algo inclinada hacia delante
+    P(39, 2, 18, 19, skinR.base); P(57, 5, 1, 12, skinR.base); P(41, 1, 14, 1, skinR.base);
+    P(58, 10, 2, 3, skinR.base); P(59, 12, 1, 1, skinR.shadow);   // nariz
+    P(39, 15, 5, 6, skinR.shadow);                                 // nuca
+    P(52, 7, 3, 4, '#1d1410'); P(53, 8, 2, 2, eyeC); P(53, 7, 1, 1, '#ffffff');   // ojo, mirando al frente
+    P(51, 5, 5, 1, hairR.deep);
+    P(54, 16, 4, 1, mix(skinR.deep, '#7a3a34', 0.55));             // boca decidida
+    P(43, 9, 4, 5, skinR.base); P(44, 10, 2, 3, skinR.shadow);     // oreja
+    if (a.facial && a.facial !== 'ninguno' && a.facial !== 'tresdias') P(48, 15, 10, 6, hairR.base);
+    if (!bald) {
+      P(38, 0, 18, 6, hairR.base); P(40, -1, 13, 1, hairR.base); P(40, 0, 10, 1, hairR.light);
+      P(36, 2, 6, 13, hairR.base); P(30, 3, 8, 3, hairR.shadow); P(26, 4, 5, 2, hairR.base);   // al viento
+      P(54, 2, 4, 4, hairR.base);
+    }
+    if (a.glasses || a.roundGlasses) { P(51, 6, 6, 1, '#2a2f40'); P(51, 11, 6, 1, '#2a2f40'); P(51, 6, 1, 6, '#2a2f40'); P(56, 6, 1, 6, '#2a2f40'); P(45, 8, 6, 1, '#2a2f40'); }
+    // Bufanda ondeando hacia atrás
+    if (a.scarf) {
+      const cols = a.scarf === 'casa' ? houseColors(a) : ((Avatar.SCARVES.filter(function (x) { return x[0] === a.scarf; })[0] || [])[2] || ['#d81e2c', '#f6f6f2']);
+      P(38, 17, 6, 5, cols[0]); P(40, 17, 2, 5, cols[1]);
+      for (let k = 0; k < 18; k++) P(37 - k, 16 + Math.round(Math.sin(k / 2) * 2), 1, 3, Math.floor(k / 3) % 2 ? cols[1] : cols[0]);
+    }
+    // Sombrero: el de paja, sujeto por su cordón y volando a la espalda
+    if (a.hat === 'paja') { P(22, 2, 16, 2, '#e8c66a'); P(25, -2, 10, 4, '#e8c66a'); P(25, 0, 10, 2, '#d0202c'); P(37, 4, 1, 1, '#a8803a'); P(38, 5, 2, 1, '#a8803a'); }
+    else if (a.hat === 'mago') { P(36, -1, 22, 2, '#3d3458'); P(40, -6, 14, 5, '#3d3458'); P(30, -8, 11, 3, '#3d3458'); P(40, -2, 14, 1, '#b08a3e'); }
+    else if (a.hat === 'copa') { P(37, -1, 20, 2, '#23232b'); P(40, -10, 13, 9, '#23232b'); P(40, -3, 13, 1, '#5a3a5a'); }
+    else if (a.hat === 'bonete') { P(37, -2, 20, 6, '#e6d3a3'); P(37, 2, 20, 1, '#7d9bd2'); P(30, 6, 8, 1, '#7d9bd2'); }
+    else if (a.hat === 'gorro') { P(37, -1, 20, 6, '#2fa59a'); P(33, 3, 5, 5, '#2fa59a'); }
+    // Brazo de delante, estirado, y los dos puños por delante
+    // (sale del hombro, pasa bajo la barbilla y llega bien por delante de la cabeza)
+    for (let x = 36; x <= 72; x++) {
+      const y = Math.round(19 - (x - 36) * 0.12);
+      const sk = x >= 52;
+      P(x, y - 1, 1, 1, sk ? skinR.deep : clothR.shadow); P(x, y, 1, 3, sk ? skinR.base : clothR.base); P(x, y, 1, 1, sk ? skinR.light : clothR.light); P(x, y + 3, 1, 1, sk ? skinR.shadow : clothR.deep);
+    }
+    P(72, 12, 7, 8, skinR.base); P(72, 12, 7, 1, skinR.light); P(78, 13, 1, 6, skinR.shadow); P(72, 19, 7, 1, skinR.deep);
+    P(75, 14, 1, 1, skinR.deep); P(75, 16, 1, 1, skinR.deep); P(77, 14, 1, 4, skinR.shadow);
+    // Estela de velocidad
+    r += '<g class="fly-wind">' + '<rect x="-14" y="10" width="9" height="1" fill="#ffffff"/><rect x="-18" y="17" width="12" height="1" fill="#ffffff"/><rect x="-12" y="24" width="8" height="1" fill="#ffffff"/></g>';
+    return r;
+  };
+
   /* ── Cuerpo entero ──────────────────────────────────────── */
   /**
    * Articulaciones de cada pose: hombro → codo → mano, cadera → rodilla → pie.
@@ -998,6 +1078,15 @@
       legs: [[[20.6, 55], [19.6, 64.5], [18.8, 72.5]], [[27.4, 55], [28.6, 62.5], [28.4, 70.5]]] },
     // Sentado a la mesa: las manos sobre el libro; la mesa tapa las piernas.
     desk: { arms: [[[16.2, 41], [13.2, 46.5], [19.6, 48.6]], [[31.8, 41], [34.8, 46.5], [28.4, 48.6]]],
+      legs: [[[20.6, 55], [20.4, 65], [20.2, 73]], [[27.4, 55], [27.6, 65], [27.8, 73]]] },
+    // En la mesa, con el brazo derecho: separado hacia el lado (abducción) …
+    deskAbd: { arms: [[[16.2, 41], [13.2, 46.5], [19.6, 48.6]], [[31.8, 41], [38.4, 38.6], [44.6, 36.6]]],
+      legs: [[[20.6, 55], [20.4, 65], [20.2, 73]], [[27.4, 55], [27.6, 65], [27.8, 73]]] },
+    // … con el pulgar en la boca (hombro flexionado, codo doblado) …
+    deskThumb: { arms: [[[16.2, 41], [13.2, 46.5], [19.6, 48.6]], [[31.8, 41], [34.6, 45.6], [27.2, 33.4]]],
+      legs: [[[20.6, 55], [20.4, 65], [20.2, 73]], [[27.4, 55], [27.6, 65], [27.8, 73]]] },
+    // … y en alto, hacia delante y arriba (de donde sale el puño gigante)
+    deskGear: { arms: [[[16.2, 41], [13.2, 46.5], [19.6, 48.6]], [[31.8, 41], [37.6, 35.6], [41.6, 29.6]]],
       legs: [[[20.6, 55], [20.4, 65], [20.2, 73]], [[27.4, 55], [27.6, 65], [27.8, 73]]] }
   };
 
