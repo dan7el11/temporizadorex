@@ -80,15 +80,40 @@
     const xp = Progress.xp();
     if (!s || typeof s.lastXp !== 'number') {
       s = { lastXp: xp, earned: 0, spent: 0, owned: [], since: U.dayKey() };
-      Store.setSetting('shop', s);
+      Store.setSetting('shop', s, true);
     } else if (xp !== s.lastXp) {
       // 1 moneda por cada 2 XP (lo que ya tenías se queda como estaba)
       s = Object.assign({}, s, { earned: Math.round(((s.earned || 0) + Math.max(0, xp - s.lastXp) * Shop.RATE) * 100) / 100, lastXp: xp });
-      Store.setSetting('shop', s);
+      Store.setSetting('shop', s, true);
     }
-    return checkKo(s);
+    return checkKo(recover(s));
   }
   Shop.init = function () { state(); };
+
+  /*
+   * Recuperación (11 nov 2026): un fallo de sincronización dejó la tienda a
+   * cero en algún dispositivo. Se recalcula lo ganado desde que abrió la
+   * tienda (10 nov) con tus sesiones, al ritmo actual, y se queda lo mayor.
+   */
+  const SHOP_OPENED = '2026-11-10';
+  const RECOV_KEY = 'mir2027.shop.recov1';
+  function recover(s) {
+    if (s.pending) return s;
+    try { if (localStorage.getItem(RECOV_KEY)) return s; } catch (e) { return s; }
+    let est = 0;
+    for (let i = 0; i < 60; i++) {
+      const k = U.dayKey(Date.now() - i * 86400000);
+      if (k < SHOP_OPENED) break;
+      const st = Progress.dayStats(k);
+      est += (st.eff * Progress.XP.min + st.perfect * Progress.XP.perfect + st.guided * Progress.XP.guided) * Shop.RATE;
+    }
+    est = Math.round(est * 100) / 100;
+    try { localStorage.setItem(RECOV_KEY, '1'); } catch (e) { /* noop */ }
+    if (est <= (s.earned || 0)) return s;
+    s = Object.assign({}, s, { earned: est });
+    Store.setSetting('shop', s, true);
+    return s;
+  }
 
   /**
    * Quedarte sin vidas cuesta 100 monedas (cada vez que llegas a 0 en el día;
@@ -101,7 +126,7 @@
     const t = Game.today();
     const day = t.day;
     // La primera vez (al estrenar esto) no se cobra lo que ya hubiera pasado hoy
-    if (!s.ko) { s = Object.assign({}, s, { ko: { day: day, n: t.kos } }); Store.setSetting('shop', s); return s; }
+    if (!s.ko) { s = Object.assign({}, s, { ko: { day: day, n: t.kos } }); Store.setSetting('shop', s, true); return s; }
     const seen = s.ko.day === day ? s.ko.n : 0;
     if (t.kos > seen) {
       let lost = 0;
@@ -110,11 +135,11 @@
         lost += Math.min(Shop.KO_COST, have);
       }
       s = Object.assign({}, s, { lost: (s.lost || 0) + lost, ko: { day: day, n: t.kos } });
-      Store.setSetting('shop', s);
+      Store.setSetting('shop', s, true);
       if (lost > 0) setTimeout(function () { UI.toast('💸 Sin vidas: −' + lost + ' monedas'); }, 1800);
     } else if (s.ko.day !== day) {
       s = Object.assign({}, s, { ko: { day: day, n: 0 } });
-      Store.setSetting('shop', s);
+      Store.setSetting('shop', s, true);
     }
     return s;
   }

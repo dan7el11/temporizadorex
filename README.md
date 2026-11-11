@@ -745,8 +745,13 @@ para hacerlo a mano. Si no hay conexión, avisa y lo reintenta la próxima vez; 
 **Cómo se resuelven los choques.** No se pisa nada: las sesiones, los bloques de la biblioteca, los
 temas, las razones y las plantillas se **unen por identificador**; si el mismo elemento se editó en
 los dos sitios gana la edición más reciente; lo que borras en un dispositivo **queda borrado** en el
-otro (se guarda constancia del borrado, así no reaparece); y los ajustes y el plan del día se toman
-del dispositivo que guardó más tarde. La sesión que esté corriendo en ese momento es local y no se
+otro (se guarda constancia del borrado, así no reaparece); el plan del día se toma del dispositivo
+que guardó más tarde. Los **ajustes** (horario, avatar, sala, etc.) se resuelven **uno por uno**:
+gana el que editaste a mano más tarde, y si ninguno lleva marca, el del servidor. Lo que la app
+escribe sola al abrirse (poner al día las monedas o las vidas) no cuenta como edición, así que un
+dispositivo con una copia vieja, o con la sesión cerrada un tiempo, ya no puede pisar lo bueno al
+volver a entrar. La **tienda** nunca pierde nada: se queda con lo máximo ganado y la unión de las
+compras de los dos dispositivos. La sesión que esté corriendo en ese momento es local y no se
 sincroniza hasta que termina.
 
 **Sobre la seguridad.** La clave *anon* está pensada para vivir en el cliente: lo que protege tus

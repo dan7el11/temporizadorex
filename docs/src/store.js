@@ -262,6 +262,9 @@
     // que un borrado no reaparezca al sincronizar con otro dispositivo.
     meta: { updatedAt: 0, deviceId: '' },
     tombstones: {},
+    // Cuándo se editó a mano cada ajuste: al sincronizar se elige ajuste por
+    // ajuste, así un dispositivo con una copia vieja no pisa los demás.
+    setStamps: {},
     presets: DEFAULT_PRESETS,
     reasons: DEFAULT_REASONS,
     topics: DEFAULT_TOPICS,
@@ -330,6 +333,29 @@
 
   function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
 
+  /**
+   * Tienda de dos dispositivos: nunca se pierde nada. Monedas ganadas,
+   * gastadas y perdidas: el máximo; compras: la unión.
+   */
+  function mergeShop(a, b) {
+    if (!a || !b) return a || b ? deepClone(a || b) : null;
+    const owned = (a.owned || []).concat(b.owned || []).filter(function (id, i, arr) { return arr.indexOf(id) === i; });
+    const paid = global.Shop ? owned.reduce(function (t, id) { const it = Shop.item(id); return t + (it ? it.price : 0); }, 0) : 0;
+    const ka = a.ko || null, kb = b.ko || null;
+    let ko = ka || kb;
+    if (ka && kb) ko = ka.day === kb.day ? { day: ka.day, n: Math.max(ka.n || 0, kb.n || 0) } : (ka.day > kb.day ? ka : kb);
+    const out = Object.assign({}, a, b, {
+      lastXp: Math.max(a.lastXp || 0, b.lastXp || 0),
+      earned: Math.max(a.earned || 0, b.earned || 0),
+      spent: Math.max(a.spent || 0, b.spent || 0, paid),
+      lost: Math.max(a.lost || 0, b.lost || 0),
+      owned: owned,
+      since: [a.since, b.since].filter(Boolean).sort()[0] || a.since || b.since
+    });
+    if (ko) out.ko = deepClone(ko); else delete out.ko;
+    return out;
+  }
+
   function read(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
@@ -362,6 +388,7 @@
       this.data.meta = Object.assign({ updatedAt: 0, deviceId: '' }, this.data.meta || {});
       if (!this.data.meta.deviceId) this.data.meta.deviceId = U.uid('dev');
       if (!this.data.tombstones || typeof this.data.tombstones !== 'object') this.data.tombstones = {};
+      if (!this.data.setStamps || typeof this.data.setStamps !== 'object') this.data.setStamps = {};
       if (!Array.isArray(this.data.presets) || !this.data.presets.length) this.data.presets = deepClone(DEFAULT_PRESETS);
       if (!Array.isArray(this.data.reasons) || !this.data.reasons.length) this.data.reasons = deepClone(DEFAULT_REASONS);
       if (!Array.isArray(this.data.topics)) this.data.topics = deepClone(DEFAULT_TOPICS);
@@ -707,12 +734,20 @@
     },
 
     /* ── Ajustes ─────────────────────────────────────────── */
-    setSetting: function (key, value) {
+    /**
+     * Guarda un ajuste. `auto` = lo escribe la app sola (p. ej. poner al día
+     * las monedas al abrir): no cuenta como edición, así no hace ganar una
+     * copia vieja al sincronizar.
+     */
+    setSetting: function (key, value, auto) {
       this.data.settings[key] = value;
+      if (auto) { this.save(true); return; }
+      this.data.setStamps[key] = Date.now();
       this.save();
     },
     setMini: function (key, value) {
       this.data.settings.mini[key] = value;
+      this.data.setStamps.mini = Date.now();
       this.save();
     },
     mini: function () {
@@ -729,7 +764,8 @@
      * Fusiona estos datos con los de otro dispositivo sin perder nada:
      * las colecciones se unen por id, un elemento que está en los dos se
      * resuelve por su marca de edición, y lo borrado en cualquiera de los dos
-     * se queda borrado. Ajustes y plan del día: gana el documento más reciente.
+     * se queda borrado. Ajustes: uno por uno (ver abajo). Plan del día: gana
+     * el documento más reciente.
      */
     mergeWith: function (remote) {
       if (!remote || typeof remote !== 'object') return this.data;
@@ -741,8 +777,26 @@
       const other = localWins ? remote : local;
 
       const out = deepClone(base);
-      out.settings = Object.assign({}, DEFAULT_SETTINGS, base.settings || {});
-      out.settings.mini = Object.assign({}, DEFAULT_MINI, (base.settings || {}).mini || {});
+      // Ajustes: uno por uno, gana el editado a mano más tarde. Sin marca en
+      // ninguno de los dos, gana el del servidor (lo último sincronizado): una
+      // copia vieja de este dispositivo no debe pisarlo solo por haberse
+      // guardado algo automático al abrir. La tienda se une.
+      const ls = local.settings || {}, rs = remote.settings || {};
+      const lt = local.setStamps || {}, rt = remote.setStamps || {};
+      const settings = deepClone(ls);
+      const stamps = {};
+      Object.keys(ls).concat(Object.keys(rs)).forEach(function (key) {
+        const tl = lt[key] || 0, tr = rt[key] || 0;
+        stamps[key] = Math.max(tl, tr);
+        if (key === 'shop' || !(key in rs)) return;
+        if (!(key in ls) || tr > tl || (tr === tl)) settings[key] = deepClone(rs[key]);
+      });
+      Object.keys(stamps).forEach(function (k) { if (!stamps[k]) delete stamps[k]; });
+      const shop = mergeShop(ls.shop, rs.shop);
+      if (shop) settings.shop = shop;
+      out.setStamps = stamps;
+      out.settings = Object.assign({}, DEFAULT_SETTINGS, settings);
+      out.settings.mini = Object.assign({}, DEFAULT_MINI, settings.mini || {});
 
       // Marcas de borrado: la unión, con la fecha más alta de cada una.
       const tombs = {};
@@ -808,6 +862,7 @@
       this.data.meta = Object.assign({ updatedAt: 0, deviceId: '' }, this.data.meta || {});
       if (!this.data.meta.deviceId) this.data.meta.deviceId = U.uid('dev');
       if (!this.data.tombstones || typeof this.data.tombstones !== 'object') this.data.tombstones = {};
+      if (!this.data.setStamps || typeof this.data.setStamps !== 'object') this.data.setStamps = {};
       this.save();
     },
     resetAll: function () {
