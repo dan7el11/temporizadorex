@@ -300,6 +300,9 @@ Un empujón de videojuego, que se puede apagar en *Ajustes → Avatar y vidas*.
     dos trenzas, trenza de lado, rizos largos, afro, rapado, ondas largas con raya, ondas cortas,
     rizos a los hombros, rizos cortos, ondas medias con volumen y rizos con volumen.
   - Ropa: pijama azul, verde, granate o **morado**, bata blanca o negro.
+  - **Pijama rosa** y personalización del uniforme: escote (pico, redondo o mao), ribete de color,
+    bolsillo con bolígrafos, linterna, libreta o tijeras, camiseta de manga larga debajo, color del
+    pantalón y tarjeta identificativa con cinta de color.
   - **Vello facial** en el hombre: afeitado, barba de 3 días, bigote, perilla, candado, barba corta o
     completa.
   Su cara cambia: contento, con dolor al perder una vida o KO sin vidas. En tamaños pequeños (cabecera
@@ -712,12 +715,20 @@ da de baja y recorta los mensajes a un tamaño seguro.
 | Tecla | Acción |
 |---|---|
 | `Espacio` | Pausar / reanudar (la pausa cuenta como distracción) |
+| `F` | Modo flow: al llegar a 0 el bloque sigue contando |
+| `H` | Hecho: terminar el bloque ya |
+| `+` / `↑` | Sumar 5 minutos al bloque |
+| `−` / `↓` | Quitar 5 minutos al bloque |
+| `T` | Ajustar el tiempo del bloque |
 | `D` | Registrar distracción sin parar el reloj |
+| `N` | Aparcar un pensamiento para luego |
 | `G` | Pausa guiada ahora; después sigue el mismo bloque |
-| `A` | Enviar un ánimo (con la sala abierta) |
 | `B` | Bloques de la sesión: tiempos, orden, añadir y saltar |
+| `A` | Enviar un ánimo (con la sala abierta) |
+| `M` | Silenciar / activar el sonido |
 | `P` | Abrir o cerrar la miniatura |
-| `F` | Pantalla completa |
+| `C` | Pantalla completa |
+| `?` | Ver la lista de atajos (en cualquier momento) |
 
 ### Tus datos
 Todo se guarda en el `localStorage` del navegador. Si cierras la pestaña a media sesión, al volver te

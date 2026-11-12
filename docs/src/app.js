@@ -383,9 +383,15 @@
 
     // Atajos de teclado durante la sesión.
     document.addEventListener('keydown', function (e) {
-      if (!Runner.isActive() || modalOpen()) return;
-      if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || modalOpen()) return;
+      if (e.target && (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable)) return;
+      if (e.key === '?') { e.preventDefault(); App.showKeys(); return; }
+      if (!Runner.isActive()) return;
       const k = e.key.toLowerCase();
+      if (k === '+' || k === 'arrowup') { e.preventDefault(); Runner.addMinutes(5); return; }
+      if (k === '-' || k === 'arrowdown') { e.preventDefault(); Runner.addMinutes(-5); return; }
+      if (k === 'm') { e.preventDefault(); App.toggleMute(); return; }
+      if (k === 'c') { e.preventDefault(); Runner.toggleFullscreen(); return; }
       if (e.code === 'Space' || k === ' ') { e.preventDefault(); Runner.togglePause(); }
       else if (k === 'd') { e.preventDefault(); Runner.quickDistraction(); }
       else if (k === 'g') { e.preventDefault(); Runner.openPauseNow(); }
@@ -395,7 +401,7 @@
       else if (k === 'a' && Room.joined()) { e.preventDefault(); Runner.showChrome('stick'); Cheers.open(); }
       else if (k === 'b') { e.preventDefault(); Runner.showChrome('stick'); Runner.openQueue(); }
       else if (k === 'p') { e.preventDefault(); PiP.toggle(); }
-      else if (k === 'f') { e.preventDefault(); Runner.toggleFullscreen(); }
+      else if (k === 'f') { e.preventDefault(); Runner.showChrome(); Runner.toggleFlow(); }
     });
 
     // Aviso al cerrar con una sesión abierta.
@@ -409,6 +415,44 @@
     const unlock = function () { Sound.unlock(); document.removeEventListener('pointerdown', unlock); };
     document.addEventListener('pointerdown', unlock);
   }
+
+  /** Lista de atajos: la misma que en Ajustes → Datos. */
+  App.KEYS = [
+    ['Espacio', 'Pausar / reanudar (la pausa cuenta como distracción)'],
+    ['F', 'Modo flow: al llegar a 0 el bloque sigue contando'],
+    ['H', 'Hecho: terminar el bloque ya'],
+    ['+ / ↑', 'Sumar 5 minutos al bloque'],
+    ['− / ↓', 'Quitar 5 minutos al bloque'],
+    ['T', 'Ajustar el tiempo del bloque'],
+    ['D', 'Registrar distracción rápida sin pausar'],
+    ['N', 'Aparcar un pensamiento para luego'],
+    ['G', 'Pausa guiada ahora (respiración, etc.)'],
+    ['B', 'Bloques de la sesión: tiempos, orden y saltar'],
+    ['A', 'Enviar un ánimo a tu pareja (con la sala abierta)'],
+    ['M', 'Silenciar / volver a activar el sonido'],
+    ['P', 'Ventana miniatura (Picture in Picture)'],
+    ['C', 'Pantalla completa (Esc para salir)'],
+    ['?', 'Ver esta lista']
+  ];
+  App.keysList = function () {
+    return U.el('ul', { class: 'keys' }, App.KEYS.map(function (k) {
+      return U.el('li', {}, [U.el('kbd', { text: k[0] }), document.createTextNode(' ' + k[1])]);
+    }));
+  };
+  App.showKeys = function () {
+    UI.modal({
+      title: '⌨️ Atajos de teclado',
+      sub: 'Funcionan durante la sesión (salvo «?»).',
+      build: function () { return App.keysList(); },
+      actions: function (close) { return [U.el('button', { class: 'btn btn--primary', text: 'Vale', onclick: function () { close(true); } })]; }
+    });
+  };
+  let volBeforeMute = null;
+  App.toggleMute = function () {
+    const v = Store.data.settings.volume;
+    if (v > 0) { volBeforeMute = v; Store.setSetting('volume', 0, true); UI.toast('🔇 Sonido silenciado (M para activarlo)'); }
+    else { Store.setSetting('volume', volBeforeMute || 0.6, true); UI.toast('🔊 Sonido activado'); }
+  };
 
   function recoverRun() {
     const saved = Store.loadRun();
@@ -460,6 +504,8 @@
   App.init = function () {
     Store.init();
     App.hydrateIcons(document);
+    const kl = document.getElementById('keysList');
+    if (kl) kl.appendChild(App.keysList());
     wire();
     App.renderAll();
     App.showView('plan');

@@ -839,6 +839,30 @@
     return box;
   };
 
+  /* ── Atajos: modo flow y minutos ───────────────────────── */
+  Runner.toggleFlow = function () {
+    if (!state || state.finished || state.gate) return;
+    const b = block();
+    if (!b) return;
+    if (b.isBreak) { UI.toast('El modo flow es para bloques de estudio'); return; }
+    b.flow = !b.flow;
+    b.flowNotified = false;
+    persist(); tick();
+    UI.toast(b.flow ? '🌊 Modo flow: al llegar a 0 sigue contando hasta que pulses «✓ Hecho» (H)' : 'Modo flow desactivado');
+  };
+  /** Suma o resta minutos a lo que queda del bloque (nunca menos de 1 min). */
+  Runner.addMinutes = function (delta) {
+    if (!state || state.finished || state.gate) return;
+    const b = block();
+    if (!b) return;
+    const left = Math.max(0, b.plannedMs - elapsedMs());
+    const next = Math.max(60000, left + delta * 60000);
+    b.plannedMs = elapsedMs() + next;
+    b.flowNotified = false; b.endWarned = false;
+    persist(); tick(); armWarn();
+    UI.toast((delta > 0 ? '+' : '−') + Math.abs(delta) + ' min · quedan ' + U.fmtHuman(next));
+  };
+
   /* ── Ajuste rápido del bloque (tocar el reloj) ─────────── */
   /** Termina el bloque ya, como hecho (no saltado): «lo terminé antes». */
   Runner.doneNow = function () {

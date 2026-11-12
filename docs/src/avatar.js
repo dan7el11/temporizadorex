@@ -34,8 +34,23 @@
     // De la tienda
     ['regencia', 'Vestido de la Regencia', 'shop:out-regencia'], ['tunica', 'Túnica de mago', 'shop:out-tunica'],
     ['chaleco', 'Chaleco rojo pirata', 'shop:out-chaleco'], ['banda', 'Camiseta de la banda roja', 'shop:out-banda'],
-    ['levita', 'Levita de caballero (Regencia)', 'shop:out-levita']
+    ['levita', 'Levita de caballero (Regencia)', 'shop:out-levita'],
+    // Añadidos después (al final para no mover los ya guardados)
+    ['#e98bb3', 'Pijama rosa']
   ];
+  // Orden en el editor: los colores lisos juntos
+  Avatar.OUTFIT_ORDER = [0, 1, 2, 5, 15, 4, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+  /*
+   * Personalización del uniforme: [valor, nombre, color]. El primero de cada
+   * lista es el de siempre.
+   */
+  Avatar.NECKS = [['v', 'Pico'], ['redondo', 'Redondo'], ['mao', 'Mao']];
+  Avatar.TRIMS = [['', 'Sin ribete'], ['blanco', 'Blanco', '#f4f4f2'], ['negro', 'Negro', '#24242a'], ['claro', 'Tono claro'], ['rosa', 'Rosa', '#f2a0c0'], ['dorado', 'Dorado', '#d4a531']];
+  Avatar.UNDERS = [['', 'Sin camiseta'], ['blanca', 'Blanca', '#f2f3f6'], ['negra', 'Negra', '#2a2c33'], ['gris', 'Gris', '#9aa1ad'], ['rosa', 'Rosa', '#f4b8cf'], ['marino', 'Marino', '#26345c']];
+  Avatar.POCKETS = [['', 'Vacío'], ['bolis', '🖊️ Bolígrafos'], ['linterna', '🔦 Linterna'], ['libreta', '📒 Libreta'], ['tijeras', '✂️ Tijeras']];
+  Avatar.PANTS = [['', 'A juego'], ['marino', 'Marino', '#2b3550'], ['negro', 'Negro', '#25262c'], ['blanco', 'Blanco', '#eceef3'], ['gris', 'Gris', '#7d8494'], ['rosa', 'Rosa', '#e98bb3']];
+  Avatar.BADGES = [['', 'Sin tarjeta'], ['azul', 'Cinta azul', '#3f72e8'], ['roja', 'Cinta roja', '#d8364a'], ['verde', 'Cinta verde', '#2a9a73'], ['rosa', 'Cinta rosa', '#ec7fae'], ['negra', 'Cinta negra', '#2a2c33']];
+  function optColor(list, v) { const o = list.filter(function (x) { return x[0] === v; })[0]; return o && o[2] ? o[2] : null; }
   // Ropa temática: color de base, color del pantalón (cuerpo entero) y muestra.
   const THEMED = {
     regencia: { base: '#f3ead8', pants: '#e9dcc0', dress: true, sw: 'linear-gradient(180deg,#f3ead8 40%,#7d9bd2 40%,#7d9bd2 56%,#f3ead8 56%)' },
@@ -707,6 +722,7 @@
       // Pliegues y bolsillo con bolígrafo
       [[12, 44], [12, 45], [13, 46], [13, 47], [36, 44], [36, 45], [35, 46], [35, 47]].forEach(function (p) { put(px, p[0], p[1], clothR.shadow); });
       if (THEMED[a.pattern]) themedPattern(px, body, a.pattern, clothR, neckR, false, a);
+      else pocket(px, a, clothR, 9, 46, 5);
     }
 
     // 3. Cuello, con la sombra de la barbilla
@@ -721,6 +737,9 @@
     const headM = fill(head);
     shade(px, headM, skinR, { softEdge: true, bias: 0.05 });
     castShadow(px, headM, 0, 2, 0.3);   // barbilla sobre el cuello
+    // Escote del uniforme (encima de la sombra de la barbilla)
+    if (!coat && !THEMED[a.pattern]) neckline(px, a, ramp(outfit), neckR, !!pose);
+    else if (coat && a.under && !pose) undershirt(px, a, fill(poly([[17.5, 37.4], [30.5, 37.4], [24, 49.5]])), 37.4);
 
     // 5. Cara
     face(px, a, m, skinR, hairR);
@@ -841,6 +860,7 @@
 
     // 9. Fonendo con volumen: el tubo asoma a los dos lados del cuello y cae
     //    por el pecho; campana a la izquierda, olivas a la derecha.
+    if (a.badge) badge(px, a, false);
     if (a.nosteth) { if (a.pin) heartPin(px, 31, 44); return px; }   // sin fonendo
     const tubeR = stethTube(a);
     const tube = fill(or(capsule([[19.4, 37.2], [18.2, 40.5], [17.5, 44.5]], 1.05), capsule([[28.6, 37.2], [29.8, 40.5], [30.4, 43.2]], 1.05)));
@@ -1098,6 +1118,124 @@
   }
   function stethMetal(a) { return a.steth === 'oro' ? ramp('#f2c94c') : ramp('#d8dde8'); }
   /** Corazoncitos blancos repartidos por el pijama. */
+  /* ── Uniforme: escote, ribete, camiseta debajo, bolsillo y tarjeta ── */
+  function trimColor(a, clothR) {
+    if (a.trim === 'claro') return mix(clothR.base, '#ffffff', 0.55);
+    return optColor(Avatar.TRIMS, a.trim);
+  }
+  /** Camiseta asomando por el escote: rellena la zona con su color y un cuello redondo arriba. */
+  function undershirt(px, a, zone, top) {
+    const c = optColor(Avatar.UNDERS, a.under);
+    if (!c) return;
+    const R = ramp(c);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!zone[y * W + x] || y < top + 0.6) continue;
+      const t = (x - CX) / 4;
+      if (y < top + 0.8 + 0.9 * (1 - t * t)) continue;          // la piel del cuello asoma arriba
+      put(px, x, y, y < top + 1.8 + 0.9 * (1 - t * t) ? R.shadow : R.base);
+    }
+  }
+  /** Escote del pijama, dibujado encima del cuello. full: cuerpo entero. */
+  function neckline(px, a, clothR, neckR, full) {
+    const L = full ? 20.6 : 19.6, R = full ? 27.4 : 28.4, T = full ? 38.2 : 37.2, tip = 42.6;
+    const style = a.neck || 'v';
+    const trim = trimColor(a, clothR);
+    const edge = trim || clothR.deep;
+    const vee = fill(poly([[L, T], [R, T], [24, tip]]));
+    if (style === 'v') {
+      undershirt(px, a, vee, T);
+      if (trim) {
+        const n = Math.round((tip - T));
+        for (let k = 0; k <= n; k++) {
+          const f = k / n;
+          put(px, Math.round(L + 0.2 + (24 - L) * f), Math.round(T + k), trim);
+          put(px, Math.round(R - 0.2 - (R - 24) * f), Math.round(T + k), trim);
+        }
+      }
+      return;
+    }
+    // Redondo y mao: se tapa el pico con tela y se abre un escote corto
+    const hw = (R - L) / 2 + 0.4;
+    const u = style === 'mao' ? fill(poly([[22.4, T + 0.6], [25.6, T + 0.6], [24, T + 4]])) : fill(and(ell(CX, T, hw - 0.2, 3.6), function (x, y) { return y >= T; }));
+    for (let y = Math.floor(T); y <= tip + 1; y++) for (let x = Math.floor(L) - 1; x <= Math.ceil(R) + 1; x++) {
+      if (!inM(vee, x, y) || inM(u, x, y)) continue;
+      put(px, x, y, (x + y) % 9 === 0 ? clothR.light : clothR.base);
+    }
+    for (let y = Math.floor(T); y <= T + 4; y++) for (let x = Math.floor(L); x <= Math.ceil(R); x++) {
+      if (!inM(u, x, y)) continue;
+      put(px, x, y, neckR.base);
+    }
+    undershirt(px, a, u, T - 0.6);
+    // Borde del escote
+    for (let x = Math.floor(L) - 1; x <= Math.ceil(R) + 1; x++) {
+      let low = -1;
+      for (let y = Math.floor(T); y <= T + 5; y++) if (inM(u, x, y)) low = y;
+      if (low >= 0) put(px, x, low + 1, edge);
+    }
+    if (style === 'mao') {
+      // Tirilla alrededor del cuello, abierta delante
+      for (let x = Math.floor(L) - 1; x <= Math.ceil(R) + 1; x++) {
+        if (x === 24) continue;
+        put(px, x, Math.floor(T) - 1, clothR.deep);
+        put(px, x, Math.floor(T), trim || clothR.light);
+        if (!inM(u, x, Math.floor(T) + 1)) put(px, x, Math.floor(T) + 1, clothR.base);
+      }
+      put(px, 24, Math.floor(T), neckR.shadow);
+    } else if (trim) {
+      for (let x = Math.floor(L); x <= Math.ceil(R); x++) {
+        let low = -1;
+        for (let y = Math.floor(T); y <= T + 5; y++) if (inM(u, x, y)) low = y;
+        if (low >= 0) put(px, x, low + 1, trim);
+      }
+    }
+  }
+  /** Bolsillo de pecho con lo que lleves dentro. x, y: esquina de arriba; w: ancho. */
+  function pocket(px, a, clothR, x0, y0, w) {
+    if (!a.pocket && !a.trim) return;
+    const edge = trimColor(a, clothR) || clothR.shadow;
+    const x1 = x0 + w - 1, h = 3;
+    // Lo que asoma, antes del borde
+    const it = a.pocket;
+    if (it === 'bolis') {
+      [[x0 + 1, '#d8364a'], [x0 + (w > 4 ? 3 : 2), '#2a5bd7']].forEach(function (p) {
+        put(px, p[0], y0 - 3, '#2b2f3a'); put(px, p[0], y0 - 2, p[1]); put(px, p[0], y0 - 1, p[1]);
+      });
+      put(px, x0 + 1, y0 - 1, '#c9ced8');
+    } else if (it === 'linterna') {
+      put(px, x0 + 1, y0 - 4, '#ffe680'); put(px, x0 + 1, y0 - 3, '#c9ced8'); put(px, x0 + 1, y0 - 2, '#aab1be'); put(px, x0 + 1, y0 - 1, '#aab1be');
+      put(px, x0 + 2, y0 - 2, '#7d8494');
+    } else if (it === 'libreta') {
+      for (let x = x0 + 1; x <= x1 - 1; x++) { put(px, x, y0 - 2, '#f08a2c'); put(px, x, y0 - 1, '#f6f1e4'); }
+      put(px, x0 + 1, y0 - 2, '#c96a18');
+    } else if (it === 'tijeras') {
+      put(px, x0 + 1, y0 - 2, '#e05a72'); put(px, x0 + 2, y0 - 2, '#e05a72'); put(px, x0 + 1, y0 - 1, '#c9ced8'); put(px, x0 + 2, y0 - 1, '#c9ced8');
+      put(px, x0 + 1, y0 - 3, '#e05a72'); put(px, x0 + 2, y0 - 3, '#e05a72');
+    }
+    if (!it && !a.trim) return;
+    for (let x = x0; x <= x1; x++) put(px, x, y0, edge);
+    for (let y = y0 + 1; y <= y0 + h; y++) { put(px, x0, y, clothR.shadow); put(px, x1, y, clothR.shadow); }
+    if (y0 + h + 1 < H - 1) for (let x = x0; x <= x1; x++) put(px, x, y0 + h + 1, clothR.shadow);
+  }
+  /** Tarjeta identificativa colgada de una cinta. */
+  function badge(px, a, full) {
+    const c = optColor(Avatar.BADGES, a.badge);
+    if (!c) return;
+    const top = full ? 38.6 : 37.6, cy = full ? 47 : 45;
+    const cord = ramp(c);
+    for (let k = 0; k <= 8; k++) {
+      const f = k / 8;
+      put(px, Math.round(21.4 + (23 - 21.4) * f), Math.round(top + (cy - top) * f), k % 3 === 2 ? cord.shadow : cord.base);
+      put(px, Math.round(26.6 + (25 - 26.6) * f), Math.round(top + (cy - top) * f), k % 3 === 2 ? cord.shadow : cord.base);
+    }
+    put(px, 24, cy, '#c9ced8');
+    for (let y = cy + 1; y <= cy + 4; y++) for (let x = 22; x <= 26; x++) {
+      const edge = x === 22 || x === 26 || y === cy + 4;
+      put(px, x, y, y === cy + 1 ? c : edge ? '#c9ced8' : '#ffffff');
+    }
+    put(px, 23, cy + 2, '#9fb3d1'); put(px, 23, cy + 3, '#9fb3d1');   // foto
+    put(px, 25, cy + 2, '#7d8494');
+  }
+
   function heartsPattern(px, mask, off) {
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       if ((x + off * 3) % 7 !== 1 || (y + (Math.floor((x + off * 3) / 7) % 2) * 3) % 6 !== 0) continue;
@@ -1303,7 +1441,8 @@
     const P = POSES[pose] || POSES.idle;
     const coat = outfit === 'coat';
     const clothR = ramp(coat ? '#eef1f7' : outfit);
-    const pantsR = coat ? ramp('#3f72e8') : THEMED[a.pattern] ? ramp(THEMED[a.pattern].pants) : ramp(mix(outfit, '#000000', 0.12));
+    const pantsCol = !THEMED[a.pattern] && optColor(Avatar.PANTS, a.pants);
+    const pantsR = pantsCol ? ramp(pantsCol) : coat ? ramp('#3f72e8') : THEMED[a.pattern] ? ramp(THEMED[a.pattern].pants) : ramp(mix(outfit, '#000000', 0.12));
     if (layer === 'under') {
       // Piernas y zapatos
       P.legs.forEach(function (leg) {
@@ -1328,6 +1467,7 @@
       if (THEMED[a.pattern]) themedPattern(px, torsoM, a.pattern, clothR, neckR, true, a);
       if (!coat) {
         for (let x = 17; x <= 31; x++) put(px, x, 56, pantsR.deep);   // cinturilla
+        if (!THEMED[a.pattern]) pocket(px, a, clothR, 28, 49, 4);
       } else {
         for (let y = 43; y <= 64; y++) put(px, 24, y, clothR.shadow);  // raja central
         for (let x = 16; x <= 20; x++) put(px, x, 57, clothR.shadow);  // bolsillos
@@ -1346,7 +1486,8 @@
       }
       return;
     }
-    // Encima: fonendo (si lo llevas) y brazos
+    // Encima: tarjeta, fonendo (si lo llevas) y brazos
+    if (a.badge) badge(px, a, true);
     if (!a.nosteth) {
       const tubeR = stethTube(a);
       shade(px, fill(or(capsule([[21, 38.2], [19.8, 41], [19.4, 45]], 0.9), capsule([[27, 38.2], [28.2, 41], [28.6, 44]], 0.9))), tubeR, { outline: false });
@@ -1362,6 +1503,12 @@
       const mid = [el[0] + (hd[0] - el[0]) * 0.55, el[1] + (hd[1] - el[1]) * 0.55];
       shade(px, fill(capsule([el, hd], 1.9, 1.7)), skinR, { softEdge: true });
       shade(px, fill(ell(hd[0], hd[1], 2.1, 2.1)), skinR, { softEdge: true });
+      // Camiseta de manga larga debajo: hasta la muñeca
+      const ush = optColor(Avatar.UNDERS, a.under);
+      if (ush && !THEMED[a.pattern]) {
+        const wr = [el[0] + (hd[0] - el[0]) * 0.72, el[1] + (hd[1] - el[1]) * 0.72];
+        shade(px, fill(capsule([sh, el, wr], 2, 1.85)), ramp(ush), {});
+      }
       // Manga: corta en el pijama, larga en la bata
       shade(px, fill(capsule(coat ? [sh, el, mid] : [sh, el], 2.6, 2.3)), clothR, coat ? { bias: 0.1 } : {});
     });
@@ -1574,7 +1721,9 @@
 
     function swatchRow(label, list, key, title) {
       const sw = U.el('div', { class: 'swatches' });
-      list.forEach(function (c, i) {
+      const order = key === 'outfit' ? Avatar.OUTFIT_ORDER.concat(list.map(function (_, i) { return i; }).filter(function (i) { return Avatar.OUTFIT_ORDER.indexOf(i) < 0; })) : list.map(function (_, i) { return i; });
+      order.forEach(function (i) {
+        const c = list[i];
         // Lo de la tienda solo aparece cuando ya es tuyo
         if (Array.isArray(c) && /^shop:/.test(c[2] || '') && !Avatar.unlocked(c[2])) return;
         const color = Array.isArray(c) ? c[0] : c;
@@ -1595,6 +1744,20 @@
       rows.appendChild(row(label, sw));
     }
 
+    /** Chips con muestra de color: [valor, nombre, color]. */
+    function colorChips(list, key) {
+      const box = U.el('div', { class: 'chips' });
+      list.forEach(function (o) {
+        const on = (cfg[key] || '') === o[0];
+        const chip = U.el('button', { class: 'chip' + (on ? ' is-active' : ''), type: 'button', 'aria-pressed': on ? 'true' : 'false',
+          onclick: function () { cfg[key] = o[0]; save(); } });
+        if (o[2]) chip.appendChild(U.el('span', { class: 'chip__swatch', style: { background: o[2] } }));
+        chip.appendChild(document.createTextNode(o[1]));
+        box.appendChild(chip);
+      });
+      return box;
+    }
+
     function paintAll() {
       if (cfg.sex) {
         preview.innerHTML = Avatar.svg(cfg, 'happy', 132);
@@ -1613,6 +1776,19 @@
       swatchRow('Ojos', Avatar.EYES, 'eyes');
       if (cfg.sex === 'm') rows.appendChild(row('Vello facial', chips(Avatar.FACIAL, 'facial', a.facial)));
       swatchRow('Ropa', Avatar.OUTFITS, 'outfit');
+      // Personalizar el uniforme (no la ropa temática de la tienda)
+      const rawO = (Avatar.OUTFITS[cfg.outfit] || Avatar.OUTFITS[0])[0];
+      if (!THEMED[rawO]) {
+        const isCoat = rawO === 'coat' || rawO === 'coatname';
+        if (!isCoat) {
+          rows.appendChild(row('Escote', chips(Avatar.NECKS, 'neck', cfg.neck || 'v')));
+          rows.appendChild(row('Ribete', colorChips(Avatar.TRIMS, 'trim')));
+          rows.appendChild(row('Bolsillo', chips(Avatar.POCKETS, 'pocket', cfg.pocket || '')));
+        }
+        rows.appendChild(row('Camiseta debajo', colorChips(Avatar.UNDERS, 'under')));
+        rows.appendChild(row('Pantalón', colorChips(Avatar.PANTS, 'pants')));
+        rows.appendChild(row('Tarjeta', colorChips(Avatar.BADGES, 'badge')));
+      }
       rows.appendChild(row('Gafas', chips([[false, 'Sin gafas'], [true, 'Con gafas']], 'glasses', !!cfg.glasses)));
       rows.appendChild(row('Fonendo', chips([[false, '🩺 Con fonendo'], [true, 'Sin fonendo']], 'nosteth', !!cfg.nosteth)));
       rows.appendChild(row('Accesorios', lockChips([
