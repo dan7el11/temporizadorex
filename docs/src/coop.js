@@ -150,7 +150,7 @@
       const v = pc[k].v === null || pc[k].v === undefined ? null : Number(pc[k].v);
       saved[k] = { k: String(pc[k].k || ''), v: v === null || isNaN(v) ? null : v };
     });
-    const oldest = dayKeyAgo(21);
+    const oldest = dayKeyAgo(70);   // ~10 semanas de historial
     Object.keys(saved).forEach(function (k) { if (k < oldest) delete saved[k]; });
     write(PEER_CHAL_KEY, saved);
   }
@@ -208,6 +208,88 @@
     Object.keys(told).forEach(function (k) { if (k < dayKeyAgo(30)) delete told[k]; });
     write(TOLD_KEY, told);
   }
+  /** Puntuación: la liga de cada semana y el detalle de cada día. */
+  Coop.showScores = function () {
+    const name = duelStore().peerName || 'Pareja';
+    const WEEKS = 8;
+    let offset = 0;   // 0 = esta semana
+    let body;
+    function weekTs(o) { return Date.now() - o * 7 * 86400000; }
+    function fmtRange(ts) {
+      const a = U.startOfWeek(ts).getTime();
+      const f = function (t) { const d = new Date(t); return d.getDate() + '/' + (d.getMonth() + 1); };
+      return f(a + 12 * 3600000) + ' – ' + f(a + 6 * 86400000 + 12 * 3600000);
+    }
+    function paint() {
+      U.clear(body);
+      // Semanas
+      const weeks = U.el('div', { class: 'scores__weeks' });
+      let wins = 0, losses = 0;
+      for (let o = 0; o < WEEKS; o++) {
+        const lg = Coop.league(weekTs(o));
+        const played = lg.days.some(function (d) { return !d.future && !d.today && d.has; });
+        if (o > 0 && !played) continue;
+        if (o > 0) { if (lg.leader === 'me') wins++; else if (lg.leader === 'peer') losses++; }
+        const res = o === 0 ? 'En juego' : lg.leader === 'me' ? '🏆 Ganaste' : lg.leader === 'peer' ? '⚔️ Ganó ' + name : '🤝 Empate';
+        weeks.appendChild(U.el('button', {
+          class: 'scores__week' + (o === offset ? ' is-active' : '') + (lg.leader ? ' is-' + lg.leader : ''), type: 'button',
+          onclick: (function (oo) { return function () { offset = oo; paint(); }; })(o)
+        }, [
+          U.el('span', { class: 'scores__wk', text: o === 0 ? 'Esta semana' : o === 1 ? 'La pasada' : fmtRange(weekTs(o)) }),
+          U.el('strong', { text: lg.me + ' – ' + lg.peer }),
+          U.el('small', { text: res })
+        ]));
+      }
+      body.appendChild(U.el('p', { class: 'hint', text: 'Ligas cerradas: ' + U.plural(wins, 'ganada', 'ganadas') + ', ' + U.plural(losses, 'perdida', 'perdidas') + '. Toca una semana para ver sus días.' }));
+      body.appendChild(weeks);
+      // Días de la semana elegida
+      const lg = Coop.league(weekTs(offset));
+      const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+      const table = U.el('table', { class: 'scores__table' });
+      table.appendChild(U.el('thead', {}, [U.el('tr', {}, [
+        U.el('th', { text: 'Día' }), U.el('th', { text: 'Reto' }), U.el('th', { text: 'Tú' }), U.el('th', { text: name }), U.el('th', { text: 'Puntos' })
+      ])]));
+      const tb = U.el('tbody');
+      let coins = 0;
+      lg.days.forEach(function (d, i) {
+        const c = d.chal || Coop.challengeOf(d.day);
+        const v = function (x) { return x === null || x === undefined ? '—' : c.fmt(x); };
+        let pts, cls = '';
+        if (d.future) pts = '';
+        else if (d.today) pts = 'hoy';
+        else if (!d.has) pts = 'sin datos';
+        else if (d.winner === 'me') { pts = '+' + Coop.WIN_PTS + ' · tú'; cls = 'is-win'; coins += Coop.WIN_COINS; }
+        else if (d.winner === 'peer') { pts = '+' + Coop.WIN_PTS + ' · ' + name; cls = 'is-loss'; }
+        else if (d.winner === 'tie') { pts = '+' + Coop.TIE_PTS + ' cada uno'; cls = 'is-tie'; }
+        else pts = 'nadie';
+        tb.appendChild(U.el('tr', { class: cls + (d.today ? ' is-today' : '') + (d.future ? ' is-future' : '') }, [
+          U.el('td', { class: 'scores__day', text: DAYS[i] + ' ' + new Date(dayFromKey(d.day)).getDate() }),
+          U.el('td', { class: 'scores__chal', title: c.desc, text: c.icon + ' ' + c.name }),
+          U.el('td', { class: 'scores__v' + (d.winner === 'me' ? ' is-lead' : ''), 'data-who': 'Tú', text: d.future ? '' : v(d.me) }),
+          U.el('td', { class: 'scores__v' + (d.winner === 'peer' ? ' is-lead' : ''), 'data-who': name, text: d.future ? '' : (d.has ? v(d.peer) : '…') }),
+          U.el('td', { class: 'scores__pts', text: pts })
+        ]));
+      });
+      table.appendChild(tb);
+      body.appendChild(U.el('div', { class: 'scores__head' }, [
+        U.el('strong', { text: (offset === 0 ? 'Esta semana' : 'Semana del ' + fmtRange(weekTs(offset))) }),
+        U.el('span', { text: 'Tú ' + lg.me + ' – ' + lg.peer + ' ' + name + ' pts' + (coins && global.Shop ? ' · ' + coins + ' 🪙 ganadas' : '') })
+      ]));
+      body.appendChild(U.el('div', { class: 'scores__scroll' }, [table]));
+      const tieDays = lg.days.filter(function (d) { return d.today; }).length;
+      if (tieDays) body.appendChild(U.el('p', { class: 'hint', text: 'El reto de hoy suma a la liga cuando se cierra el día.' }));
+    }
+    UI.modal({
+      title: '📊 Puntuación de los retos',
+      sub: Coop.WIN_PTS + ' pts por reto ganado · ' + Coop.TIE_PTS + ' por empate · la liga va de lunes a domingo',
+      build: function () { body = U.el('div', { class: 'scores' }); paint(); return body; },
+      actions: function (close) {
+        return [U.el('button', { class: 'btn btn--ghost', text: 'Reglas', onclick: function () { close(true); Coop.showRules(); } }),
+          U.el('button', { class: 'btn btn--primary', text: 'Cerrar', onclick: function () { close(true); } })];
+      }
+    });
+  };
+
   /** Cómo se puntúa, con todos los retos. */
   Coop.showRules = function () {
     UI.modal({
@@ -451,7 +533,10 @@
         ])
       ]),
       dots,
-      U.el('button', { class: 'duel__prize', type: 'button', onclick: Coop.setPrize, text: d.prize ? '🎁 Premio: ' + d.prize : '🎁 Pactar un premio' })
+      U.el('div', { class: 'duel__actions' }, [
+        U.el('button', { class: 'duel__prize', type: 'button', onclick: Coop.showScores, text: '📊 Ver puntuación' }),
+        U.el('button', { class: 'duel__prize', type: 'button', onclick: Coop.setPrize, text: d.prize ? '🎁 Premio: ' + d.prize : '🎁 Pactar un premio' })
+      ])
     ]);
   }
 

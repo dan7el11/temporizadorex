@@ -435,6 +435,9 @@ El temporizador no te ata a lo planeado:
   - En la tira de la sala: el reto de hoy con el marcador en vivo, la liga con una casilla por día
     (verde ganado, rojo perdido, amarillo empate), ⓘ con las reglas, corona 👑 en el cuarto de quien
     va ganando la liga y el **premio pactado**. Al empezar la semana se anuncia quién ganó.
+  - **📊 Ver puntuación** (en la tira de la sala o en *Ajustes → Sala*, aunque no estés conectado):
+    las ligas de las últimas semanas con su resultado y, al tocar una, el detalle de cada día: reto,
+    tu valor, el de tu pareja y los puntos.
 
 ### Modo habitación
 - **Toca la escena** del temporizador y los puestos pasan a ser **cuartos en grande a cada lado del

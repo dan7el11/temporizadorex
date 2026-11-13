@@ -1907,3 +1907,41 @@ body > .gameover{position:fixed}
 .keypop__txt strong{font-size:.95rem;font-weight:650}
 .keypop__txt small{font-size:.76rem;color:var(--text-dim)}
 @media (prefers-reduced-motion:reduce){.keypop{transition:opacity .15s}}
+
+/* Puntuación de los retos */
+.duel__actions{display:flex;flex-wrap:wrap;gap:6px}
+.scores{display:flex;flex-direction:column;gap:10px}
+.scores__weeks{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px}
+.scores__week{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--card-2);color:var(--text);font:inherit;cursor:pointer}
+.scores__week:hover{border-color:var(--text-faint)}
+.scores__week.is-active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.scores__week strong{font-size:1.05rem;font-variant-numeric:tabular-nums}
+.scores__week small,.scores__wk{font-size:.72rem;color:var(--text-dim)}
+.scores__week.is-me strong{color:var(--ok)}
+.scores__week.is-peer strong{color:var(--danger)}
+.scores__head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:.85rem;color:var(--text-dim);margin-top:4px}
+.scores__head strong{color:var(--text)}
+.scores__scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scores__table{width:100%;border-collapse:collapse;font-size:.8rem;min-width:460px}
+.scores__table th{text-align:left;font-weight:600;color:var(--text-faint);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;padding:4px 6px;border-bottom:1px solid var(--line)}
+.scores__table td{padding:7px 6px;border-bottom:1px solid var(--line-soft);font-variant-numeric:tabular-nums;vertical-align:top}
+.scores__table td.is-lead{color:#ffcf66;font-weight:650}
+.scores__table tr.is-win .scores__pts{color:var(--ok);font-weight:600}
+.scores__table tr.is-loss .scores__pts{color:var(--danger)}
+.scores__table tr.is-tie .scores__pts{color:var(--warn)}
+.scores__table tr.is-today td{background:var(--accent-soft)}
+.scores__table tr.is-future td{opacity:.4}
+.scores__pts{white-space:nowrap;color:var(--text-dim)}
+@media (max-width:560px){
+  .scores__table{min-width:0}
+  .scores__table thead{display:none}
+  .scores__table tr{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;padding:8px 4px;border-bottom:1px solid var(--line-soft)}
+  .scores__table td{border:0;padding:0}
+  .scores__day{font-weight:650}
+  .scores__table .scores__pts{text-align:right;grid-row:1;grid-column:2}
+  .scores__chal{grid-column:1 / -1;color:var(--text-dim)}
+  .scores__v::before{content:attr(data-who) ' ';color:var(--text-faint);font-weight:400;font-size:.72rem}
+  .scores__table tr.is-future .scores__v{display:none}
+  .scores__table tr.is-today{background:var(--accent-soft);border-radius:10px}
+  .scores__table tr.is-today td{background:none}
+}

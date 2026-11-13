@@ -422,8 +422,15 @@
       return;
     }
 
-    if (!Room.joined()) { box.appendChild(joinForm()); return; }
-    box.appendChild(roomPanel());
+    if (!Room.joined()) box.appendChild(joinForm());
+    else box.appendChild(roomPanel());
+    // La puntuación se guarda en este dispositivo: se puede ver aunque no estés en la sala
+    if (global.Coop) {
+      box.appendChild(U.el('div', { class: 'row row--wrap', style: { marginTop: '12px' } }, [
+        U.el('button', { class: 'btn btn--ghost', text: '📊 Puntuación de los retos', onclick: Coop.showScores }),
+        U.el('button', { class: 'btn btn--ghost', text: 'ⓘ Reglas de los retos', onclick: Coop.showRules })
+      ]));
+    }
   };
 
   /** Entrar en una sala desde cualquier pantalla. */
