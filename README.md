@@ -423,9 +423,18 @@ El temporizador no te ata a lo planeado:
   con bloques limpios y pausas guiadas. Tu pareja lo ve en tu puesto.
 - **⏰ A tu hora**: con el horario activado (Tiempo perdido), la primera sesión de cada franja: si
   empiezas a tu hora (5 min de margen), +30 XP; si llegas tarde, ½ vida por cada 10 min (hasta 2).
-- **⚔️ Duelo de la semana** (en la sala): quién hace más bloques limpios (sin distracciones, de 10 min
-  o más) de lunes a domingo, con el marcador en la tira de la sala, corona 👑 en el cuarto de quien va
-  ganando y un **premio pactado** que los dos veis. Al empezar la semana se anuncia quién ganó.
+- **⚔️ Reto del día y liga semanal** (en la sala): cada día toca un reto distinto, el mismo para los
+  dos (se elige con la fecha y nunca repite el de ayer): bloques limpios, bloque más largo sin
+  distracciones, más horas de estudio, menos descanso por hora, menos distracciones por hora,
+  empezar antes o bloques completos de 25 min o más. Los que miden «por hora» exigen 2 h de estudio
+  para participar.
+  - **Puntuación**: ganar el reto del día da **3 puntos** de liga y **40 monedas**; empate, 1 punto
+    cada uno; si nadie llega al mínimo, nadie puntúa. La liga suma de lunes a domingo.
+  - Cada uno calcula su valor con su historial y lo publica en la sala (últimos 8 días): el día se
+    cierra al terminar y se anuncia cuando los dos os habéis conectado.
+  - En la tira de la sala: el reto de hoy con el marcador en vivo, la liga con una casilla por día
+    (verde ganado, rojo perdido, amarillo empate), ⓘ con las reglas, corona 👑 en el cuarto de quien
+    va ganando la liga y el **premio pactado**. Al empezar la semana se anuncia quién ganó.
 
 ### Modo habitación
 - **Toca la escena** del temporizador y los puestos pasan a ser **cuartos en grande a cada lado del
@@ -729,6 +738,9 @@ da de baja y recorta los mensajes a un tamaño seguro.
 | `P` | Abrir o cerrar la miniatura |
 | `C` | Pantalla completa |
 | `?` | Ver la lista de atajos (en cualquier momento) |
+
+Cada atajo muestra un **aviso emergente** arriba con la tecla y lo que ha hecho (por ejemplo,
+«Modo flow activado» o «+5 min · quedan 35 min»), encima incluso de los diálogos y la pantalla completa.
 
 ### Tus datos
 Todo se guarda en el `localStorage` del navegador. Si cierras la pestaña a media sesión, al volver te

@@ -49,12 +49,183 @@
     mineAt = Date.now();
     return out;
   };
-  Coop.invalidate = function () { mineCache = null; streakCache = null; };
+  Coop.invalidate = function () { mineCache = null; streakCache = null; chalCache = null; };
 
   /** Lo que publico en la sala. */
-  Coop.myState = function () { return { eff: Coop.mine(), duel: Coop.myDuel() }; };
+  Coop.myState = function () { return { eff: Coop.mine(), duel: Coop.myDuel(), chal: myChalState() }; };
 
-  /* ── C3 · Duelo semanal de bloques limpios ──────────────── */
+  /* ── Retos diarios y liga semanal ────────────────────────── */
+  /*
+   * Protocolo de puntuación:
+   *   - Cada día toca un reto distinto. Se elige con la fecha, así los dos
+   *     dispositivos saben cuál es sin ponerse de acuerdo (y nunca se repite
+   *     el de ayer).
+   *   - Cada uno calcula su valor con su propio historial y lo publica en la
+   *     sala (los últimos 8 días). Cuando hay un mínimo para participar y no
+   *     se llega, el valor es «no participa».
+   *   - Ganar el reto del día: 3 puntos; empate: 1 cada uno; si nadie
+   *     participa, 0. La liga suma los puntos de lunes a domingo.
+   *   - El día que se cierra (ya pasó y hay datos de los dos), quien gana se
+   *     lleva 40 monedas.
+   */
+  const PEER_CHAL_KEY = 'mir2027.chal.peer.v1';   // { día: { k, v } } de la pareja
+  const TOLD_KEY = 'mir2027.chal.told.v1';        // días ya anunciados
+  Coop.WIN_PTS = 3; Coop.TIE_PTS = 1; Coop.WIN_COINS = 40;
+  function hm2(min) { return U.fmtHuman(Math.round(min) * 60000); }
+  function clock(min) { const h = Math.floor(min / 60), m = Math.round(min % 60); return h + ':' + String(m).padStart(2, '0'); }
+  Coop.CHALLENGES = [
+    { k: 'limpios', icon: '🧼', name: 'Bloques limpios', desc: 'Bloques de 10 min o más sin ninguna distracción. Gana quien haga más.', more: true, fmt: function (v) { return U.plural(v, 'bloque', 'bloques'); } },
+    { k: 'racha', icon: '🎯', name: 'Bloque más largo sin distracciones', desc: 'El tramo de estudio más largo sin pausas ni distracciones. Gana el más largo.', more: true, fmt: hm2 },
+    { k: 'horas', icon: '⏱️', name: 'Más horas de estudio', desc: 'Tiempo de estudio efectivo del día. Gana quien estudie más.', more: true, fmt: hm2 },
+    { k: 'descansos', icon: '☕', name: 'Menos descanso por hora', desc: 'Minutos de descanso y pausas por cada hora de estudio. Gana quien descanse menos. Mínimo 2 h de estudio para participar.', more: false, fmt: function (v) { return Math.round(v) + ' min/h'; } },
+    { k: 'foco', icon: '🧘', name: 'Menos distracciones por hora', desc: 'Distracciones por cada hora de estudio. Gana quien tenga menos. Mínimo 2 h de estudio para participar.', more: false, fmt: function (v) { return (Math.round(v * 10) / 10).toLocaleString('es-ES') + '/h'; } },
+    { k: 'madrugar', icon: '🌅', name: 'Empieza antes', desc: 'Hora a la que empieza tu primer bloque de 25 min o más. Gana quien empiece antes.', more: false, fmt: clock },
+    { k: 'completos', icon: '✅', name: 'Bloques completos de 25 min o más', desc: 'Bloques de estudio de al menos 25 min terminados. Gana quien haga más.', more: true, fmt: function (v) { return U.plural(v, 'bloque', 'bloques'); } }
+  ];
+  function chalByKey(k) { return Coop.CHALLENGES.filter(function (c) { return c.k === k; })[0] || null; }
+  function hashDay(k) { let h = 7; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) % 1000003; return h; }
+  function dayFromKey(k) { const p = k.split('-'); return new Date(+p[0], +p[1] - 1, +p[2], 12).getTime(); }
+  /** El reto de un día (el mismo en los dos dispositivos). */
+  Coop.challengeOf = function (k) {
+    const n = Coop.CHALLENGES.length;
+    let i = hashDay(k) % n;
+    const prev = hashDay(U.dayKey(dayFromKey(k) - 86400000)) % n;
+    if (i === prev) i = (i + 1) % n;
+    return Coop.CHALLENGES[i];
+  };
+  /** Mi valor en el reto de un día; null si no participo. */
+  Coop.myValue = function (k, chal) {
+    const c = chal || Coop.challengeOf(k);
+    let sum;
+    try { sum = Day.summary(k); } catch (e) { return null; }
+    const t = sum.totals;
+    const study = sum.items.filter(function (it) { return !it.isBreak; });
+    const effMin = t.eff / 60000;
+    switch (c.k) {
+      case 'limpios': {
+        const n = study.filter(function (it) { return !it.dist && !it.pauseMs && it.effMs >= 10 * 60000; }).length;
+        return n || null;
+      }
+      case 'racha': {
+        const best = study.reduce(function (m, it) { return !it.dist && !it.pauseMs ? Math.max(m, it.effMs) : m; }, 0);
+        return best >= 60000 ? Math.round(best / 60000) : null;
+      }
+      case 'horas': return effMin >= 1 ? Math.round(effMin) : null;
+      case 'descansos': return effMin >= 120 ? Math.round((t.breaks + t.pauses) / 60000 / (effMin / 60) * 10) / 10 : null;
+      case 'foco': return effMin >= 120 ? Math.round(t.dist / (effMin / 60) * 100) / 100 : null;
+      case 'madrugar': {
+        const first = study.filter(function (it) { return it.effMs >= 25 * 60000; })
+          .reduce(function (m, it) { return Math.min(m, it.startedAt); }, Infinity);
+        if (first === Infinity) return null;
+        const d = new Date(first);
+        return d.getHours() * 60 + d.getMinutes();
+      }
+      case 'completos': {
+        const n = study.filter(function (it) { return !it.continues && it.effMs >= 25 * 60000; }).length;
+        return n || null;
+      }
+    }
+    return null;
+  };
+  let chalCache = null, chalAt = 0;
+  function myChalState() {
+    if (chalCache && Date.now() - chalAt < 30000) return chalCache;
+    const out = {};
+    for (let i = 0; i < 8; i++) {
+      const k = dayKeyAgo(i);
+      const c = Coop.challengeOf(k);
+      out[k] = { k: c.k, v: Coop.myValue(k, c) };
+    }
+    chalCache = out; chalAt = Date.now();
+    return out;
+  }
+  function peerChal() { return read(PEER_CHAL_KEY, {}) || {}; }
+  function receiveChal(peer) {
+    const st = (peer && peer.state) || {};
+    const pc = st.coop && st.coop.chal;
+    if (!pc || typeof pc !== 'object') return;
+    const saved = peerChal();
+    Object.keys(pc).forEach(function (k) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !pc[k] || typeof pc[k] !== 'object') return;
+      const v = pc[k].v === null || pc[k].v === undefined ? null : Number(pc[k].v);
+      saved[k] = { k: String(pc[k].k || ''), v: v === null || isNaN(v) ? null : v };
+    });
+    const oldest = dayKeyAgo(21);
+    Object.keys(saved).forEach(function (k) { if (k < oldest) delete saved[k]; });
+    write(PEER_CHAL_KEY, saved);
+  }
+  /** Resultado de un día: { chal, me, peer, has (hay dato de la pareja), winner: 'me'|'peer'|'tie'|'' }. */
+  Coop.dayResult = function (k) {
+    const c = Coop.challengeOf(k);
+    const me = (myChalState()[k] && myChalState()[k].k === c.k) ? myChalState()[k].v : Coop.myValue(k, c);
+    const pd = peerChal()[k];
+    const has = !!(pd && pd.k === c.k);
+    const peer = has ? pd.v : null;
+    let winner = '';
+    if (me !== null && peer !== null) winner = me === peer ? 'tie' : ((me > peer) === c.more ? 'me' : 'peer');
+    else if (me !== null && has) winner = 'me';
+    else if (peer !== null) winner = 'peer';
+    return { day: k, chal: c, me: me, peer: peer, has: has, winner: winner };
+  };
+  function pts(w, who) { return w === who ? Coop.WIN_PTS : w === 'tie' ? Coop.TIE_PTS : 0; }
+  /** Liga de la semana de `ts`: puntos de cada uno y resultado por día. */
+  Coop.league = function (ts) {
+    const start = U.startOfWeek(ts || Date.now()).getTime();
+    const today = U.dayKey();
+    const days = [];
+    let me = 0, peer = 0;
+    for (let i = 0; i < 7; i++) {
+      const k = U.dayKey(start + i * 86400000 + 12 * 3600000);
+      if (k > today) { days.push({ day: k, future: true }); continue; }
+      const r = Coop.dayResult(k);
+      // Hoy todavía no cuenta: el reto se cierra al acabar el día
+      if (k === today) { days.push(Object.assign({ today: true }, r)); continue; }
+      me += pts(r.winner, 'me'); peer += pts(r.winner, 'peer');
+      days.push(r);
+    }
+    return { me: me, peer: peer, days: days, leader: me > peer ? 'me' : peer > me ? 'peer' : '' };
+  };
+  /** Anuncia los días cerrados (una vez) y paga las monedas al ganador. */
+  function settleDays(peerName) {
+    const told = read(TOLD_KEY, {}) || {};
+    const today = U.dayKey();
+    for (let i = 7; i >= 1; i--) {
+      const k = dayKeyAgo(i);
+      if (k >= today || told[k]) continue;
+      const r = Coop.dayResult(k);
+      if (!r.has) continue;
+      told[k] = 1;
+      if (!r.winner) continue;
+      const c = r.chal, name = peerName || 'Tu pareja';
+      const score = (r.me === null ? '—' : c.fmt(r.me)) + ' vs ' + (r.peer === null ? '—' : c.fmt(r.peer));
+      if (r.winner === 'me') {
+        if (global.Shop && Shop.bonus) Shop.bonus('chal:' + k, Coop.WIN_COINS);
+        UI.toast('🏆 Ganaste el reto del ' + U.fmtDate(dayFromKey(k)) + ' (' + c.name.toLowerCase() + ': ' + score + ') · +' + Coop.WIN_PTS + ' pts' + (global.Shop ? ' · +' + Coop.WIN_COINS + ' 🪙' : ''), 5000);
+      } else if (r.winner === 'peer') {
+        UI.toast('⚔️ ' + name + ' ganó el reto del ' + U.fmtDate(dayFromKey(k)) + ' (' + c.name.toLowerCase() + ': ' + score + ')', 5000);
+      } else UI.toast('🤝 Empate en el reto del ' + U.fmtDate(dayFromKey(k)) + ' (' + score + ') · +' + Coop.TIE_PTS + ' pt', 4500);
+    }
+    Object.keys(told).forEach(function (k) { if (k < dayKeyAgo(30)) delete told[k]; });
+    write(TOLD_KEY, told);
+  }
+  /** Cómo se puntúa, con todos los retos. */
+  Coop.showRules = function () {
+    UI.modal({
+      title: '⚔️ Retos y liga',
+      sub: 'Cada día toca un reto distinto, el mismo para los dos.',
+      build: function () {
+        const box = U.el('div', { class: 'chal-rules' });
+        box.appendChild(U.el('p', { class: 'hint', text: 'Ganar el reto del día: ' + Coop.WIN_PTS + ' puntos de liga' + (global.Shop ? ' y ' + Coop.WIN_COINS + ' monedas' : '') + '. Empate: ' + Coop.TIE_PTS + ' punto cada uno. Si nadie llega al mínimo, nadie puntúa. La liga va de lunes a domingo y el día se cierra al terminar; el resultado aparece cuando los dos os conectáis a la sala.' }));
+        box.appendChild(U.el('ul', { class: 'chal-rules__list' }, Coop.CHALLENGES.map(function (c) {
+          return U.el('li', {}, [U.el('strong', { text: c.icon + ' ' + c.name }), U.el('small', { text: c.desc })]);
+        })));
+        return box;
+      },
+      actions: function (close) { return [U.el('button', { class: 'btn btn--primary', text: 'Vale', onclick: function () { close(true); } })]; }
+    });
+  };
+
+  /* ── Premio y compatibilidad: bloques limpios de la semana ── */
   const DUEL_KEY = 'mir2027.duel.v1';       // { week, me, peer, prize, prizeAt, peerName, told }
   function weekKey(ts) { return U.dayKey(U.startOfWeek(ts || Date.now())); }
   /** Bloques limpios de esta semana (sin ninguna distracción, de 10 min o más). */
@@ -77,9 +248,8 @@
   /** Marcador de la semana: el tuyo, el de tu pareja, quién gana y el premio pactado. */
   Coop.duel = function () {
     const d = duelStore();
-    const me = Coop.weekClean();
-    const peer = d.week === weekKey() ? (d.peer || 0) : 0;
-    return { me: me, peer: peer, leader: me > peer ? 'me' : peer > me ? 'peer' : '', prize: d.prize || '', peerName: d.peerName || 'Pareja' };
+    const l = Coop.league();
+    return { me: l.me, peer: l.peer, leader: l.leader, prize: d.prize || '', peerName: d.peerName || 'Pareja' };
   };
   function receiveDuel(peer) {
     const st = (peer && peer.state) || {};
@@ -88,27 +258,31 @@
     const wk = weekKey();
     // Semana nueva: se anuncia el resultado de la anterior (una vez)
     if (d.week && d.week !== wk && !d.told) {
-      const mine = d.me || 0, theirs = d.peer || 0;
+      const last = Coop.league(Date.now() - 7 * 86400000);
+      const mine = last.me, theirs = last.peer;
       if (mine || theirs) {
-        UI.toast(mine > theirs ? '🏆 Ganaste el duelo de la semana pasada ' + mine + '–' + theirs + (d.prize ? ' · premio: ' + d.prize : '')
-          : mine < theirs ? '⚔️ ' + (d.peerName || 'Tu pareja') + ' ganó el duelo de la semana pasada ' + theirs + '–' + mine + (d.prize ? ' · premio: ' + d.prize : '')
-            : '🤝 Empate en el duelo de la semana pasada (' + mine + '–' + theirs + ')');
+        UI.toast(mine > theirs ? '🏆 Ganaste la liga de la semana pasada ' + mine + '–' + theirs + ' pts' + (d.prize ? ' · premio: ' + d.prize : '')
+          : mine < theirs ? '⚔️ ' + (d.peerName || 'Tu pareja') + ' ganó la liga de la semana pasada ' + theirs + '–' + mine + ' pts' + (d.prize ? ' · premio: ' + d.prize : '')
+            : '🤝 Empate en la liga de la semana pasada (' + mine + '–' + theirs + ' pts)', 5000);
       }
       d.told = true;
     }
-    if (d.week !== wk) { d.week = wk; d.me = 0; d.peer = 0; d.told = false; }
-    d.me = Coop.weekClean();
-    if (pd && pd.week === wk) d.peer = Math.max(0, parseInt(pd.clean, 10) || 0);
+    if (d.week !== wk) {
+      // Cierre de la semana anterior con su liga completa
+      d.week = wk; d.me = 0; d.peer = 0; d.told = false;
+    }
+    const lg = Coop.league();
+    d.me = lg.me; d.peer = lg.peer;
     if (pd && pd.prize && (pd.prizeAt || 0) > (d.prizeAt || 0)) { d.prize = String(pd.prize).slice(0, 80); d.prizeAt = pd.prizeAt; }
     d.peerName = peer.name || d.peerName;
     write(DUEL_KEY, d);
   }
-  /** Pactar el premio del duelo (lo ve tu pareja). */
+  /** Pactar el premio de la liga (lo ve tu pareja). */
   Coop.setPrize = function () {
     let input;
     UI.modal({
-      title: '🎁 Premio del duelo',
-      sub: 'Lo que gana quien haga más bloques limpios esta semana (lo ve tu pareja).',
+      title: '🎁 Premio de la liga',
+      sub: 'Lo que gana quien sume más puntos en la liga de esta semana (lo ve tu pareja).',
       build: function (close) {
         input = U.el('input', { type: 'text', class: 'thought-input', maxlength: '80', value: duelStore().prize || '', placeholder: 'p. ej. quien pierda invita a cenar',
           onkeydown: function (e) { if (e.key === 'Enter') { e.preventDefault(); close(true); } } });
@@ -134,7 +308,9 @@
 
   /** Al recibir el estado de la pareja: guardar sus minutos y avisar si cae KO. */
   Coop.receive = function (peer) {
+    receiveChal(peer);
     receiveDuel(peer);
+    settleDays(peer && peer.name);
     const st = (peer && peer.state) || {};
     if (st.coop && st.coop.eff && typeof st.coop.eff === 'object') {
       const saved = peerEff();
@@ -242,15 +418,39 @@
   function duelNode(peerName) {
     const d = Coop.duel();
     const name = peerName || d.peerName;
+    const k = U.dayKey();
+    const r = Coop.dayResult(k);
+    const c = r.chal;
+    const lead = r.winner;
+    const val = function (v) { return v === null ? '—' : c.fmt(v); };
+    const lg = Coop.league();
+    const LETTERS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    const dots = U.el('div', { class: 'chal__week', 'aria-label': 'Resultados de la semana' }, lg.days.map(function (x, i) {
+      const cls = x.future ? 'is-future' : x.today ? 'is-today' : !x.has ? 'is-unknown' : x.winner === 'me' ? 'is-win' : x.winner === 'peer' ? 'is-loss' : x.winner === 'tie' ? 'is-tie' : 'is-none';
+      const tip = x.future ? '' : (x.chal ? x.chal.icon + ' ' + x.chal.name : '') + (x.today ? ' · hoy' : !x.has ? ' · sin datos de tu pareja' : x.winner === 'me' ? ' · ganaste' : x.winner === 'peer' ? ' · ganó ' + name : x.winner === 'tie' ? ' · empate' : ' · nadie puntuó');
+      return U.el('span', { class: 'chal__day ' + cls, title: tip, text: x.chal && !x.future ? x.chal.icon : LETTERS[i] });
+    }));
     return U.el('div', { class: 'duel' }, [
       U.el('div', { class: 'duel__head' }, [
-        U.el('span', { class: 'duel__title', text: '⚔️ Duelo de la semana · bloques limpios' }),
+        U.el('span', { class: 'duel__title', text: '⚔️ Reto de hoy · ' + c.icon + ' ' + c.name }),
+        U.el('button', { class: 'duel__info', type: 'button', 'aria-label': 'Cómo se puntúa', title: 'Cómo se puntúa', text: 'ⓘ', onclick: Coop.showRules })
+      ]),
+      U.el('div', { class: 'duel__score' }, [
+        U.el('span', { class: lead === 'me' ? 'is-lead' : '', text: (lead === 'me' ? '👑 ' : '') + 'Tú ' + val(r.me) }),
+        U.el('span', { text: ' – ' }),
+        U.el('span', { class: lead === 'peer' ? 'is-lead' : '', text: (r.has ? val(r.peer) : '…') + ' ' + name + (lead === 'peer' ? ' 👑' : '') })
+      ]),
+      U.el('small', { class: 'duel__desc', text: c.desc }),
+      U.el('div', { class: 'duel__head' }, [
+        U.el('span', { class: 'duel__title', text: '🏆 Liga de la semana' }),
         U.el('span', { class: 'duel__score' }, [
-          U.el('span', { class: d.leader === 'me' ? 'is-lead' : '', text: (d.leader === 'me' ? '👑 ' : '') + 'Tú ' + d.me }),
+          U.el('span', { class: lg.leader === 'me' ? 'is-lead' : '', text: 'Tú ' + lg.me }),
           U.el('span', { text: ' – ' }),
-          U.el('span', { class: d.leader === 'peer' ? 'is-lead' : '', text: d.peer + ' ' + name + (d.leader === 'peer' ? ' 👑' : '') })
+          U.el('span', { class: lg.leader === 'peer' ? 'is-lead' : '', text: lg.peer + ' ' + name }),
+          U.el('span', { text: ' pts' })
         ])
       ]),
+      dots,
       U.el('button', { class: 'duel__prize', type: 'button', onclick: Coop.setPrize, text: d.prize ? '🎁 Premio: ' + d.prize : '🎁 Pactar un premio' })
     ]);
   }

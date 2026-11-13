@@ -350,6 +350,7 @@
       spent: Math.max(a.spent || 0, b.spent || 0, paid),
       lost: Math.max(a.lost || 0, b.lost || 0),
       owned: owned,
+      bonus: Object.assign({}, a.bonus || {}, b.bonus || {}),
       since: [a.since, b.since].filter(Boolean).sort()[0] || a.since || b.since
     });
     if (ko) out.ko = deepClone(ko); else delete out.ko;

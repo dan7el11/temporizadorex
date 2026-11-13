@@ -844,11 +844,12 @@
     if (!state || state.finished || state.gate) return;
     const b = block();
     if (!b) return;
-    if (b.isBreak) { UI.toast('El modo flow es para bloques de estudio'); return; }
+    if (b.isBreak) return { icon: '🌊', text: 'El modo flow es para bloques de estudio', off: true };
     b.flow = !b.flow;
     b.flowNotified = false;
     persist(); tick();
-    UI.toast(b.flow ? '🌊 Modo flow: al llegar a 0 sigue contando hasta que pulses «✓ Hecho» (H)' : 'Modo flow desactivado');
+    return b.flow ? { icon: '🌊', text: 'Modo flow activado', sub: 'Al llegar a 0 sigue contando · H para terminar' }
+      : { icon: '🌊', text: 'Modo flow desactivado', sub: 'El bloque termina al llegar a 0', off: true };
   };
   /** Suma o resta minutos a lo que queda del bloque (nunca menos de 1 min). */
   Runner.addMinutes = function (delta) {
@@ -860,7 +861,7 @@
     b.plannedMs = elapsedMs() + next;
     b.flowNotified = false; b.endWarned = false;
     persist(); tick(); armWarn();
-    UI.toast((delta > 0 ? '+' : '−') + Math.abs(delta) + ' min · quedan ' + U.fmtHuman(next));
+    return { icon: delta > 0 ? '⏫' : '⏬', text: (delta > 0 ? '+' : '−') + Math.abs(delta) + ' min', sub: 'Quedan ' + U.fmtHuman(next) };
   };
 
   /* ── Ajuste rápido del bloque (tocar el reloj) ─────────── */

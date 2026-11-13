@@ -381,27 +381,54 @@
       }, { passive: true });
     });
 
-    // Atajos de teclado durante la sesión.
+    // Atajos de teclado durante la sesión (cada uno muestra un aviso).
     document.addEventListener('keydown', function (e) {
-      if (e.ctrlKey || e.metaKey || e.altKey || modalOpen()) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || modalOpen()) return;
       if (e.target && (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable)) return;
       if (e.key === '?') { e.preventDefault(); App.showKeys(); return; }
       if (!Runner.isActive()) return;
       const k = e.key.toLowerCase();
-      if (k === '+' || k === 'arrowup') { e.preventDefault(); Runner.addMinutes(5); return; }
-      if (k === '-' || k === 'arrowdown') { e.preventDefault(); Runner.addMinutes(-5); return; }
-      if (k === 'm') { e.preventDefault(); App.toggleMute(); return; }
-      if (k === 'c') { e.preventDefault(); Runner.toggleFullscreen(); return; }
-      if (e.code === 'Space' || k === ' ') { e.preventDefault(); Runner.togglePause(); }
-      else if (k === 'd') { e.preventDefault(); Runner.quickDistraction(); }
-      else if (k === 'g') { e.preventDefault(); Runner.openPauseNow(); }
-      else if (k === 't') { e.preventDefault(); Runner.openAdjust(); }
-      else if (k === 'h') { e.preventDefault(); Runner.doneNow(); }
-      else if (k === 'n') { e.preventDefault(); Runner.parkThought(); }
-      else if (k === 'a' && Room.joined()) { e.preventDefault(); Runner.showChrome('stick'); Cheers.open(); }
-      else if (k === 'b') { e.preventDefault(); Runner.showChrome('stick'); Runner.openQueue(); }
-      else if (k === 'p') { e.preventDefault(); PiP.toggle(); }
-      else if (k === 'f') { e.preventDefault(); Runner.showChrome(); Runner.toggleFlow(); }
+      const pop = function (label, r) { if (r) App.keyPop(label, r); };
+      const st = function () { return Runner.getState() || {}; };
+      const blk = function () { const s0 = st(); return (s0.blocks || [])[s0.index]; };
+      let handled = true;
+      if (k === '+' || k === 'arrowup') pop(k === '+' ? '+' : '↑', Runner.addMinutes(5));
+      else if (k === '-' || k === 'arrowdown') pop(k === '-' ? '−' : '↓', Runner.addMinutes(-5));
+      else if (k === 'm') pop('M', App.toggleMute());
+      else if (k === 'c') {
+        const was = !!document.fullscreenElement;
+        Runner.toggleFullscreen();
+        pop('C', { icon: '⛶', text: was ? 'Salir de pantalla completa' : 'Pantalla completa', sub: was ? '' : 'Esc o C para salir' });
+      }
+      else if (e.code === 'Space' || k === ' ') {
+        const was = !!st().pausedAt;
+        Runner.togglePause();
+        setTimeout(function () {
+          const now = !!st().pausedAt;
+          if (now !== was) App.keyPop('Espacio', now ? { icon: '⏸', text: 'En pausa', sub: 'La pausa cuenta como distracción', off: true } : { icon: '▶️', text: 'Reanudado' });
+          else if (!was) App.keyPop('Espacio', { icon: '⏸', text: 'Pausar' });
+        }, 60);
+      }
+      else if (k === 'd') { Runner.quickDistraction(); pop('D', { icon: '⚡', text: 'Distracción registrada', sub: 'Sin parar el reloj', off: true }); }
+      else if (k === 'g') { Runner.openPauseNow(); pop('G', { icon: '🧘', text: 'Pausa guiada' }); }
+      else if (k === 't') { Runner.openAdjust(); pop('T', { icon: '⏱', text: 'Ajustar el tiempo' }); }
+      else if (k === 'h') {
+        const b0 = blk();
+        Runner.doneNow();
+        if (b0) pop('H', { icon: '✓', text: 'Bloque terminado', sub: b0.name || '' });
+      }
+      else if (k === 'n') { Runner.parkThought(); pop('N', { icon: '💭', text: 'Aparcar un pensamiento' }); }
+      else if (k === 'a' && Room.joined()) { Runner.showChrome('stick'); Cheers.open(); pop('A', { icon: '💌', text: 'Enviar un ánimo' }); }
+      else if (k === 'b') { Runner.showChrome('stick'); Runner.openQueue(); pop('B', { icon: '📋', text: 'Bloques de la sesión' }); }
+      else if (k === 'p') {
+        const wasOpen = PiP.isOpen();
+        Promise.resolve(PiP.toggle()).then(function () {
+          App.keyPop('P', PiP.isOpen() ? { icon: '🖼', text: 'Miniatura abierta' } : { icon: '🖼', text: wasOpen ? 'Miniatura cerrada' : 'Miniatura no disponible', off: true });
+        });
+      }
+      else if (k === 'f') { Runner.showChrome(); pop('F', Runner.toggleFlow()); }
+      else handled = false;
+      if (handled) e.preventDefault();
     });
 
     // Aviso al cerrar con una sesión abierta.
@@ -450,8 +477,40 @@
   let volBeforeMute = null;
   App.toggleMute = function () {
     const v = Store.data.settings.volume;
-    if (v > 0) { volBeforeMute = v; Store.setSetting('volume', 0, true); UI.toast('🔇 Sonido silenciado (M para activarlo)'); }
-    else { Store.setSetting('volume', volBeforeMute || 0.6, true); UI.toast('🔊 Sonido activado'); }
+    if (v > 0) { volBeforeMute = v; Store.setSetting('volume', 0, true); return { icon: '🔇', text: 'Sonido silenciado', sub: 'Pulsa M para activarlo', off: true }; }
+    Store.setSetting('volume', volBeforeMute || 0.6, true);
+    return { icon: '🔊', text: 'Sonido activado' };
+  };
+
+  /**
+   * Aviso emergente de un atajo: la tecla, lo que ha hecho y una línea
+   * opcional. Va en la capa superior (encima de diálogos y pantalla completa).
+   */
+  let popEl = null, popTimer = null;
+  App.keyPop = function (key, r) {
+    if (!r) return;
+    if (!popEl) {
+      popEl = U.el('div', { class: 'keypop', role: 'status', 'aria-live': 'polite' });
+      try { popEl.setAttribute('popover', 'manual'); } catch (e) { /* noop */ }
+      document.body.appendChild(popEl);
+    }
+    U.clear(popEl);
+    popEl.className = 'keypop' + (r.off ? ' keypop--off' : '');
+    popEl.appendChild(U.el('kbd', { class: 'keypop__key', text: key }));
+    popEl.appendChild(U.el('span', { class: 'keypop__icon', text: r.icon || '⌨️' }));
+    popEl.appendChild(U.el('span', { class: 'keypop__txt' }, [
+      U.el('strong', { text: r.text }),
+      r.sub ? U.el('small', { text: r.sub }) : null
+    ]));
+    const host = document.fullscreenElement || document.body;
+    if (popEl.parentNode !== host && !popEl.showPopover) host.appendChild(popEl);
+    try { if (popEl.showPopover) { if (popEl.matches(':popover-open')) popEl.hidePopover(); popEl.showPopover(); } } catch (e) { /* noop */ }
+    popEl.classList.remove('is-in'); void popEl.offsetWidth; popEl.classList.add('is-in');
+    clearTimeout(popTimer);
+    popTimer = setTimeout(function () {
+      popEl.classList.remove('is-in');
+      setTimeout(function () { try { if (popEl.hidePopover && popEl.matches(':popover-open')) popEl.hidePopover(); } catch (e) { /* noop */ } }, 260);
+    }, r.sub ? 2200 : 1500);
   };
 
   function recoverRun() {

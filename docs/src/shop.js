@@ -89,6 +89,16 @@
     return checkKo(recover(s));
   }
   Shop.init = function () { state(); };
+  /** Monedas extra (p. ej. por ganar un reto). id evita cobrarlas dos veces. */
+  Shop.bonus = function (id, amount) {
+    const s = state();
+    if (s.pending) return false;
+    const bonus = Object.assign({}, s.bonus || {});
+    if (bonus[id]) return false;
+    bonus[id] = amount;
+    Store.setSetting('shop', Object.assign({}, s, { earned: (s.earned || 0) + amount, bonus: bonus }), true);
+    return true;
+  };
 
   /*
    * Recuperación (11 nov 2026): un fallo de sincronización dejó la tienda a
