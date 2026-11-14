@@ -1945,3 +1945,6 @@ body > .gameover{position:fixed}
   .scores__table tr.is-today{background:var(--accent-soft);border-radius:10px}
   .scores__table tr.is-today td{background:none}
 }
+
+.shop__note{grid-column:1 / -1;margin:6px 0 0;color:var(--text-dim);font-size:.85rem;font-weight:600}
+.shop-card.is-locked .shop-card__art{filter:grayscale(.85) brightness(.8)}

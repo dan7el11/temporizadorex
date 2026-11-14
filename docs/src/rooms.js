@@ -33,18 +33,30 @@
     ['bandera', '🏴‍☠️ Bandera pirata', 'shop:room-bandera'], ['cofre', '💰 Cofre del tesoro', 'shop:room-cofre'],
     ['timon', '☸️ Timón de barco', 'shop:room-timon'], ['figuras', '🧸 Figuritas de la tripulación', 'shop:room-figuras'], ['mapa', '🗺️ Mapa del tesoro', 'shop:room-mapa'], ['carne', '🍖 Carne con hueso', 'shop:room-carne'],
     ['banderin', '🚩 Banderín rojo y blanco', 'shop:room-banderin'], ['pelota', '⚽ Pelota de fútbol', 'shop:room-pelota'],
-    ['estadio', '🏟️ Póster del Monumental', 'shop:room-estadio'], ['camiseta', '👕 Camiseta enmarcada', 'shop:room-camiseta'], ['trofeo', '🏆 Trofeo', 'shop:room-trofeo']
+    ['estadio', '🏟️ Póster del Monumental', 'shop:room-estadio'], ['camiseta', '👕 Camiseta enmarcada', 'shop:room-camiseta'], ['trofeo', '🏆 Trofeo', 'shop:room-trofeo'],
+    // Plantas: unas se desbloquean subiendo de nivel y otras se compran
+    ['cactus', '🌵 Cactus con flor', 'room:cactus'], ['suculentas', '🪴 Suculentas en la ventana', 'room:suculentas'], ['sansevieria', '🌿 Sansevieria', 'room:sansevieria'],
+    ['cactusmesa', '🌵 Cactus de mesa', 'room:cactusmesa'],
+    ['monstera', '🌿 Monstera', 'shop:deco-monstera'], ['kentia', '🌴 Palmera kentia', 'shop:deco-kentia'], ['ficus', '🌳 Ficus lira', 'shop:deco-ficus'],
+    ['olivo', '🫒 Olivo en maceta', 'shop:deco-olivo'], ['orquidea', '🌸 Orquídea en la ventana', 'shop:deco-orquidea'], ['lavanda', '💜 Lavanda en la ventana', 'shop:deco-lavanda'],
+    ['potus', '🍃 Potus en la estantería', 'shop:deco-potus'], ['bonsai', '🌲 Bonsái', 'shop:deco-bonsai']
   ];
   // En la mesa auxiliar caben 3 cosas: al poner una cuarta se quita la más antigua.
-  Rooms.DESK = ['darcy', 'te', 'cartas', 'varita', 'carne', 'trofeo', 'figuras'];
+  Rooms.DESK = ['darcy', 'te', 'cartas', 'varita', 'carne', 'trofeo', 'figuras', 'bonsai', 'cactusmesa'];
   const DESK_X = [75, 83, 91];
   // Objetos que comparten sitio en la pared: poner uno quita el otro.
-  Rooms.SLOT = { poster: 'a', pemberley: 'a', amanecer: 'a', bandera: 'a', estadio: 'a', diploma: 'b', estandarte: 'b', mapa: 'b', camiseta: 'b' };
+  Rooms.SLOT = { poster: 'a', pemberley: 'a', amanecer: 'a', bandera: 'a', estadio: 'a', diploma: 'b', estandarte: 'b', mapa: 'b', camiseta: 'b',
+    // Rincón del suelo (una planta grande) y lado derecho del alféizar
+    planta: 'p', monstera: 'p', cactus: 'p', kentia: 'p', ficus: 'p', sansevieria: 'p', olivo: 'p',
+    suculentas: 'w', orquidea: 'w', lavanda: 'w' };
   // Recorte de cada objeto para verlo suelto (en la tienda): [x, y, ancho, alto]
   const BOX = {
     pemberley: [45, 6, 22, 18], amanecer: [44, 3, 22, 27], rosas: [7, 28, 12, 15], escoba: [0, 46, 16, 52], estandarte: [64, 15, 18, 22],
     snitch: [62, 18, 18, 12], bandera: [45, 5, 22, 18], cofre: [96, 80, 24, 20], timon: [72, 50, 20, 20], banderin: [43, 27, 24, 13],
-    pelota: [82, 86, 18, 14], estadio: [43, 2, 24, 27], mapa: [64, 15, 20, 18], camiseta: [64, 14, 20, 20]
+    pelota: [82, 86, 18, 14], estadio: [43, 2, 24, 27], mapa: [64, 15, 20, 18], camiseta: [64, 14, 20, 20],
+    planta: [96, 52, 24, 38], monstera: [93, 44, 27, 46], cactus: [96, 46, 24, 44], kentia: [90, 40, 30, 50], ficus: [94, 42, 26, 48],
+    sansevieria: [96, 48, 24, 42], olivo: [93, 42, 27, 48], suculentas: [20, 30, 20, 15], orquidea: [21, 21, 18, 24], lavanda: [20, 26, 20, 19],
+    potus: [100, 10, 20, 38]
   };
   Rooms.DESK.forEach(function (id) { BOX[id] = [72, 64, 24, 20]; });
   const DEFAULT = { wall: 0, floor: 0, curtain: 0, items: ['estanteria', 'planta', 'reloj'] };
@@ -76,6 +88,272 @@
     const f = function (v) { return Math.max(0, Math.min(255, Math.round(t < 0 ? v * (1 + t) : v + (255 - v) * t))); };
     return '#' + [16, 8, 0].map(function (sh) { return f((n >> sh) & 255).toString(16).padStart(2, '0'); }).join('');
   }
+
+  /* ── Plantas: lienzo de píxeles con hojas, macetas y tallos ── */
+  function grid() {
+    const g = {};
+    return {
+      put: function (x, y, c) { if (c) g[Math.round(x) + ',' + Math.round(y)] = c; },
+      has: function (x, y) { return !!g[Math.round(x) + ',' + Math.round(y)]; },
+      svg: function () {
+        const rows = {};
+        Object.keys(g).forEach(function (k) { const p = k.split(','); (rows[p[1]] = rows[p[1]] || []).push(+p[0]); });
+        let r = '';
+        Object.keys(rows).forEach(function (y) {
+          const xs = rows[y].sort(function (a, b) { return a - b; });
+          let i = 0;
+          while (i < xs.length) {
+            let j = i;
+            while (j + 1 < xs.length && xs[j + 1] === xs[j] + 1 && g[xs[j + 1] + ',' + y] === g[xs[i] + ',' + y]) j++;
+            r += px(xs[i], +y, xs[j] - xs[i] + 1, 1, g[xs[i] + ',' + y]);
+            i = j + 1;
+          }
+        });
+        return r;
+      }
+    };
+  }
+  function line(G, x0, y0, x1, y1, c) {
+    const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))));
+    for (let k = 0; k <= n; k++) G.put(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n, typeof c === 'function' ? c(k / n) : c);
+  }
+  /** Curva de Bézier cuadrática; f(x, y, t) en cada paso. */
+  function curve(x0, y0, cx, cy, x1, y1, f) {
+    const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 1.6) + 2;
+    for (let k = 0; k <= n; k++) {
+      const t = k / n, a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t;
+      f(a * x0 + b * cx + c * x1, a * y0 + b * cy + c * y1, t);
+    }
+  }
+  /**
+   * Hoja desde (bx, by) en la dirección ang (radianes, 0 = derecha), largo len
+   * y ancho máximo wid. kind: 'lanza' | 'ancha' (más ancha hacia la punta) |
+   * 'monstera' (con cortes). pal: { dark, base, light, vein }.
+   */
+  function leaf(G, bx, by, len, wid, ang, pal, kind) {
+    const ca = Math.cos(ang), sa = Math.sin(ang);
+    const R = Math.ceil(len + wid + 2);
+    const width = function (u) {
+      const t = u / len;
+      if (t < 0 || t > 1) return -1;
+      if (kind === 'ancha') return wid * Math.pow(Math.sin(Math.PI * Math.min(1, t * 0.8 + 0.12)), 0.7) * (0.55 + 0.45 * t);
+      if (kind === 'monstera') return wid * Math.pow(Math.sin(Math.PI * t), 0.55);
+      if (kind === 'espada') return wid * Math.min(1, (1 - t) * 3.2) * (t < 0.05 ? 0.8 : 1);
+      return wid * Math.pow(Math.sin(Math.PI * t), 0.9);
+    };
+    for (let y = Math.floor(by - R); y <= by + R; y++) for (let x = Math.floor(bx - R); x <= bx + R; x++) {
+      const dx = x + 0.5 - bx, dy = y + 0.5 - by;
+      const u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
+      const w = width(u);
+      if (w < 0 || Math.abs(v) > w) continue;
+      if (kind === 'monstera' && Math.abs(v) > w * 0.42 && Math.abs(v) < w - 0.2 && ((u + Math.abs(v) * 0.5) % 2.6) < 0.75 && u > len * 0.18) continue;
+      let c = v < 0 ? pal.light : pal.base;
+      if (Math.abs(v) > w - 0.85) c = pal.dark;
+      if (Math.abs(v) < 0.42 && u < len * 0.92) c = pal.vein || pal.light;
+      if (kind === 'espada' && pal.band && Math.floor(u / 2.2) % 2 === 0 && Math.abs(v) < w - 0.85) c = pal.band;
+      G.put(x, y, c);
+    }
+  }
+  const POTS = {
+    barro: ['#e88a5a', '#c4592c', '#8e3e1d', '#b9532a', '#d36c3e'],
+    blanca: ['#ffffff', '#e8e8ee', '#a9a9b8', '#d9d9e2', '#f6f6fa'],
+    gris: ['#9aa1ad', '#7d8494', '#4c5260', '#6b7280', '#8a91a0'],
+    azul: ['#7fb2e6', '#3f72e8', '#23458f', '#3460c4', '#5a8ae8'],
+    madera: ['#c48a55', '#a96f40', '#6e4426', '#8a5a34', '#a06c40']
+  };
+  /** Maceta centrada en cx con la base en y (abajo), ancho w y alto h. */
+  function pot(G, cx, y, w, h, kind) {
+    const P = POTS[kind] || POTS.barro;
+    const x0 = Math.round(cx - w / 2), top = y - h + 1;
+    for (let x = x0; x < x0 + w; x++) { G.put(x, top, P[0]); G.put(x, top + 1, P[1]); }
+    for (let yy = top + 2; yy <= y; yy++) {
+      const inset = Math.round((yy - top - 2) / Math.max(1, h - 2) * 1.6) + 1;
+      for (let x = x0 + inset - 1; x <= x0 + w - inset; x++) {
+        const edgeL = x === x0 + inset - 1, edgeR = x === x0 + w - inset;
+        G.put(x, yy, yy === top + 2 ? P[2] : edgeR || yy === y ? P[2] : edgeL ? P[3] : x === x0 + inset ? P[4] : P[3]);
+      }
+    }
+  }
+  /** Tierra dentro de la maceta. */
+  function soil(G, cx, top, w) { for (let x = Math.round(cx - w / 2) + 1; x < Math.round(cx + w / 2) - 1; x++) G.put(x, top, '#4a3222'); }
+  function shadowEll(cx, cy, rx) { return '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + rx + '" ry="1" fill="#000" opacity=".16"/>'; }
+  const GREEN = { dark: '#1d5a34', base: '#2f7d46', light: '#46a060', vein: '#5fb877' };
+  const GREEN2 = { dark: '#24603a', base: '#3a8a4f', light: '#58aa66', vein: '#79c47f' };
+
+  const PLANTS = {
+    monstera: function () {
+      const G = grid();
+      const P = { dark: '#164a2a', base: '#25703d', light: '#3a8f52', vein: '#5aae6c' };
+      [[108, 78, 103, 63, 10, 6.4, -2.55], [108, 78, 112, 61, 10, 6.4, -0.6], [108, 78, 107, 58, 10, 6, -1.75], [108, 78, 112, 70, 8, 5, -0.15], [108, 78, 103, 71, 8, 4.8, -3.0]]
+        .forEach(function (l) {
+          line(G, l[0], l[1], l[2], l[3], '#3b6b2c');
+          leaf(G, l[2], l[3], l[4], l[5], l[6], P, 'monstera');
+        });
+      pot(G, 108, 87, 12, 9, 'blanca');
+      soil(G, 108, 79, 12);
+      return shadowEll(108, 88, 7) + G.svg();
+    },
+    cactus: function () {
+      const G = grid();
+      const C = ['#2d6b3a', '#3f8a4a', '#5aa85e', '#7cc47a'];
+      const col = function (x0, y0, y1, w) {
+        for (let y = y0; y <= y1; y++) for (let x = x0; x < x0 + w; x++) {
+          const i = x - x0;
+          const round = (y === y0 && (i === 0 || i === w - 1));
+          if (round) continue;
+          G.put(x, y, i === 0 ? C[0] : i === w - 1 ? C[0] : i === 1 ? C[3] : (i % 2 ? C[1] : C[2]));
+        }
+      };
+      col(105, 52, 79, 6);
+      col(100, 61, 70, 4); for (let x = 101; x <= 104; x++) { G.put(x, 70, C[1]); G.put(x, 71, C[0]); }
+      col(112, 57, 67, 4); for (let x = 110; x <= 113; x++) { G.put(x, 67, C[1]); G.put(x, 68, C[0]); }
+      [[106, 56], [109, 60], [107, 65], [110, 70], [106, 74], [101, 64], [114, 60], [102, 67]].forEach(function (s) { G.put(s[0], s[1], '#f4efe0'); });
+      G.put(107, 50, '#f27a92'); G.put(108, 50, '#f27a92'); G.put(107, 51, '#e0546f'); G.put(108, 51, '#ffd0dc'); G.put(106, 51, '#f27a92'); G.put(109, 51, '#f27a92');
+      pot(G, 108, 87, 12, 8, 'barro');
+      for (let x = 103; x <= 113; x++) G.put(x, 80, '#e9d9b4');   // grava
+      return shadowEll(108, 88, 7) + G.svg();
+    },
+    kentia: function () {
+      const G = grid();
+      const P = '#2f7d46', L = '#4fa064', D = '#1d5a34';
+      [[-1, 92, 60], [-1, 99, 50], [1, 118, 57], [1, 113, 48], [-1, 105, 45], [1, 108, 44], [-1, 93, 70], [1, 119, 68]].forEach(function (f, i) {
+        const tx = f[1], ty = f[2];
+        const cx = 108 + (tx - 108) * 0.35, cy = Math.min(ty, 78) - 14;
+        curve(108, 78, cx, cy, tx, ty, function (x, y, t) {
+          G.put(x, y, i % 2 ? '#5c7a2e' : '#4f6e28');
+          const step = Math.round(t * 40);
+          if (t > 0.18 && step % 2 === 0) {
+            const len = Math.round(4.5 * (1 - t) + 1.5);
+            const dir = tx < 108 ? -1 : 1;
+            for (let k = 1; k <= len; k++) {
+              G.put(x - k * 0.45 * dir, y + k * 0.95, k === len ? D : P);
+              G.put(x + k * 0.75 * dir, y + k * 0.8, k === len ? D : L);
+            }
+          }
+        });
+      });
+      pot(G, 108, 87, 13, 9, 'gris');
+      soil(G, 108, 79, 13);
+      return shadowEll(108, 88, 8) + G.svg();
+    },
+    ficus: function () {
+      const G = grid();
+      const P = { dark: '#1d4f2c', base: '#2c6e3e', light: '#43925a', vein: '#9cc98a' };
+      line(G, 108, 79, 108, 50, function (t) { return t > 0.5 ? '#6e5a3a' : '#5a4630'; });
+      line(G, 108, 66, 102, 58, '#5a4630');
+      [[108, 49, 6, 3.6, -1.6], [107, 54, 6, 3.4, -2.6], [109, 55, 6, 3.4, -0.4], [102, 57, 6, 3.4, -2.2], [103, 57, 5, 3, -1.1], [109, 61, 6, 3.4, -0.2], [107, 65, 6, 3.4, -3.0], [109, 70, 5, 3, -0.5], [107, 72, 5, 3, -2.9]]
+        .forEach(function (l) { leaf(G, l[0], l[1], l[2], l[3], l[4], P, 'ancha'); });
+      pot(G, 108, 87, 12, 9, 'blanca');
+      return shadowEll(108, 88, 7) + G.svg();
+    },
+    sansevieria: function () {
+      const G = grid();
+      const P = { dark: '#cdb848', base: '#2c6a3c', light: '#3d8550', band: '#4f9a5c' };
+      [[104, 79, 15, 2.4, -1.95], [112, 79, 17, 2.4, -1.2], [106, 79, 21, 2.6, -1.7], [110, 79, 24, 2.6, -1.45], [108, 79, 27, 2.6, -1.6]].forEach(function (l) { leaf(G, l[0], l[1], l[2], l[3], l[4], P, 'espada'); });
+      pot(G, 108, 87, 12, 9, 'gris');
+      soil(G, 108, 79, 12);
+      return shadowEll(108, 88, 7) + G.svg();
+    },
+    olivo: function () {
+      const G = grid();
+      const T = ['#5c4a36', '#7a6448', '#3e3124'];
+      curve(108, 79, 104, 70, 108, 62, function (x, y) { G.put(x, y, T[0]); G.put(x + 1, y, T[1]); });
+      curve(107, 68, 103, 64, 100, 58, function (x, y) { G.put(x, y, T[0]); });
+      curve(108, 63, 113, 60, 115, 55, function (x, y) { G.put(x, y, T[0]); });
+      const O = ['#5f7a52', '#7f9a6b', '#a3b98e', '#c6d6b2'];
+      [[99, 56, 5, 3.2], [106, 54, 6, 3.6], [114, 53, 5, 3.4], [110, 58, 5, 3], [102, 60, 4, 2.6], [108, 49, 4, 2.6]].forEach(function (c) {
+        for (let y = Math.floor(c[1] - c[3]); y <= c[1] + c[3]; y++) for (let x = Math.floor(c[0] - c[2]); x <= c[0] + c[2]; x++) {
+          const d = Math.pow((x + 0.5 - c[0]) / c[2], 2) + Math.pow((y + 0.5 - c[1]) / c[3], 2);
+          if (d > 1) continue;
+          if (((x * 7 + y * 13) % 5) === 0 && d > 0.4) continue;   // borde irregular
+          G.put(x, y, y < c[1] - c[3] * 0.3 ? O[2 + ((x + y) % 2)] : d > 0.7 ? O[0] : O[1 + ((x * 3 + y) % 2)]);
+        }
+      });
+      [[101, 57], [108, 53], [113, 55], [105, 51]].forEach(function (o) { G.put(o[0], o[1], '#2e2a3a'); });
+      pot(G, 108, 87, 14, 9, 'barro');
+      soil(G, 108, 79, 14);
+      return shadowEll(108, 88, 8) + G.svg();
+    },
+    // Alféizar: a la derecha de las rosas
+    suculentas: function () {
+      const G = grid();
+      [[25, '#7fb2a0', '#a8d4c0', '#e48aa0', 'barro'], [30, '#6a9a5a', '#8cc070', '#d4e08a', 'blanca'], [35, '#8aa8c8', '#b4cce0', '#c47ad0', 'azul']].forEach(function (s) {
+        const x = s[0];
+        pot(G, x, 40, 5, 3, s[4]);
+        G.put(x, 34, s[3]); G.put(x - 1, 35, s[1]); G.put(x, 35, s[2]); G.put(x + 1, 35, s[1]);
+        G.put(x - 2, 36, s[3]); G.put(x - 1, 36, s[2]); G.put(x, 36, s[1]); G.put(x + 1, 36, s[2]); G.put(x + 2, 36, s[3]);
+        G.put(x - 1, 37, s[1]); G.put(x, 37, s[2]); G.put(x + 1, 37, s[1]);
+      });
+      return G.svg();
+    },
+    orquidea: function () {
+      const G = grid();
+      const L = { dark: '#1d5a34', base: '#2f7d46', light: '#4fa064' };
+      leaf(G, 30, 36, 5, 1.4, -2.7, L, 'lanza'); leaf(G, 30, 36, 5, 1.4, -0.45, L, 'lanza'); leaf(G, 30, 36, 4, 1.2, -1.9, L, 'lanza');
+      curve(30, 36, 29, 24, 35, 25, function (x, y) { G.put(x, y, '#5a7a3a'); });
+      [[30, 27, '#f8f2fa', '#d65a9a'], [33, 25, '#fbe4f0', '#c43a7a'], [35.5, 27, '#f8f2fa', '#d65a9a']].forEach(function (f) {
+        const x = Math.round(f[0]), y = Math.round(f[1]);
+        G.put(x - 1, y, f[2]); G.put(x + 1, y, f[2]); G.put(x, y - 1, f[2]); G.put(x, y + 1, f[2]); G.put(x, y, f[3]);
+        G.put(x - 1, y - 1, f[2]); G.put(x + 1, y - 1, f[2]);
+      });
+      pot(G, 30, 40, 6, 4, 'azul');
+      return G.svg();
+    },
+    lavanda: function () {
+      const G = grid();
+      for (let x = 23; x <= 37; x++) { G.put(x, 37, '#a96f40'); G.put(x, 38, '#8a5a34'); G.put(x, 39, '#8a5a34'); G.put(x, 40, '#6e4426'); }
+      for (let x = 23; x <= 37; x += 3) G.put(x, 38, '#c48a55');
+      [24, 26, 27, 29, 31, 32, 34, 35, 36].forEach(function (x, i) {
+        const h = 6 + (i * 5) % 4;
+        for (let y = 36; y > 36 - h; y--) G.put(x + (y < 32 && i % 2 ? 0 : 0), y, '#6a8a5a');
+        for (let k = 0; k < 3; k++) G.put(x, 36 - h - k + 2, k % 2 ? '#9b6bd6' : '#7d4fc0');
+        G.put(x, 36 - h, '#b48ae8');
+      });
+      return G.svg();
+    },
+    // Estantería: potus colgando desde la balda de arriba
+    potus: function () {
+      const G = grid();
+      const P = { dark: '#3f7a2a', base: '#5aa040', light: '#8acb5e', vein: '#d8e88a' };
+      pot(G, 111, 19, 7, 5, 'blanca');
+      [[109, 15, 107, 22, 108, 38], [112, 15, 117, 24, 114, 44], [114, 16, 119, 20, 118, 32]].forEach(function (v) {
+        curve(v[0], v[1], v[2], v[3], v[4], v[5], function (x, y, t) {
+          G.put(x, y, '#4a7a30');
+          if (Math.round(t * 20) % 4 === 0) leaf(G, x, y, 2.6, 1.6, t * 3 + (x > 112 ? 0.3 : 2.4), P, 'ancha');
+        });
+      });
+      leaf(G, 110, 15, 3, 1.7, -2.2, P, 'ancha'); leaf(G, 112, 15, 3, 1.7, -0.9, P, 'ancha'); leaf(G, 111, 14, 3, 1.6, -1.6, P, 'ancha');
+      return G.svg();
+    },
+    // Mesa auxiliar
+    bonsai: function (part, ctx) {
+      const G = grid();
+      const x = ctx.dx + 4;
+      for (let k = -4; k <= 4; k++) { G.put(x + k, 78, '#3f72e8'); G.put(x + k, 79, '#23458f'); }
+      for (let k = -3; k <= 3; k++) G.put(x + k, 77, '#4a3222');
+      curve(x, 77, x - 3, 74, x + 1, 71, function (xx, yy) { G.put(xx, yy, '#6e4a2e'); });
+      curve(x, 73, x + 3, 72, x + 3, 69, function (xx, yy) { G.put(xx, yy, '#6e4a2e'); });
+      [[x - 2, 70, 2.6, 1.6], [x + 3, 68, 2.4, 1.5], [x + 1, 67, 2, 1.3]].forEach(function (c) {
+        for (let yy = Math.floor(c[1] - c[3]); yy <= c[1] + c[3]; yy++) for (let xx = Math.floor(c[0] - c[2]); xx <= c[0] + c[2]; xx++) {
+          const d = Math.pow((xx + 0.5 - c[0]) / c[2], 2) + Math.pow((yy + 0.5 - c[1]) / c[3], 2);
+          if (d <= 1) G.put(xx, yy, yy < c[1] ? '#5aa85e' : d > 0.6 ? '#245a32' : '#3a8a4f');
+        }
+      });
+      return G.svg();
+    },
+    cactusmesa: function (part, ctx) {
+      const G = grid();
+      const x = ctx.dx + 4;
+      pot(G, x, 79, 6, 3, 'barro');
+      for (let yy = 72; yy <= 76; yy++) for (let xx = x - 2; xx <= x + 2; xx++) {
+        const d = Math.pow((xx + 0.5 - (x + 0.5)) / 2.6, 2) + Math.pow((yy + 0.5 - 74.5) / 2.8, 2);
+        if (d <= 1) G.put(xx, yy, xx === x - 2 ? '#2d6b3a' : xx === x + 2 ? '#2d6b3a' : (xx + yy) % 2 ? '#3f8a4a' : '#5aa85e');
+      }
+      G.put(x - 1, 73, '#f4efe0'); G.put(x + 1, 75, '#f4efe0'); G.put(x + 1, 72, '#f4efe0');
+      G.put(x, 71, '#f2a0c0'); G.put(x - 1, 71, '#f27a92'); G.put(x + 1, 71, '#f27a92'); G.put(x, 70, '#f27a92');
+      return G.svg();
+    }
+  };
 
   /* ── Cielo de la ventana según la hora ──────────────────── */
   function sky(part) {
@@ -175,11 +453,14 @@
       return r;
     },
     planta: function () {
-      let r = px(102, 78, 12, 9, '#c4592c') + px(102, 78, 12, 1, '#e07a4a') + px(103, 86, 10, 1, '#8e3e1d');
-      [[107, 60, 2, 18], [103, 64, 2, 10], [111, 63, 2, 12], [99, 68, 5, 2], [112, 67, 5, 2], [104, 61, 4, 2], [109, 58, 4, 2]].forEach(function (l, i) {
-        r += px(l[0], l[1], l[2], l[3], i % 2 ? '#3d9a5a' : '#2e7d48');
+      // Planta de interior con hojas en abanico, en su maceta de barro
+      const G = grid();
+      [[-2.9, 9, 2.4], [-2.45, 11, 2.6], [-2.0, 12, 2.6], [-1.6, 13, 2.6], [-1.2, 12, 2.6], [-0.75, 11, 2.6], [-0.3, 9, 2.4], [-1.85, 8, 2.2], [-1.3, 8, 2.2]].forEach(function (l, i) {
+        leaf(G, 108, 78, l[1], l[2], l[0], i % 2 ? GREEN2 : GREEN, 'lanza');
       });
-      return '<g class="room-plant">' + r + '</g>';
+      pot(G, 108, 87, 12, 9, 'barro');
+      soil(G, 108, 79, 12);
+      return '<g class="room-plant">' + shadowEll(108, 88, 7) + G.svg() + '</g>';
     },
     reloj: function () {
       const t = new Date(), h = t.getHours() % 12, m = t.getMinutes();
@@ -519,10 +800,11 @@
       return r;
     },
   };
+  Object.keys(PLANTS).forEach(function (k) { DECO[k] = PLANTS[k]; });
   // Orden de pintado: lo de la pared antes que lo del suelo
   const ORDER = ['luces', 'poster', 'pemberley', 'amanecer', 'bandera', 'estadio', 'reloj', 'diploma', 'estandarte', 'mapa', 'camiseta', 'foto', 'banderin', 'estanteria', 'pecera', 'pizarra',
-    'timon', 'rosas', 'alfombra'];
-  const FLOOR_BACK = ['escoba', 'lampara', 'planta'];
+    'timon', 'rosas', 'suculentas', 'orquidea', 'lavanda', 'potus', 'alfombra'];
+  const FLOOR_BACK = ['escoba', 'lampara', 'planta', 'monstera', 'cactus', 'kentia', 'ficus', 'sansevieria', 'olivo'];
   const FLOOR_FRONT = ['cofre', 'pelota'];
 
   /** Mesa auxiliar pegada al escritorio (en el cuarto). */

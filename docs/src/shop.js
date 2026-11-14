@@ -19,7 +19,8 @@
     ['oyp', 'Orgullo y Prejuicio', '🌹'],
     ['hp', 'Mundo mágico', '🪄'],
     ['op', 'One Piece', '🏴‍☠️'],
-    ['river', 'River Plate', '⚽']
+    ['river', 'River Plate', '⚽'],
+    ['deco', 'Decoración', '🪴']
   ];
 
   /*
@@ -65,7 +66,24 @@
     { id: 'shop:room-estadio', theme: 'river', kind: 'room', room: 'estadio', name: 'Póster del Monumental', icon: '🏟️', price: 350, desc: 'El estadio lleno de noche, con las gradas rojas y blancas y los papelitos. Ocupa el sitio del póster.' },
     { id: 'shop:room-camiseta', theme: 'river', kind: 'room', room: 'camiseta', name: 'Camiseta enmarcada', icon: '👕', price: 350, desc: 'La de la banda roja, en un marco. Ocupa el sitio del diploma.' },
     { id: 'shop:room-trofeo', theme: 'river', kind: 'room', room: 'trofeo', name: 'Trofeo', icon: '🏆', price: 300, desc: 'Una copa dorada con cinta roja y blanca para tu mesa.' },
-    { id: 'shop:pet-banda', theme: 'river', kind: 'pet', val: 'banda', name: 'Camiseta de la banda para tu mascota', icon: '🐾', price: 250, desc: 'Blanca con la banda roja.' }
+    { id: 'shop:pet-banda', theme: 'river', kind: 'pet', val: 'banda', name: 'Camiseta de la banda para tu mascota', icon: '🐾', price: 250, desc: 'Blanca con la banda roja.' },
+    // Decoración general: plantas
+    { id: 'shop:deco-monstera', theme: 'deco', kind: 'room', room: 'monstera', name: 'Monstera', icon: '🌿', price: 300, desc: 'Hojas grandes con sus cortes característicos, en maceta blanca. Va en el rincón de la planta.' },
+    { id: 'shop:deco-kentia', theme: 'deco', kind: 'room', room: 'kentia', name: 'Palmera kentia', icon: '🌴', price: 300, desc: 'Hojas largas que se arquean, en maceta gris. Va en el rincón de la planta.' },
+    { id: 'shop:deco-ficus', theme: 'deco', kind: 'room', room: 'ficus', name: 'Ficus lira', icon: '🌳', price: 280, desc: 'Tallo alto y hojas anchas en forma de violín. Va en el rincón de la planta.' },
+    { id: 'shop:deco-olivo', theme: 'deco', kind: 'room', room: 'olivo', name: 'Olivo en maceta', icon: '🫒', price: 400, desc: 'Tronco retorcido, copa plateada y alguna aceituna. Va en el rincón de la planta.' },
+    { id: 'shop:deco-potus', theme: 'deco', kind: 'room', room: 'potus', name: 'Potus en la estantería', icon: '🍃', price: 220, desc: 'Arriba de la estantería, con las ramas colgando por un lado.' },
+    { id: 'shop:deco-orquidea', theme: 'deco', kind: 'room', room: 'orquidea', name: 'Orquídea en la ventana', icon: '🌸', price: 200, desc: 'Flores blancas con el centro fucsia, en el alféizar (al lado de las rosas, si las tienes).' },
+    { id: 'shop:deco-lavanda', theme: 'deco', kind: 'room', room: 'lavanda', name: 'Lavanda en la ventana', icon: '💜', price: 160, desc: 'Una jardinera de madera con espigas moradas en el alféizar.' },
+    { id: 'shop:deco-bonsai', theme: 'deco', kind: 'room', room: 'bonsai', name: 'Bonsái', icon: '🌲', price: 260, desc: 'Un arbolito en bandeja azul para tu mesa auxiliar.' }
+  ];
+
+  /** Plantas que se desbloquean por nivel: [objeto, id de desbloqueo, nombre, icono, descripción]. */
+  Shop.LEVEL_DECO = [
+    ['cactus', 'room:cactus', 'Cactus con flor', '🌵', 'Un cactus con brazos y una flor rosa arriba, sobre grava. Va en el rincón de la planta.'],
+    ['suculentas', 'room:suculentas', 'Suculentas en la ventana', '🪴', 'Tres macetitas de colores en el alféizar.'],
+    ['cactusmesa', 'room:cactusmesa', 'Cactus de mesa', '🌵', 'Redondito y con flor, para la mesa auxiliar.'],
+    ['sansevieria', 'room:sansevieria', 'Sansevieria', '🌿', 'Hojas rectas como espadas con el borde amarillo. Va en el rincón de la planta.']
   ];
 
   function byId(id) { return Shop.ITEMS.filter(function (x) { return x.id === id; })[0] || null; }
@@ -293,7 +311,7 @@
           head.appendChild(U.el('span', { class: 'shop__coins', text: '🪙 ' + Shop.points().toLocaleString('es-ES') }));
           head.appendChild(U.el('small', { class: 'shop__hint', text: s.pending
             ? 'Las monedas empiezan a contar con tu primera sesión.'
-            : '1 moneda por cada 2 puntos de experiencia que ganes desde el ' + U.fmtDate(new Date(s.since + 'T12:00').getTime()) + ' (la experiencia de antes no cuenta). Llevas ' +
+            : '1 moneda por cada 2 puntos de experiencia' + (s.since ? ' que ganes desde el ' + U.fmtDate(new Date(s.since + 'T12:00').getTime()) + ' (la experiencia de antes no cuenta)' : '') + '. Llevas ' +
               Math.floor(s.earned || 0).toLocaleString('es-ES') + ' ganadas' + (s.lost ? ' y ' + s.lost.toLocaleString('es-ES') + ' perdidas por quedarte sin vidas' : '') + '. Quedarte sin vidas cuesta ' + Shop.KO_COST + ' monedas.' }));
           U.clear(tabs);
           Shop.THEMES.forEach(function (t) {
@@ -325,6 +343,35 @@
               btn
             ]));
           });
+          // Plantas que se ganan subiendo de nivel (no se compran)
+          if (lastTheme === 'deco') {
+            grid.appendChild(U.el('p', { class: 'shop__note', text: '🌱 Y estas se ganan subiendo de nivel:' }));
+            Shop.LEVEL_DECO.forEach(function (d) {
+              const ok = global.Progress ? Progress.unlocked(d[1]) : true;
+              const on = Rooms.config().items.indexOf(d[0]) >= 0;
+              const btn = ok
+                ? U.el('button', { class: 'btn btn--sm ' + (on ? 'btn--ghost' : 'btn--primary'), type: 'button', text: on ? 'Quitar' : 'Poner en el cuarto',
+                  onclick: function () {
+                    const r = Rooms.config();
+                    r.items = on ? r.items.filter(function (x) { return x !== d[0]; }) : Rooms.place(r.items, d[0]);
+                    Store.setSetting('room', JSON.parse(JSON.stringify(r)));
+                    refreshWorld(); paint(); if (o.onChange) o.onChange();
+                  } })
+                : U.el('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '🔒 Con ' + Progress.unlockLabel(d[1]), 'aria-disabled': 'true',
+                  onclick: function () { UI.toast('🔒 Se desbloquea con ' + Progress.unlockLabel(d[1])); } });
+              const art = U.el('div', { class: 'shop-card__art' });
+              art.innerHTML = Rooms.itemSvg(d[0], 84);
+              grid.appendChild(U.el('div', { class: 'shop-card' + (ok ? ' is-mine' : ' is-locked') + (on ? ' is-on' : '') }, [
+                art,
+                U.el('div', { class: 'shop-card__body' }, [
+                  U.el('strong', { text: d[3] + ' ' + d[2] }),
+                  U.el('small', { text: d[4] }),
+                  U.el('span', { class: 'shop-card__tag', text: on ? '✓ Puesto' : ok ? 'Es tuyo' : 'Por nivel' })
+                ]),
+                btn
+              ]));
+            });
+          }
         }
         repaint = function () { paint(); if (o.onChange) o.onChange(); };
         paint();

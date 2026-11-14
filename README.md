@@ -537,6 +537,13 @@ desde la tienda o desde los editores (lo comprado aparece allí, sin candado).
 - **River Plate** ⚽: camiseta blanca con la banda roja (de arriba a la derecha a abajo a la izquierda,
   vista de frente), bufanda roja y blanca, banderín, pelota, póster del Monumental de noche, camiseta
   enmarcada, trofeo para la mesa y camiseta de la banda para la mascota.
+- **Decoración** 🪴: plantas para el cuarto. En la tienda: monstera, palmera kentia, ficus lira y olivo
+  (rincón de la planta), potus colgando de la estantería, orquídea y lavanda en la ventana, y bonsái
+  para la mesa. Por nivel: cactus con flor (5), suculentas en la ventana (9), cactus de mesa (13) y
+  sansevieria (17); aparecen también en la pestaña, con su candado hasta que llegas al nivel.
+  - Sitios: una planta grande en el rincón (poner otra cambia la que había), una en el lado derecho
+    del alféizar (las rosas van a la izquierda y caben a la vez), el potus arriba de la estantería y
+    las de mesa en la mesa auxiliar (hasta 3 cosas).
 
 **Nuevos en esta versión**: cuadro «paseo al amanecer» (el prado con niebla y él caminando con el
 abrigo largo y la camisa abierta; la foto de Mr Darcy de la mesa es esa misma escena en pequeño) y
