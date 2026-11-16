@@ -959,8 +959,7 @@
       el.appendChild(frame);
       if (it.fx) el.appendChild(U.el('span', { class: 'room__tag room__tag--hit', text: it.fx.badge }));
       else if (it.bubble) el.appendChild(U.el('span', { class: 'room__tag', text: it.bubble }));
-      const wl = global.Weather && it.weather ? Weather.label(it.weather) : '';
-      el.appendChild(U.el('span', { class: 'room__name', text: (it.away ? it.name + ' · fuera' : it.name) + (wl ? ' · ' + wl : '') }));
+      el.appendChild(U.el('span', { class: 'room__name', text: it.away ? it.name + ' · fuera' : it.name }));
       box.appendChild(el);
     });
   };

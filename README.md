@@ -443,8 +443,8 @@ El temporizador no te ata a lo planeado:
 - **Clima real en la ventana** (opcional, en *Ajustes → Avatar y vidas → Clima en tu ventana*): con
   tu ubicación (si das permiso) o una ciudad escrita, la ventana enseña el tiempo que hace donde
   estudias: nubes que se mueven, lluvia (inclinada si hay viento, con gotas en el cristal), llovizna,
-  nieve, niebla o tormenta con relámpagos, de día y de noche. Junto a tu nombre sale el icono y la
-  temperatura. Se consulta en [Open-Meteo](https://open-meteo.com) (gratis y sin clave) cada 20 min
+  nieve, niebla o tormenta con relámpagos, de día y de noche (solo en el dibujo: ni la ciudad ni la
+  temperatura aparecen escritas). Se consulta en [Open-Meteo](https://open-meteo.com) (gratis y sin clave) cada 20 min
   con las coordenadas redondeadas (~1 km). En la sala solo se comparte el tipo de cielo y la
   temperatura: tu pareja ve tu clima en tu ventana y tú el suyo, pero nunca la ubicación.
 - **Gestos en la mesa** (ciclo de unos 1,5 min, cada avatar a su ritmo): escribe con el bolígrafo

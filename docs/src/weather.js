@@ -140,8 +140,8 @@
       box.appendChild(U.el('p', { class: 'hint', text: 'La ventana de tu cuarto enseña el tiempo real donde estudias: lluvia, nieve, nubes, niebla o tormenta. Se consulta en Open-Meteo cada 20 minutos con tu ubicación aproximada (unos 1 km). Tu pareja ve tu clima en tu ventana, pero no dónde estás.' }));
       if (s.on) {
         box.appendChild(U.el('p', { class: 'weather-now' }, [
-          U.el('strong', { text: d ? Weather.KINDS[d.k][0] + ' ' + Weather.KINDS[d.k][1] + ' · ' + Math.round(d.t) + ' °C' : 'Consultando…' }),
-          U.el('span', { text: ' · ' + (s.name || '') + (s.at ? ' · actualizado a las ' + U.fmtClock(new Date(s.at)) : '') })
+          U.el('strong', { text: d ? '✓ Activado: tu ventana enseña el tiempo real' : 'Activado · consultando…' }),
+          U.el('span', { text: s.at ? ' · actualizado a las ' + U.fmtClock(new Date(s.at)) : '' })
         ]));
       }
       const city = U.el('input', { type: 'text', class: 'sync-input', placeholder: 'Ciudad (p. ej. Madrid)', maxlength: '60',
@@ -150,10 +150,10 @@
         UI.toast('Buscando el tiempo…');
         p.then(function () { UI.toast(ok()); paint(); }).catch(function (err) { UI.toast(err.message, 4500); paint(); });
       }
-      function goCity() { busyMsg(Weather.useCity(city.value), function () { return '🌦️ Clima de ' + Weather.place(); }); }
+      function goCity() { busyMsg(Weather.useCity(city.value), function () { return '🌦️ Clima activado'; }); }
       box.appendChild(U.el('div', { class: 'row row--wrap' }, [
         U.el('button', { class: 'btn ' + (s.on ? 'btn--ghost' : 'btn--primary'), type: 'button', text: '📍 Usar mi ubicación',
-          onclick: function () { busyMsg(Weather.useLocation(), function () { return '🌦️ Clima de tu ubicación'; }); } }),
+          onclick: function () { busyMsg(Weather.useLocation(), function () { return '🌦️ Clima activado'; }); } }),
         city,
         U.el('button', { class: 'btn btn--ghost', type: 'button', text: 'Buscar ciudad', onclick: goCity }),
         s.on ? U.el('button', { class: 'btn btn--ghost', type: 'button', text: 'Actualizar', onclick: function () { busyMsg(Weather.refresh(true), function () { return 'Clima actualizado'; }); } }) : null,
