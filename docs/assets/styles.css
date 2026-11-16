@@ -1948,3 +1948,60 @@ body > .gameover{position:fixed}
 
 .shop__note{grid-column:1 / -1;margin:6px 0 0;color:var(--text-dim);font-size:.85rem;font-weight:600}
 .shop-card.is-locked .shop-card__art{filter:grayscale(.85) brightness(.8)}
+
+/* Clima en la ventana del cuarto */
+.wx-clouds{animation:wxDrift 60s linear infinite}
+@keyframes wxDrift{0%{transform:translateX(-4px)}50%{transform:translateX(5px)}100%{transform:translateX(-4px)}}
+.wx-rain{animation:wxFall .7s linear infinite}
+.wx-rain--wind{animation-name:wxFallWind}
+@keyframes wxFall{from{transform:translateY(0)}to{transform:translateY(30px)}}
+@keyframes wxFallWind{from{transform:translate(2px,0)}to{transform:translate(-4px,30px)}}
+.wx-snow{animation:wxSnow 9s linear infinite}
+@keyframes wxSnow{0%{transform:translate(0,0)}25%{transform:translate(1px,7.5px)}50%{transform:translate(-1px,15px)}75%{transform:translate(1px,22.5px)}100%{transform:translate(0,30px)}}
+.wx-fog{animation:wxFog 14s ease-in-out infinite alternate}
+@keyframes wxFog{from{transform:translateX(-3px);opacity:.85}to{transform:translateX(4px);opacity:1}}
+.wx-flash{opacity:0;animation:wxFlash 9s steps(1) infinite}
+@keyframes wxFlash{0%,88%{opacity:0}89%{opacity:1}90%{opacity:0}92%{opacity:.8}93%,100%{opacity:0}}
+.weather-panel{display:flex;flex-direction:column;gap:10px}
+.weather-panel .row{align-items:center}
+.weather-panel .sync-input{flex:1 1 180px;min-width:150px}
+.weather-now{margin:0;font-size:.92rem;color:var(--text-dim)}
+.weather-now strong{color:var(--text)}
+@media (prefers-reduced-motion:reduce){.wx-clouds,.wx-rain,.wx-snow,.wx-fog,.wx-flash{animation:none!important}.wx-flash{opacity:0}}
+
+/* Vida en la mesa (ciclo de 96 s): escribe, piensa, bebe y se estira */
+.scene-unit .act{animation-duration:96s;animation-iteration-count:infinite;animation-timing-function:linear;animation-delay:var(--ph,0s)}
+.scene-unit .act-base{animation-name:actBase}
+.scene-unit .act-think{opacity:0;animation-name:actThink}
+.scene-unit .act-sip{opacity:0;animation-name:actSip}
+.scene-unit .act-stretch{opacity:0;animation-name:actStretch}
+.scene-unit .act-hand-r{animation-name:actHandR}
+.scene-unit .act-hand-l{animation-name:actHandL}
+.scene-unit .act-drink{animation-name:actDrink}
+.scene-unit .act-write{opacity:0;animation-name:actWrite}
+.scene-unit .act-pen{animation:actPen .5s steps(2) infinite}
+.scene-unit .act-ink{transform-box:fill-box;transform-origin:0 50%;animation:actInk 96s linear infinite;animation-delay:var(--ph,0s)}
+@keyframes actBase{0%,23.99%{opacity:1}24%,29.99%{opacity:0}30%,45.99%{opacity:1}46%,49.99%{opacity:0}50%,69.99%{opacity:1}70%,74.99%{opacity:0}75%,100%{opacity:1}}
+@keyframes actThink{0%,23.99%{opacity:0}24%,29.99%{opacity:1}30%,100%{opacity:0}}
+@keyframes actSip{0%,45.99%{opacity:0}46%,49.99%{opacity:1}50%,100%{opacity:0}}
+@keyframes actStretch{0%,69.99%{opacity:0}70%{opacity:1;transform:translateY(1px)}72%{transform:translateY(-1px)}74.99%{opacity:1;transform:none}75%,100%{opacity:0}}
+@keyframes actHandR{0%,23.99%{opacity:1}24%,29.99%{opacity:0}30%,69.99%{opacity:1}70%,74.99%{opacity:0}75%,100%{opacity:1}}
+@keyframes actHandL{0%,45.99%{opacity:1}46%,49.99%{opacity:0}50%,69.99%{opacity:1}70%,74.99%{opacity:0}75%,100%{opacity:1}}
+@keyframes actDrink{0%,45.99%{opacity:1}46%,49.99%{opacity:0}50%,100%{opacity:1}}
+@keyframes actWrite{0%,1.99%{opacity:0}2%,10.99%{opacity:1}11%,100%{opacity:0}}
+@keyframes actPen{0%{transform:translate(0,0)}50%{transform:translate(1px,-1px)}}
+@keyframes actInk{0%,2%{transform:scaleX(0)}11%,100%{transform:scaleX(1)}}
+.hitfx .scene-unit .act,.hitfx .scene-unit .act-ink,.hitfx .scene-unit .act-pen{animation:none}
+.hitfx .scene-unit .act-think,.hitfx .scene-unit .act-sip,.hitfx .scene-unit .act-stretch,.hitfx .scene-unit .act-write{opacity:0}
+@media (prefers-reduced-motion:reduce){
+  .scene-unit .act,.scene-unit .act-ink,.scene-unit .act-pen{animation:none!important}
+  .scene-unit .act-think,.scene-unit .act-sip,.scene-unit .act-stretch,.scene-unit .act-write{opacity:0}
+}
+
+/* Andar en cuatro fotogramas */
+.pw4{opacity:0;animation:pw4Step .6s steps(1) infinite}
+.pw4-1{animation-delay:-.45s}.pw4-2{animation-delay:-.3s}.pw4-3{animation-delay:-.15s}
+@keyframes pw4Step{0%{opacity:1}25%,100%{opacity:0}}
+.scene-pet--dog{animation:petBreath 2.2s ease-in-out infinite}
+.scene-pet--owl{animation:petBob 3.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.pw4{animation:none!important}.pw4-0{opacity:1}}

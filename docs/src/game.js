@@ -794,6 +794,8 @@
       ed.appendChild(Avatar.editor(function () { Game.renderTile(); if (global.Scene) Scene.invalidate(); if (global.App) App.renderRoomStrip(); }));
       if (global.Rooms) ed.appendChild(Rooms.editor());
     }
+    const wp = document.getElementById('weatherPanel');
+    if (wp && global.Weather) { U.clear(wp); wp.appendChild(Weather.panel()); }
   };
 
   global.Game = Game;

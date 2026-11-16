@@ -440,6 +440,19 @@ El temporizador no te ata a lo planeado:
     tu valor, el de tu pareja y los puntos.
 
 ### Modo habitación
+- **Clima real en la ventana** (opcional, en *Ajustes → Avatar y vidas → Clima en tu ventana*): con
+  tu ubicación (si das permiso) o una ciudad escrita, la ventana enseña el tiempo que hace donde
+  estudias: nubes que se mueven, lluvia (inclinada si hay viento, con gotas en el cristal), llovizna,
+  nieve, niebla o tormenta con relámpagos, de día y de noche. Junto a tu nombre sale el icono y la
+  temperatura. Se consulta en [Open-Meteo](https://open-meteo.com) (gratis y sin clave) cada 20 min
+  con las coordenadas redondeadas (~1 km). En la sala solo se comparte el tipo de cielo y la
+  temperatura: tu pareja ve tu clima en tu ventana y tú el suyo, pero nunca la ubicación.
+- **Gestos en la mesa** (ciclo de unos 1,5 min, cada avatar a su ritmo): escribe con el bolígrafo
+  (sale la línea en el libro), se queda pensando con la mano en la barbilla, coge la taza y da un
+  sorbo, y se estira con los brazos arriba; además de respirar, parpadear y pasar página.
+- **Mascotas más vivas**: andan en cuatro fotogramas (patas en diagonal, el lomo sube y baja y la
+  cola se mueve), el perro respira y el búho se balancea; y el gato, cuando va a la ventana, se
+  sienta mirando fuera, mueve la cola, parpadea y a ratos se gira hacia el cuarto.
 - **Toca la escena** del temporizador y los puestos pasan a ser **cuartos en grande a cada lado del
   reloj**: el tuyo a la izquierda y el de tu pareja a la derecha, **en espejo**. Toca un cuarto para
   volver a la vista pequeña. El reloj sigue centrado (algo más contenido para dejar sitio). Si la

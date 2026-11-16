@@ -586,6 +586,7 @@
     setTimeout(Push.refresh, 4000);
     // Modo juego: misiones cumplidas y logros nuevos (la primera vez, sin fiesta).
     setTimeout(function () { if (window.Progress) Progress.check(); if (window.Shop) { Shop.init(); Progress.coinsBaseline(); } }, 2500);
+    if (window.Weather) Weather.init();
     // Cada minuto: la cuenta atrás del examen y la tarjeta de tiempo perdido,
     // que así sigue lo que vas haciendo sin tener que recargar.
     setInterval(function () {

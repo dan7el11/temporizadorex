@@ -356,14 +356,23 @@
   };
 
   /* ── Cielo de la ventana según la hora ──────────────────── */
-  function sky(part) {
+  function sky(part, wx) {
     const X = 7, Y = 9, W = 30, H = 30;
     let r = '';
-    const bands = {
+    let bands = {
       morning: ['#9fd8ff', '#bfe6ff', '#dff3ff'], midday: ['#4aa8f0', '#6ebcf5', '#9ad2fa'],
       afternoon: ['#f08a4b', '#f6a96a', '#ffd59e'], evening: ['#3b2c6e', '#7a4c8f', '#e07a7a'], night: ['#0d1638', '#16204a', '#1f2c5c']
     }[part] || ['#6ebcf5', '#9ad2fa', '#c8e7fc'];
+    const k = wx && wx.k;
+    const grey = k === 'cloudy' || k === 'rain' || k === 'drizzle' || k === 'storm' || k === 'snow' || k === 'fog';
+    if (grey) {
+      // Cielo cubierto: los colores de la hora, apagados hacia el gris
+      const dark = part === 'night' || part === 'evening';
+      const g = k === 'storm' ? (dark ? '#1a1c26' : '#5a5f6e') : k === 'snow' || k === 'fog' ? (dark ? '#3a3f52' : '#c9ced8') : (dark ? '#262a3a' : '#8c93a3');
+      bands = bands.map(function (b, i) { return mixHex(b, g, 0.72 - i * 0.04); });
+    }
     r += px(X, Y, W, 10, bands[0]) + px(X, Y + 10, W, 10, bands[1]) + px(X, Y + 20, W, 10, bands[2]);
+    if (grey) return r + weatherSky(part, wx, X, Y, W, H);
     if (part === 'morning') r += px(X + 4, Y + 18, 6, 6, '#ffe27a') + px(X + 5, Y + 17, 4, 8, '#ffe27a') + px(X + 3, Y + 19, 8, 4, '#ffe27a');
     if (part === 'midday') r += px(X + 18, Y + 6, 8, 3, '#ffffff') + px(X + 16, Y + 8, 12, 3, '#ffffff') + px(X + 4, Y + 16, 6, 2, '#ffffff') + px(X + 3, Y + 17, 9, 2, '#ffffff');
     if (part === 'afternoon') r += px(X + 18, Y + 20, 7, 7, '#ffcf66') + px(X + 19, Y + 19, 5, 9, '#ffcf66');
@@ -374,20 +383,82 @@
         r += '<rect class="room-star" style="animation-delay:' + (i * 0.4) + 's" x="' + (X + p[0]) + '" y="' + (Y + p[1]) + '" width="1" height="1" fill="#ffffff"/>';
       });
     }
-    // Ciudad a lo lejos
-    const city = part === 'night' || part === 'evening' ? '#141b38' : '#8aa2c0';
+    if (k === 'partly') r += cloudsArt(part, X, Y, false);
+    return r + cityArt(part, X, Y, H, false);
+  }
+  function mixHex(a, b, t) {
+    const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16);
+    return '#' + [16, 8, 0].map(function (sh) { return Math.round(((x >> sh) & 255) * (1 - t) + ((y >> sh) & 255) * t).toString(16).padStart(2, '0'); }).join('');
+  }
+  /** Ciudad a lo lejos (más apagada con mal tiempo). */
+  function cityArt(part, X, Y, H, dim) {
+    let r = '';
+    const dark = part === 'night' || part === 'evening';
+    const city = dark ? '#141b38' : dim ? '#6f7788' : '#8aa2c0';
     [[0, 24, 5], [5, 21, 4], [9, 26, 6], [15, 22, 5], [20, 25, 4], [24, 20, 6]].forEach(function (b) { r += px(X + b[0], Y + b[1], b[2], H - b[1], city); });
-    if (part === 'night' || part === 'evening') {
-      [[1, 26], [6, 23], [11, 28], [16, 24], [26, 22], [27, 26]].forEach(function (p) { r += px(X + p[0], Y + p[1], 1, 1, '#ffd27a'); });
-    }
+    if (dark) [[1, 26], [6, 23], [11, 28], [16, 24], [26, 22], [27, 26]].forEach(function (p) { r += px(X + p[0], Y + p[1], 1, 1, '#ffd27a'); });
     return r;
   }
+  /** Nubes que se desplazan despacio. heavy: cielo cubierto y nubes oscuras. */
+  function cloudsArt(part, X, Y, heavy, storm) {
+    const dark = part === 'night' || part === 'evening';
+    const c1 = storm ? '#3e4252' : heavy ? (dark ? '#4a5066' : '#a9afbd') : (dark ? '#6a6f8a' : '#ffffff');
+    const c2 = storm ? '#2c2f3c' : heavy ? (dark ? '#363b4e' : '#8a91a2') : (dark ? '#565b74' : '#e4ecf6');
+    const cloud = function (x, y, w) {
+      return px(x + 2, y, w - 4, 1, c1) + px(x, y + 1, w, 2, c1) + px(x + 1, y + 3, w - 2, 1, c2);
+    };
+    let r = '<g class="wx-clouds">' + cloud(X + 2, Y + 2, 12) + cloud(X + 17, Y + 6, 11) + cloud(X + 32, Y + 3, 10) + cloud(X - 12, Y + 7, 10);
+    if (heavy) r += cloud(X + 8, Y + 9, 13) + cloud(X + 24, Y + 12, 10) + cloud(X - 6, Y + 13, 9);
+    return r + '</g>';
+  }
+  /** Lluvia, nieve, niebla o tormenta dentro del cristal. */
+  function weatherSky(part, wx, X, Y, W, H) {
+    const k = wx.k;
+    let r = cloudsArt(part, X, Y, true, k === 'storm');
+    r += cityArt(part, X, Y, H, true);
+    const id = 'wxc' + Math.floor(Math.random() * 1e7);
+    let fx = '';
+    const wind = Math.min(3, Math.round((wx.w || 0) / 15));   // con viento, la lluvia va inclinada
+    if (k === 'rain' || k === 'drizzle' || k === 'storm') {
+      const n = k === 'drizzle' ? 14 : 26;
+      const col = part === 'night' || part === 'evening' ? '#9fb4dc' : '#dfe9f6';
+      let drops = '';
+      for (let i = 0; i < n; i++) {
+        const x = X + ((i * 7 + (i % 3) * 5) % (W + 6)) - 3, y = Y + ((i * 11) % H);
+        drops += px(x, y, 1, k === 'drizzle' ? 1 : 2, col, ' opacity=".8"') + (wind ? px(x - 1, y + 2, 1, 1, col, ' opacity=".5"') : '');
+      }
+      // Dos capas iguales desplazadas: la lluvia cae sin cortes
+      fx += '<g class="wx-rain' + (wind ? ' wx-rain--wind' : '') + '" style="animation-duration:' + (k === 'drizzle' ? 1.4 : 0.7) + 's">' + drops + '<g transform="translate(0,-' + H + ')">' + drops + '</g></g>';
+    }
+    if (k === 'snow') {
+      let flakes = '';
+      for (let i = 0; i < 18; i++) {
+        const x = X + ((i * 9 + (i % 4) * 3) % W), y = Y + ((i * 13) % H);
+        flakes += px(x, y, 1, 1, '#ffffff') + (i % 3 === 0 ? px(x + 1, y + 1, 1, 1, '#ffffff', ' opacity=".7"') : '');
+      }
+      fx += '<g class="wx-snow">' + flakes + '<g transform="translate(0,-' + H + ')">' + flakes + '</g></g>';
+    }
+    if (k === 'fog') {
+      fx += '<g class="wx-fog">' + px(X - 6, Y + 14, W + 12, 3, '#ffffff', ' opacity=".45"') + px(X - 4, Y + 20, W + 10, 4, '#ffffff', ' opacity=".55"') +
+        px(X - 8, Y + 26, W + 14, 4, '#ffffff', ' opacity=".6"') + px(X, Y + 8, W, 2, '#ffffff', ' opacity=".3"') + '</g>';
+    }
+    if (k === 'storm') fx += '<g class="wx-flash">' + px(X, Y, W, H, '#ffffff', ' opacity=".7"') +
+      px(X + 18, Y + 4, 1, 4, '#fff6b0') + px(X + 17, Y + 8, 1, 3, '#fff6b0') + px(X + 18, Y + 11, 1, 4, '#fff6b0') + '</g>';
+    return r + '<clipPath id="' + id + '"><rect x="' + X + '" y="' + Y + '" width="' + W + '" height="' + H + '"/></clipPath><g clip-path="url(#' + id + ')">' + fx + '</g>';
+  }
 
-  function windowArt(curtain, part, flyEl) {
+  function windowArt(curtain, part, flyEl, wx) {
     let r = '';
     // Marco, cristal con el cielo, cruceta y alféizar
     r += px(5, 7, 34, 34, '#f4efe6') + px(5, 40, 34, 1, '#cfc6b4');
-    r += sky(part);
+    const sid = 'sky' + Math.floor(Math.random() * 1e7);
+    r += '<clipPath id="' + sid + '"><rect x="7" y="9" width="30" height="30"/></clipPath><g clip-path="url(#' + sid + ')">' + sky(part, wx) + '</g>';
+    // Gotas en el cristal cuando llueve
+    if (wx && (wx.k === 'rain' || wx.k === 'storm' || wx.k === 'drizzle')) {
+      [[10, 13], [16, 28], [27, 16], [33, 31], [12, 33], [30, 11]].forEach(function (d, i) {
+        r += px(d[0], d[1], 1, 2, '#ffffff', ' opacity=".55"') + (i % 2 ? px(d[0], d[1] + 2, 1, 1, '#ffffff', ' opacity=".3"') : '');
+      });
+    }
     if (flyEl !== undefined) {
       // Llegada en escoba: las dos hojas se abren hacia dentro, pasa y se cierran
       const pane = function (x0, w) {
@@ -824,7 +895,8 @@
     const part = Scene.daypart();
     const wall = Rooms.WALLS[d.wall][0];
     const flyEl = unit && (unit.mode === 'fly' || unit.mode === 'rocket') && unit.flyStart ? Math.max(0, (Date.now() - unit.flyStart) / 1000) : undefined;
-    let r = wallArt(wall) + windowArt(Rooms.CURTAINS[d.curtain][0], part, flyEl) + floorArt(Rooms.FLOORS[d.floor][0], wall);
+    const wx = unit && unit.weather && unit.weather.k ? unit.weather : null;
+    let r = wallArt(wall) + windowArt(Rooms.CURTAINS[d.curtain][0], part, flyEl, wx) + floorArt(Rooms.FLOORS[d.floor][0], wall);
     const items = d.items.filter(function (id) { return DECO[id]; });
     // Si dos objetos comparten sitio, gana el último que se puso
     const used = {};
@@ -882,12 +954,13 @@
       el.dataset.i = i;
       const frame = U.el('div', { class: 'room__frame' });
       const art = U.el('div', { class: 'room__art' + (i ? ' is-mirror' : '') });
-      art.innerHTML = Rooms.svg(it.mode === 'empty' ? null : it.cfg, it.deco, { mode: it.mode, mood: it.mood, x: it.x, y: it.y, k: it.k, flyStart: it.flyStart, armPose: it.armPose, lamp: it.lamp, noProps: it.noProps, placing: it.placing, mess: it.mess, event: it.event }, 400);
+      art.innerHTML = Rooms.svg(it.mode === 'empty' ? null : it.cfg, it.deco, { mode: it.mode, mood: it.mood, x: it.x, y: it.y, k: it.k, flyStart: it.flyStart, armPose: it.armPose, lamp: it.lamp, noProps: it.noProps, placing: it.placing, mess: it.mess, event: it.event, weather: it.weather }, 400);
       frame.appendChild(art);
       el.appendChild(frame);
       if (it.fx) el.appendChild(U.el('span', { class: 'room__tag room__tag--hit', text: it.fx.badge }));
       else if (it.bubble) el.appendChild(U.el('span', { class: 'room__tag', text: it.bubble }));
-      el.appendChild(U.el('span', { class: 'room__name', text: it.away ? it.name + ' · fuera' : it.name }));
+      const wl = global.Weather && it.weather ? Weather.label(it.weather) : '';
+      el.appendChild(U.el('span', { class: 'room__name', text: (it.away ? it.name + ' · fuera' : it.name) + (wl ? ' · ' + wl : '') }));
       box.appendChild(el);
     });
   };

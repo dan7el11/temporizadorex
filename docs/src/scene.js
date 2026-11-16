@@ -69,10 +69,10 @@
   }
 
   /** Lo que hay para picar o beber, según la hora. */
-  function props(part) {
+  function props(part, life) {
     // Móvil boca abajo (¡lejos!) y subrayador
-    let r = px(45, 63, 5, 2, '#2b2f3a') + px(46, 63, 3, 1, '#4a5064');
-    r += px(45, 65, 5, 1, '#f5d23a') + px(49, 65, 1, 1, '#3a3a3a');
+    const fixed = px(45, 63, 5, 2, '#2b2f3a') + px(46, 63, 3, 1, '#4a5064') + px(45, 65, 5, 1, '#f5d23a') + px(49, 65, 1, 1, '#3a3a3a');
+    let r = '';
     const steam = function (x) {
       return '<g class="scene-steam">' + px(x, 57, 1, 2, '#ffffff', ' opacity=".65"') + px(x + 2, 55, 1, 2, '#ffffff', ' opacity=".5"') + '</g>';
     };
@@ -98,7 +98,8 @@
       r += px(17, 61, 5, 5, '#e05a72') + px(18, 62, 3, 3, '#fff4e0') + px(19, 63, 1, 1, '#2b2f3a') + px(17, 66, 1, 1, '#2b2f3a') + px(21, 66, 1, 1, '#2b2f3a');
       r += px(17, 60, 1, 1, '#f5d23a') + px(21, 60, 1, 1, '#f5d23a');
     }
-    return r;
+    // La bebida se levanta de la mesa cuando da un sorbo
+    return fixed + (life ? '<g class="act act-drink">' + r + '</g>' : r);
   }
 
   /* ── Mascotas (desbloqueables) ──────────────────────────── */
@@ -309,7 +310,55 @@
     return s;
   })();
 
+  // Gato sentado mirando por la ventana: la cola se mueve, gira la cabeza y parpadea
+  function drawCatSit(st, v) {
+    const c = CAT_BREEDS[v.breed] || CAT_BREEDS.naranja;
+    const O = c.O, D = c.D, K = c.K, W = c.W, Pk = '#f4a6a6', G = c.G, E = '#2b1a10';
+    const P = rectsAt(0, 0);
+    const tailC = c.points ? D : O;
+    // Cola en el suelo, con la punta que se mueve
+    P(0, 8, 5, 1, tailC);
+    if (st.tail === 0) { P(0, 6, 1, 2, tailC); P(1, 5, 1, 1, D); }
+    else if (st.tail === 1) { P(0, 7, 1, 1, tailC); P(-1, 6, 1, 1, D); }
+    else { P(1, 7, 1, 1, tailC); P(1, 6, 1, 1, D); }
+    // Cuerpo sentado (muslo, lomo y pecho)
+    P(3, 2, 6, 7, O); P(4, 1, 4, 1, O); P(2, 5, 2, 4, O); P(3, 9, 7, 0, K);
+    P(3, 8, 6, 1, K);
+    if (!c.noStripes) { P(4, 3, 1, 2, D); P(6, 2, 1, 2, D); P(3, 6, 2, 1, D); }
+    if (c.calico) { P(3, 2, 3, 3, '#e8913a'); P(6, 5, 2, 2, '#2e2a33'); }
+    if (v.sweater) sweaterRows(P, 4, 2, 5, 3, v.sweater);
+    P(8, 3, 2, 5, c.points ? O : W);   // pecho
+    P(8, 7, 1, 2, c.points ? D : W); P(10, 7, 1, 2, c.points ? D : W); P(9, 6, 1, 2, O);   // patas de delante
+    // Cabeza
+    const hx = st.look ? -1 : 0;
+    P(7 + hx, -4, 6, 5, O); P(8 + hx, -5, 4, 1, O);
+    if (c.points) P(8 + hx, -3, 4, 4, D);
+    if (c.calico) P(10 + hx, -5, 3, 2, '#e8913a');
+    const earC = c.points ? D : O;
+    P(7 + hx, -6, 1, 2, earC); P(8 + hx, -5, 1, 1, Pk); P(12 + hx, -6, 1, 2, earC); P(11 + hx, -5, 1, 1, Pk);
+    if (st.ear) P(12 + hx, -6, 1, 1, O);
+    if (st.eyes === 'closed') { P(8 + hx, -2, 2, 1, E); P(11 + hx, -2, 1, 1, E); }
+    else if (st.look) { P(7 + hx, -2, 1, 1, G); P(10 + hx, -2, 1, 1, G); }
+    else { P(9, -2, 1, 1, G); P(11, -2, 1, 1, G); }
+    P(st.look ? 8 + hx : 12, -1, 1, 1, Pk);
+    if (v.bow) { P(9 + hx, -7, 1, 2, '#ff7ab0'); P(11 + hx, -7, 1, 2, '#ff7ab0'); P(10 + hx, -6, 1, 1, '#e0365a'); }
+    if (v.collar) { P(8, 1, 4, 1, v.collar); P(10, 2, 1, 1, '#f5d23a'); }
+    return P.out();
+  }
+  const CAT_SIT_SEQ = (function () {
+    const s = [];
+    for (let i = 0; i < 40; i++) {
+      const st = { tail: [0, 1, 0, 2][Math.floor(i / 2) % 4], eyes: 'open', look: false, ear: false };
+      if (i === 7 || i === 23 || i === 35) st.eyes = 'closed';
+      if (i >= 14 && i < 20) st.look = true;      // se gira hacia el cuarto
+      if (i === 27 || i === 29) st.ear = true;    // oreja que se mueve
+      s.push(st);
+    }
+    return s;
+  })();
+
   const PETS = {
+    gatoSit: { x: 0, y: 0, cls: 'cat', tick: 0.32, seq: CAT_SIT_SEQ, draw: drawCatSit, hidden: true },
     gato: { x: 47, y: 47, cls: 'cat', tick: 0.25, seq: CAT_SEQ, draw: drawCat },
     perro: { x: 36, y: 74, cls: 'dog', tick: 0.2, seq: DOG_SEQ, draw: drawDog },
     buho: { x: 5, y: 44, cls: 'owl', tick: 0.2, seq: OWL_SEQ, draw: drawOwl }
@@ -343,7 +392,7 @@
         css += '.pf-' + k + '-' + fi + '{opacity:0;animation:pf-' + k + '-' + fi + ' ' + (n * p.tick).toFixed(2) + 's step-end infinite}';
       });
     });
-    css += '@media (prefers-reduced-motion:reduce){[class^="pf-"]{animation:none!important}.pf-gato-0,.pf-perro-0,.pf-buho-0{opacity:1}}';
+    css += '@media (prefers-reduced-motion:reduce){[class^="pf-"]{animation:none!important}.pf-gato-0,.pf-perro-0,.pf-buho-0,.pf-gatoSit-0{opacity:1}}';
     const st = document.createElement('style');
     st.id = 'petAnim';
     st.textContent = css;
@@ -367,11 +416,11 @@
    */
   const PET_PLAN = {
     gato: (function () {
-      const DESK = [47, 47], DOWN = [56, 77], RUG = [72, 77], OUT = [122, 77], WIN = [-10, 77], NEAR = [40, 77];
+      const DESK = [47, 47], DOWN = [56, 77], RUG = [72, 77], OUT = [122, 77], WIN = [-5, 77], NEAR = [40, 77];
       return [
         { stay: DESK, d: 480 }, { from: DESK, to: DOWN, d: 1.6 }, { from: DOWN, to: RUG, d: 4 },
         { stay: RUG, d: 420, label: 'rug' }, { from: RUG, to: OUT, d: 7 }, { away: true, d: 240 },
-        { from: OUT, to: WIN, d: 16 }, { stay: WIN, d: 300 }, { from: WIN, to: NEAR, d: 6 }, { from: NEAR, to: DESK, d: 1.4 }
+        { from: OUT, to: WIN, d: 16 }, { stay: WIN, d: 300, sit: true }, { from: WIN, to: NEAR, d: 6 }, { from: NEAR, to: DESK, d: 1.4 }
       ];
     })(),
     perro: (function () {
@@ -414,15 +463,21 @@
   function drawCatWalk(f, v) {
     const c = CAT_BREEDS[v.breed] || CAT_BREEDS.naranja;
     const O = c.O, D = c.D, K = c.K, W = c.W, Pk = '#f4a6a6', G = c.G;
-    const P = rectsAt(0, 0);
+    // Cuatro fotogramas: el lomo sube y baja y las patas van en diagonal
+    const bob = f % 2 ? -1 : 0;
+    const P0 = rectsAt(0, 0);
+    const P = function (x, y, w, h, col) { P0(x, y + (y < 7 ? bob : 0), w, h, col); };
+    P.out = P0.out;
     const tailC = c.points ? D : O;
-    P(0, f ? 0 : 1, 1, 3, tailC); P(1, 3, 1, 1, tailC);
+    const tt = [0, 1, 0, -1][f];
+    P(0, 1 + tt, 1, 3, tailC); P(1, 3, 1, 1, tailC);
     P(2, 3, 10, 1, K); P(1, 4, 12, 3, O); P(3, 6, 8, 1, W);
     if (!c.noStripes) { P(4, 4, 1, 2, D); P(7, 4, 1, 2, D); P(10, 4, 1, 2, D); }
     if (c.calico) { P(3, 4, 3, 2, '#e8913a'); P(8, 4, 3, 2, '#2e2a33'); }
     if (v.sweater) sweaterRows(P, 3, 4, 8, 2, v.sweater);
-    const legs = f ? [3, 5, 10, 12] : [2, 4, 9, 11];
-    legs.forEach(function (x) { P(x, 7, 1, 2, c.points ? D : O); P(x, 8, 1, 1, c.points ? D : W); });
+    const legs = [[2, 5, 9, 12], [3, 4, 10, 11], [4, 2, 11, 9], [3, 4, 10, 11]][f];
+    const lift = [[0, 1, 1, 0], [0, 0, 0, 0], [1, 0, 0, 1], [0, 0, 0, 0]][f];
+    legs.forEach(function (x, i) { P0(x, 7 - lift[i], 1, 2, c.points ? D : O); P0(x, 8 - lift[i], 1, 1, c.points ? D : W); });
     P(11, 0, 5, 4, O); P(12, -1, 3, 1, O);
     if (c.points) P(12, 1, 4, 3, D);
     if (c.calico) P(13, 0, 3, 1, '#e8913a');
@@ -436,18 +491,22 @@
   function drawDogWalk(f, v) {
     const c = DOG_BREEDS[v.breed] || DOG_BREEDS.dorado;
     const C = c.C, B = c.B, L = c.L, K = c.K, E = c.E, T = '#e05a72', N = '#1d1410';
-    const P = rectsAt(0, 0);
-    P(0, f ? 2 : 3, 1, 2, C); P(1, 4, 1, 1, C);
+    const bob = f % 2 ? -1 : 0;
+    const P0 = rectsAt(0, 0);
+    const P = function (x, y, w, h, col) { P0(x, y + (y < 9 ? bob : 0), w, h, col); };
+    P.out = P0.out;
+    P(0, [2, 3, 2, 1][f], 1, 2, C); P(1, 4, 1, 1, C);
     P(1, 5, 9, 4, C); P(2, 8, 7, 1, L);
     if (c.spots) { P(3, 5, 1, 1, B); P(6, 7, 1, 1, B); P(8, 6, 1, 1, B); }
     if (v.sweater) sweaterRows(P, 2, 5, 7, 3, v.sweater);
-    const legs = f ? [2, 4, 7, 9] : [1, 3, 8, 10];
-    legs.forEach(function (x) { P(x, 9, 1, 2, C); P(x, 11, 1, 1, K); });
+    const legs = [[1, 4, 7, 10], [2, 3, 8, 9], [3, 1, 9, 7], [2, 3, 8, 9]][f];
+    const lift = [[0, 1, 1, 0], [0, 0, 0, 0], [1, 0, 0, 1], [0, 0, 0, 0]][f];
+    legs.forEach(function (x, i) { P0(x, 9 - lift[i], 1, 2, C); P0(x, 11 - lift[i], 1, 1, K); });
     P(8, 1, 5, 5, C); P(9, 0, 3, 1, C);
     if (c.husky) P(9, 1, 3, 3, L);
     P(12, 3, 2, 2, c.mask ? '#3a302a' : L); P(13, 3, 1, 1, N);
     P(8, 2, 1, 3, B); P(11, 2, 1, 1, E);
-    if (f) P(12, 5, 1, 1, T);
+    if (f % 2) P(12, 5, 1, 1, T);
     if (v.collar) { P(8, 6, 4, 1, v.collar); P(10, 7, 1, 1, '#f5d23a'); }
     if (v.bow) { P(9, -1, 1, 2, '#ff7ab0'); P(11, -1, 1, 2, '#ff7ab0'); P(10, 0, 1, 1, '#e0365a'); }
     return P.out();
@@ -455,8 +514,8 @@
   const PET_W = { gato: 17, perro: 14, buho: 10 };
   function moveFrames(kind, v, seg) {
     if (kind === 'buho') return [drawOwl({ eyes: 'open', look: 0, wings: 'up', hop: false, hoot: false }, v), drawOwl({ eyes: 'open', look: 0, wings: 'down', hop: true, hoot: false }, v)];
-    if (kind === 'perro') return [drawDogWalk(0, v), drawDogWalk(1, v)];
-    return [drawCatWalk(0, v), drawCatWalk(1, v)];
+    if (kind === 'perro') return [0, 1, 2, 3].map(function (f) { return drawDogWalk(f, v); });
+    return [0, 1, 2, 3].map(function (f) { return drawCatWalk(f, v); });
   }
 
   function pet(cfg, o) {
@@ -479,7 +538,13 @@
     if (seg.needs && (o.items || []).indexOf(seg.needs) < 0) return '<g transform="translate(' + p.x + ',' + p.y + ')">' + routine + '</g>';
     if (seg.stay) {
       let inner = routine;
-      if (seg.nap) {
+      if (seg.sit && cfg.pet === 'gato') {
+        // Sentado junto a la ventana, mirando fuera (hacia la izquierda)
+        const sp = PETS.gatoSit;
+        const sk = 'sit' + JSON.stringify(v);
+        if (!petCache[sk]) petCache[sk] = sp.uniq.map(function (f, fi) { return '<g class="pf-gatoSit-' + fi + '">' + drawCatSit(f.st, v) + '</g>'; }).join('');
+        inner = '<g class="scene-pet scene-pet--cat">' + title + '<g transform="translate(13,0) scale(-1,1)">' + petCache[sk] + '</g></g>';
+      } else if (seg.nap) {
         // Siesta larga en la alfombra: tumbado, con sus «Zzz»
         const lie = function (z) { return drawDog({ lie: true, z: z }, v); };
         inner = '<g class="scene-pet scene-pet--dog">' + title + '<g class="pz-0">' + lie(true) + '</g><g class="pz-1">' + lie(false) + '</g></g>';
@@ -490,7 +555,9 @@
     const fr = moveFrames(cfg.pet, v, seg);
     const left = seg.to[0] < seg.from[0];
     const w = PET_W[cfg.pet] || 14;
-    const frames = '<g class="pw-0">' + fr[0] + '</g><g class="pw-1">' + fr[1] + '</g>';
+    const frames = fr.length === 4
+      ? fr.map(function (f, i) { return '<g class="pw4 pw4-' + i + '">' + f + '</g>'; }).join('')
+      : '<g class="pw-0">' + fr[0] + '</g><g class="pw-1">' + fr[1] + '</g>';
     const body = left ? '<g transform="translate(' + w + ',0) scale(-1,1)">' + frames + '</g>' : frames;
     const style = '--x0:' + seg.from[0] + 'px;--y0:' + seg.from[1] + 'px;--x1:' + seg.to[0] + 'px;--y1:' + seg.to[1] + 'px;' +
       'animation-duration:' + seg.d + 's;animation-delay:-' + st.el.toFixed(2) + 's';
@@ -511,8 +578,9 @@
   }
 
   /** Lo de la mesa, salvo que aún no haya llegado nadie (o esté dejándolo ahora mismo). */
-  function propsOf(part, o) {
+  function propsOf(part, o, life) {
     if (o.noProps) return '';
+    if (life && !o.mess) return o.placing ? '<g class="scene-placed">' + props(part, true) + '</g>' : props(part, true);
     if (o.mess) return (o.placing ? '<g class="scene-placed">' + props(part) + '</g>' : props(part)) + mess(o.mess);
     return o.placing ? '<g class="scene-placed">' + props(part) + '</g>' : props(part);
   }
@@ -541,6 +609,29 @@
     // Cuando el brazo derecho está en otra postura, su mano no está en el libro
     const right = rightAway ? '' : '<g class="scene-hand scene-hand--r">' + hand(36) + '</g>';
     return '<g class="scene-hand scene-hand--l">' + hand(26) + '</g>' + right;
+  }
+
+  /* ── Vida en la mesa: escribir, pensar, beber y estirarse ── */
+  const LIFE_S = 96;
+  function lifeOn(o, mood) { return !o.armPose && !o.still && mood !== 'ko' && mood !== 'hurt' && !o.noLife; }
+  /** Fase del ciclo a partir del reloj: no se reinicia al redibujar y cada avatar va desfasado. */
+  function lifePhase(cfg, o) {
+    let h = 0;
+    const k = JSON.stringify([cfg.sex, cfg.skin, cfg.hair, cfg.style, cfg.outfit, o.who || '']);
+    for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) % 9973;
+    return ((Date.now() / 1000 + h) % LIFE_S).toFixed(2);
+  }
+  /** Taza en la mano (al beber). */
+  function sipCup(part) {
+    const x = SEAT_X + 18, y = SEAT_Y + 33;
+    const c = part === 'evening' ? '#e0f2e9' : '#f2f4f8';
+    return px(x, y, 5, 5, c) + px(x, y + 4, 5, 1, '#c9d1e0') + px(x + 5, y + 1, 1, 2, '#c9d1e0') + px(x + 1, y, 3, 1, part === 'evening' ? '#c9a227' : '#6b4128');
+  }
+  /** Manos sobre el libro, con el bolígrafo; se esconden cuando el brazo está en otra postura. */
+  function lifeHands(cfg) {
+    const pen = '<g class="act act-write"><g class="act-pen">' + px(39, 60, 1, 1, '#2a5bd7') + px(38, 61, 1, 1, '#2a5bd7') + px(37, 62, 1, 1, '#2b2f3a') + px(40, 59, 1, 1, '#c9ced8') + '</g>' +
+      '<g class="act-ink">' + px(34, 63, 1, 1, '#2a5bd7') + px(35, 63, 2, 1, '#2a5bd7') + px(37, 63, 1, 1, '#2a5bd7') + '</g></g>';
+    return '<g class="act act-hand-l">' + hands(cfg, true) + '</g><g class="act act-hand-r">' + hands(cfg, false).replace(/^.*?(<g class="scene-hand scene-hand--r">)/, '$1') + pen + '</g>';
   }
 
   function who(cfg, pose, mood, x, y, clipH, extraClass) {
@@ -592,9 +683,19 @@
     } else if (cfg && mode === 'desk') {
       // Dos versiones de la cara (normal y parpadeo); el CSS alterna.
       const dp = o.armPose || 'desk';   // postura del brazo derecho en las animaciones
-      body += '<g class="who who--desk">' +
-        '<g class="who__open">' + who(cfg, dp, mood, SEAT_X, SEAT_Y, 50) + '</g>' +
-        '<g class="who__blink">' + who(cfg, dp, mood === 'ko' ? 'ko' : 'blink', SEAT_X, SEAT_Y, 50) + '</g></g>';
+      const base = '<g class="who__open">' + who(cfg, dp, mood, SEAT_X, SEAT_Y, 50) + '</g>' +
+        '<g class="who__blink">' + who(cfg, dp, mood === 'ko' ? 'ko' : 'blink', SEAT_X, SEAT_Y, 50) + '</g>';
+      if (lifeOn(o, mood)) {
+        // Vida en la mesa (ciclo de 96 s): escribe, se queda pensando con la
+        // mano en la barbilla, da un sorbo y se estira. Cada avatar va a su ritmo.
+        body += '<g class="who who--desk">' +
+          '<g class="act act-base">' + base + '</g>' +
+          '<g class="act act-think">' + who(cfg, 'deskChin', mood === 'tired' ? mood : 'neutral', SEAT_X, SEAT_Y, 50) + '</g>' +
+          '<g class="act act-sip">' + who(cfg, 'deskSip', mood, SEAT_X, SEAT_Y, 50) + sipCup(part) + '</g>' +
+          '<g class="act act-stretch">' + who(cfg, 'deskStretch', 'happy', SEAT_X, SEAT_Y - 1, 51) + '</g></g>';
+      } else {
+        body += '<g class="who who--desk">' + base + '</g>';
+      }
     } else if (cfg && mode === 'ko') {
       const b = Avatar.bodyInner(cfg, 'idle', 'ko');
       front += '<g class="who who--ko" transform="translate(' + (STAND_X + 36 + b.h / 2) + ',' + (UH - 37) + ') rotate(90)">' + who(cfg, 'idle', 'ko', 0, 0) + '</g>';
@@ -608,10 +709,12 @@
       ? '<svg x="' + o.nest.x + '" y="' + o.nest.y + '" width="' + o.nest.w + '" height="' + (o.nest.w * UH / UW) + '" viewBox="0 0 ' + UW + ' ' + UH + '" overflow="visible" class="scene-unit scene-unit--' + mode + '">'
       : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + UW + ' ' + UH + '" width="' + (o.size || 160) +
         '" height="' + Math.round((o.size || 160) * UH / UW) + '" shape-rendering="crispEdges" style="overflow:visible" class="scene-unit scene-unit--' + mode + '" aria-hidden="true">';
-    const svg = open +
+    const life = mode === 'desk' && cfg && lifeOn(o, mood);
+    const ph = life ? '--ph:-' + lifePhase(cfg, o) + 's;' : '';
+    const svg = (!ph ? open : open.indexOf('style="') >= 0 ? open.replace('style="', 'style="' + ph) : open.replace('class="scene-unit', 'style="' + ph + '" class="scene-unit')) +
       behind + desk(lamp, part) +
       // Sentado: el libro, las manos y lo de la mesa van por delante del cuerpo
-      (mode === 'desk' && cfg ? body + book(true) + hands(cfg, !!o.armPose) + propsOf(part, o) : book(false) + propsOf(part, o) + body) +
+      (mode === 'desk' && cfg ? body + book(true) + (life ? lifeHands(cfg) : hands(cfg, !!o.armPose)) + propsOf(part, o, life) : book(false) + propsOf(part, o) + body) +
       pet(cfg, o) + front + (o.room ? eventArt(cfg, o.event) : '') + '</svg>';
     return svg;
   };
@@ -903,7 +1006,7 @@
     // En el cuarto, lo que hacen los objetos desbloqueados (pelotita dorada, carne…)
     const myRoomMode = roomView ? withEvent(myMode, myDeco, myCfg) : myMode;
     const peerRoomMode = roomView && ps ? withEvent(peerMode, ps.roomDeco, ps.avatar) : peerMode;
-    const sig = JSON.stringify([myRoomMode.ev || '', peerRoomMode && peerRoomMode.ev || '', Avatar.config(), myMode, ps ? [ps.avatar, peerMode, peer.name, ps.roomDeco, ps.tired, ps.duel, Scene.petKey(ps.avatar)] : null, part, coop, fx,
+    const sig = JSON.stringify([global.Weather ? Weather.key() : '', ps && ps.weather && global.Weather ? Weather.key(ps.weather) : '', myRoomMode.ev || '', peerRoomMode && peerRoomMode.ev || '', Avatar.config(), myMode, ps ? [ps.avatar, peerMode, peer.name, ps.roomDeco, ps.tired, ps.duel, Scene.petKey(ps.avatar)] : null, part, coop, fx,
       roomView ? Rooms.config() : 0, Scene.petKey(myCfg)]);
     if (sig === lastSig) return;
     lastSig = sig;
@@ -924,8 +1027,8 @@
         // Corona para quien va ganando el duelo de la semana
     const lead = global.Coop && Coop.active() ? Coop.duel().leader : '';
     const petTag = function (c) { return c && c.pet && c.petName ? ' · ' + ({ gato: '🐈', perro: '🐕', buho: '🦉' }[c.pet] || '') + ' ' + c.petName : ''; };
-    const list = [Object.assign({ cfg: myCfg, deco: Rooms.config(), name: 'Tú' + (lead === 'me' ? ' 👑' : '') + petTag(myCfg) }, myRoomMode)];
-        if (ps) list.push(Object.assign({ cfg: Object.assign({}, ps.avatar, { tired: ps.tired || 0 }), mess: ps.tired || 0, deco: ps.roomDeco, name: (peer.name || 'Pareja') + (lead === 'peer' ? ' 👑' : '') + petTag(ps.avatar), away: !peerMe.session && !fx && !peerEnter, fx: fx }, peerRoomMode));
+    const list = [Object.assign({ cfg: myCfg, deco: Rooms.config(), weather: global.Weather ? Weather.current() : null, name: 'Tú' + (lead === 'me' ? ' 👑' : '') + petTag(myCfg) }, myRoomMode)];
+        if (ps) list.push(Object.assign({ cfg: Object.assign({}, ps.avatar, { tired: ps.tired || 0 }), mess: ps.tired || 0, deco: ps.roomDeco, weather: ps.weather && ps.weather.k ? ps.weather : null, name: (peer.name || 'Pareja') + (lead === 'peer' ? ' 👑' : '') + petTag(ps.avatar), away: !peerMe.session && !fx && !peerEnter, fx: fx }, peerRoomMode));
         Rooms.render(rooms, list);
         if (coop) rooms.appendChild(U.el('div', { class: 'study-rooms__coop', text: coop }));
       } else U.clear(rooms);
